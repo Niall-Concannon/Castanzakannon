@@ -1,20 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Week 1 - Movement Prototype</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #222; overflow: hidden; font-family: Arial, sans-serif; }
-canvas { display: block; background: #333; }
-</style>
-</head>
-<body>
-<canvas id="gameCanvas"></canvas>
-<script>
-// WEEK 1 PROTOTYPE - Movement & Map System
-
+// Setup canvas
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
@@ -48,23 +32,23 @@ let player = {
     facing: 1
 };
 
-// Input handlers
+// Input handling
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
-    if (e.key === ' ') {
+    if (e.key === ' ') { // Spacebar for dash
         e.preventDefault();
         playerDash();
     }
 });
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// Generate simple map
+// Map generation
 function generateMap() {
     mapTiles = [];
     for (let y = 0; y < MAP_H; y++) {
         mapTiles[y] = [];
         for (let x = 0; x < MAP_W; x++) {
-            mapTiles[y][x] = 0;
+            mapTiles[y][x] = 0; // Empty tile
         }
     }
     
@@ -125,7 +109,7 @@ function isInWall(x, y, size) {
     for (let ty = ty1; ty <= ty2; ty++) {
         for (let tx = tx1; tx <= tx2; tx++) {
             if (ty >= 0 && ty < MAP_H && tx >= 0 && tx < MAP_W && mapTiles[ty] && mapTiles[ty][tx] === 1) {
-                return true;
+                return true; // Collision detected
             }
         }
     }
@@ -142,7 +126,7 @@ function playerDash() {
     if (keys['a'] || keys['arrowleft']) dx = -1;
     if (keys['d'] || keys['arrowright']) dx = 1;
     
-    if (dx === 0 && dy === 0) dx = player.facing;
+    if (dx === 0 && dy === 0) dx = player.facing; // Dash forward if no input
     
     const mag = Math.sqrt(dx * dx + dy * dy) || 1;
     player.dashDirX = dx / mag;
@@ -163,6 +147,7 @@ function updatePlayer() {
     if (dx !== 0) player.facing = dx > 0 ? 1 : -1;
     
     if (player.dashing) {
+        // Dash movement
         player.dashTime--;
         if (player.dashTime <= 0) {
             player.dashing = false;
@@ -191,7 +176,7 @@ function updatePlayer() {
         }
     }
     
-    // Clamp to map bounds
+    // Keep player inside map bounds
     player.x = Math.max(TILE * 2, Math.min(MAP_W * TILE - TILE * 2, player.x));
     player.y = Math.max(TILE * 2, Math.min(MAP_H * TILE - TILE * 2, player.y));
     
@@ -243,7 +228,7 @@ function drawMap() {
 function drawPlayer() {
     const s = toScreen(player.x, player.y);
     
-    // Draw player as simple square
+    // Draw player as square
     ctx.fillStyle = player.dashing ? '#88ff88' : player.color;
     ctx.fillRect(s.x - player.size, s.y - player.size, player.size * 2, player.size * 2);
     
@@ -300,6 +285,3 @@ function gameLoop() {
 // Initialize and start
 generateMap();
 gameLoop();
-</script>
-</body>
-</html>
