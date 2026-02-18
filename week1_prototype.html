@@ -13,9 +13,8 @@ canvas { display: block; background: #333; }
 <body>
 <canvas id="gameCanvas"></canvas>
 <script>
-// ============================================================
 // WEEK 1 PROTOTYPE - Movement & Map System
-// ============================================================
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
@@ -39,7 +38,7 @@ let player = {
     x: MAP_W * TILE / 2,
     y: MAP_H * TILE / 2,
     size: 20,
-    speed: 4.55, // 30% faster than 3.5
+    speed: 4.55,
     color: '#4444ff',
     dashing: false,
     dashTime: 0,
