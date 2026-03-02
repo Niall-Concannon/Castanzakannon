@@ -21,6 +21,7 @@ let mouseX = 0, mouseY = 0, mouseDown = false;
 let projectiles = [];
 let enemies = [];
 let score = 0;
+let pickups = [];
 
 // Player object
 let player = {
@@ -39,7 +40,10 @@ let player = {
     weaponAngle: 0,
     hp: 100, // current hp
     maxHp: 100,
-    invulnTimer: 0
+    invulnTimer: 0,
+    xp: 0,
+    xpToNextLevel: 100,
+    level: 1
 };
 
 // Input handling
@@ -236,6 +240,8 @@ function startGame() {
     player.y = (MAP_H * TILE) / 2;
     player.hp = player.maxHp;
     score = 0;
+    player.xp = 0;
+    player.level = 1;
     gameState = "playing";
 }
 
@@ -351,11 +357,49 @@ function updateProjectiles() {
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.size + e.size) {
                 e.hp--;
                 e.hitFlash = 8;
-                if (e.hp <= 0) { e.alive = false; score++; } // dead
+                if (e.hp <= 0) // dead
+                { 
+                    e.alive = false;
+                    score++;
+
+                    // Spawn pickups
+                    pickups.push({
+                        x: e.x,
+                        y: e.y,
+                        size: 10,
+                        type: "xp" // Might change later for different pickup types
+                    });
+                }
 
                 projectiles.splice(i, 1); // remove projectile from array
                 break;
             }
+        }
+    }
+}
+
+// Update pickups
+function updatePickups() {
+    for (let i = pickups.length - 1; i >= 0; i--) {
+        const p = pickups[i];
+
+        // Check collision with player
+        if (Math.hypot(player.x - p.x, player.y - p.y) < player.size + p.size) {
+
+            // type of pickup - currently only xp but can add more types later
+            if (p.type === "xp") {
+                player.xp += 5;
+
+                // Level up
+                if (player.xp >= player.xpToNextLevel)
+                {
+                    player.xp -= player.xpToNextLevel;
+                    player.level++;
+                }
+            }
+
+            // Remove pickup
+            pickups.splice(i, 1);
         }
     }
 }
@@ -444,6 +488,21 @@ function drawProjectiles() {
     }
 }
 
+// Draw pickups
+function drawPickups() {
+    for (let p of pickups) {
+        const s = toScreen(p.x, p.y);
+
+        ctx.fillStyle = "#44ddff";
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+    }
+}
+
 // Draw UI
 function drawUI() {
     ctx.fillStyle = '#fff';
@@ -463,7 +522,7 @@ function drawUI() {
     ctx.fillText(cooldownText, 10, 75);
     
     // Position info (for debugging)
-    ctx.fillText('X: ' + Math.floor(player.x) + ' Y: ' + Math.floor(player.y), 10, canvas.height - 10);
+    ctx.fillText('X: ' + Math.floor(player.x) + ' Y: ' + Math.floor(player.y), 10, canvas.height - 50);
 
     // HP
     ctx.fillStyle = "#111";
@@ -487,6 +546,28 @@ function drawUI() {
         "HP " + player.hp + "/" + player.maxHp,
         14,
         canvas.height - 28
+    );
+
+    // XP
+    ctx.fillStyle = "#111";
+    ctx.fillRect(10, canvas.height - 20, 150, 12);
+    ctx.fillStyle = "#3399ff";
+    ctx.fillRect(
+        10,
+        canvas.height - 20,
+        150 * (player.xp / player.xpToNextLevel),
+        12
+    );
+
+    ctx.strokeStyle = "#fff";
+    ctx.strokeRect(10, canvas.height - 20, 150, 12);
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px monospace";
+    
+    ctx.fillText(
+        "XP " + player.xp + " / " + player.xpToNextLevel,
+        14,
+        canvas.height - 10
     );
 }
 
@@ -518,6 +599,7 @@ function gameLoop() {
         updatePlayer();
         updateEnemies();
         updateProjectiles();
+        updatePickups();
         updateCamera();
         
         // Draw
@@ -525,6 +607,7 @@ function gameLoop() {
         drawPlayer();
         drawEnemies();
         drawProjectiles();
+        drawPickups();
         drawUI();
     }
     requestAnimationFrame(gameLoop);
