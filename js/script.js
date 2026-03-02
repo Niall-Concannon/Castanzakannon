@@ -186,7 +186,7 @@ function playerDash() {
 // Shooting mechanic
 function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
-    player.shootCooldown = 60; // Every 60 frames
+    player.shootCooldown = 10; // Every 10 frames
 
     projectiles.push({ // add to an projectile array
         x: player.x,
@@ -235,6 +235,7 @@ function startGame() {
     player.x = (MAP_W * TILE) / 2;
     player.y = (MAP_H * TILE) / 2;
     player.hp = player.maxHp;
+    score = 0;
     gameState = "playing";
 }
 
@@ -299,6 +300,10 @@ function updatePlayer() {
             player.hp = Math.max(0, player.hp - 10);
             player.invulnTimer = 60;
         }
+    }
+
+    if (player.hp <= 0) {
+        gameState = "menu"; // Back to menu on death (TEMPORARY)
     }
 
     // Calculate angle from player center to mouse position
