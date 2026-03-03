@@ -10,6 +10,7 @@ const MAP_W = 80;
 const MAP_H = 60;
 const DASH_SPEED = 16;
 const DASH_DURATION = 15; // 0.25 second dash
+const MAX_ENEMIES = 20;
 
 // Game state
 let keys = {};
@@ -202,39 +203,38 @@ function playerShoot() {
     });
 }
 
-// Spawn enemies
-function spawnEnemies() {
-    enemies = [];
+// Spawn enemy
+function spawnEnemy() {
+    let enemyX, enemyY, tries = 0;
 
-    // Spawn 10 enemies
-    for (let i = 0; i < 10; i++) {
-        let enemyX, enemyY, tries = 0;
+    // Loop to find position is within 300px of player, not in wall and not tried over 60 times (infinite loop prevention)
+    do {
+        // Find position 5 tiles from edge to avoid spawning in walls
+        enemyX = (5 + Math.floor(Math.random() * (MAP_W - 10))) * TILE;
+        enemyY = (5 + Math.floor(Math.random() * (MAP_H - 10))) * TILE;
+        tries++;
+    } while ((Math.hypot(enemyX - player.x, enemyY - player.y) < 300 || wallCollision(enemyX, enemyY, 14)) && tries < 60);
 
-        // Loop to find position is within 300px of player, not in wall and not tried over 60 times (infinite loop prevention)
-        do {
-            // Find position 5 tiles from edge to avoid spawning in walls
-            enemyX = (5 + Math.floor(Math.random() * (MAP_W - 10))) * TILE;
-            enemyY = (5 + Math.floor(Math.random() * (MAP_H - 10))) * TILE;
-            tries++;
-        } while ((Math.hypot(enemyX - player.x, enemyY - player.y) < 300 || wallCollision(enemyX, enemyY, 14)) && tries < 60);
-
-        // Add enemies to array
-        enemies.push({
-            x: enemyX,
-            y: enemyY,
-            hp: 3,
-            size: 14,
-            speed: 2,
-            hitFlash: 0,
-            alive: true
-        });
-    }
+    // Add enemies to array
+    enemies.push({
+        x: enemyX,
+        y: enemyY,
+        hp: 3,
+        size: 14,
+        speed: 2,
+        hitFlash: 0,
+        alive: true
+    });
 }
 
 // Start game
 function startGame() {
     generateMap();
-    spawnEnemies();
+    
+    enemies = [];
+    for (let i = 0; i < MAX_ENEMIES; i++) {
+        spawnEnemy();
+    }
 
     player.x = (MAP_W * TILE) / 2;
     player.y = (MAP_H * TILE) / 2;
@@ -369,6 +369,8 @@ function updateProjectiles() {
                         size: 10,
                         type: "xp" // Might change later for different pickup types
                     });
+
+                    spawnEnemy();
                 }
 
                 projectiles.splice(i, 1); // remove projectile from array
