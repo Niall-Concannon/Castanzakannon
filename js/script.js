@@ -11,6 +11,26 @@ const MAP_H = 60;
 const DASH_SPEED = 16;
 const DASH_DURATION = 15; // 0.25 second dash
 const MAX_ENEMIES = 20;
+const ENEMY_TYPES = {
+    basic: {
+        hp: 3,
+        size: 14,
+        speed: 2,
+        color: "green"
+    },
+    fast: {
+        hp: 2,
+        size: 12,
+        speed: 3.5,
+        color: "yellow"
+    },
+    tank: {
+        hp: 8,
+        size: 20,
+        speed: 1.2,
+        color: "red"
+    }
+};
 
 // Game state
 let keys = {};
@@ -30,7 +50,7 @@ let player = {
     y: MAP_H * TILE / 2,
     size: 20,
     speed: 4,
-    color: '#4444ff',
+    color: 'blue',
     dashing: false,
     dashTime: 0,
     dashDirX: 0,
@@ -204,7 +224,9 @@ function playerShoot() {
 }
 
 // Spawn enemy
-function spawnEnemy() {
+function spawnEnemy(type) {
+    const enemy = ENEMY_TYPES[type];
+    
     let enemyX, enemyY, tries = 0;
 
     // Loop to find position is within 300px of player, not in wall and not tried over 60 times (infinite loop prevention)
@@ -219,11 +241,13 @@ function spawnEnemy() {
     enemies.push({
         x: enemyX,
         y: enemyY,
-        hp: 3,
-        size: 14,
-        speed: 2,
+        hp: enemy.hp,
+        size: enemy.size,
+        speed: enemy.speed,
+        color: enemy.color,
         hitFlash: 0,
-        alive: true
+        alive: true,
+        type: type
     });
 }
 
@@ -233,7 +257,9 @@ function startGame() {
     
     enemies = [];
     for (let i = 0; i < MAX_ENEMIES; i++) {
-        spawnEnemy();
+        const types = ["basic", "fast", "tank"];
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        spawnEnemy(randomType);
     }
 
     player.x = (MAP_W * TILE) / 2;
@@ -370,7 +396,9 @@ function updateProjectiles() {
                         type: "xp" // Might change later for different pickup types
                     });
 
-                    spawnEnemy();
+                    const types = ["basic", "fast", "tank"];
+                    const randomType = types[Math.floor(Math.random() * types.length)];
+                    spawnEnemy(randomType);
                 }
 
                 projectiles.splice(i, 1); // remove projectile from array
@@ -434,13 +462,13 @@ function drawMap() {
             
             if (mapTiles[y][x] === 1) {
                 // Wall
-                ctx.fillStyle = '#555';
+                ctx.fillStyle = 'dimgray';
                 ctx.fillRect(s.x, s.y, TILE, TILE);
-                ctx.strokeStyle = '#444';
+                ctx.strokeStyle = 'black';
                 ctx.strokeRect(s.x, s.y, TILE, TILE);
             } else {
                 // Floor
-                ctx.fillStyle = '#2a2a2a';
+                ctx.fillStyle = 'black';
                 ctx.fillRect(s.x, s.y, TILE, TILE);
             }
         }
@@ -452,16 +480,16 @@ function drawPlayer() {
     const s = toScreen(player.x, player.y);
     
     // Draw player as square
-    ctx.fillStyle = player.dashing ? '#88ff88' : player.color;
+    ctx.fillStyle = player.dashing ? 'cyan' : player.color;
     ctx.fillRect(s.x - player.size, s.y - player.size, player.size * 2, player.size * 2);
     
     // Border
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.strokeRect(s.x - player.size, s.y - player.size, player.size * 2, player.size * 2);
     
     // Direction indicator
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = 'white';
     ctx.fillRect(s.x + player.facing * 8, s.y - 3, 8, 6);
 }
 
@@ -471,9 +499,9 @@ function drawEnemies() {
         if (!e.alive) continue; // Skip dead enemies
 
         const s = toScreen(e.x, e.y);
-        ctx.fillStyle = e.hitFlash > 0 ? "#ffffff" : "#4a9a3a";
+        ctx.fillStyle = e.hitFlash > 0 ? "white" : e.color;
         ctx.fillRect(s.x - e.size, s.y - e.size, e.size * 2, e.size * 2);
-        ctx.strokeStyle = "#333";
+        ctx.strokeStyle = "white";
         ctx.lineWidth = 1;
         ctx.strokeRect(s.x - e.size, s.y - e.size, e.size * 2, e.size * 2);
     }
@@ -481,7 +509,7 @@ function drawEnemies() {
 
 // Draw projectiles
 function drawProjectiles() {
-    ctx.fillStyle = "#ffdd44";
+    ctx.fillStyle = "yellow";
     for (let p of projectiles) {
         const s = toScreen(p.x, p.y);
         ctx.beginPath();
@@ -495,19 +523,19 @@ function drawPickups() {
     for (let p of pickups) {
         const s = toScreen(p.x, p.y);
 
-        ctx.fillStyle = "#44ddff";
+        ctx.fillStyle = "deepskyblue";
         ctx.beginPath();
         ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle = "white";
         ctx.stroke();
     }
 }
 
 // Draw UI
 function drawUI() {
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = 'white';
     ctx.font = '16px Arial';
     ctx.textAlign = 'left';
     
@@ -527,9 +555,9 @@ function drawUI() {
     ctx.fillText('X: ' + Math.floor(player.x) + ' Y: ' + Math.floor(player.y), 10, canvas.height - 50);
 
     // HP
-    ctx.fillStyle = "#111";
+    ctx.fillStyle = "black";
     ctx.fillRect(10, canvas.height - 40, 150, 16);
-    ctx.fillStyle = "#aa1111";
+    ctx.fillStyle = "red";
     ctx.fillRect(
         10,
         canvas.height - 40,
@@ -537,10 +565,10 @@ function drawUI() {
         16
     );
 
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = "white";
     ctx.lineWidth = 1;
     ctx.strokeRect(10, canvas.height - 40, 150, 16);
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "white";
     ctx.font = "11px monospace";
     ctx.textAlign = "left";
     
@@ -551,9 +579,9 @@ function drawUI() {
     );
 
     // XP
-    ctx.fillStyle = "#111";
+    ctx.fillStyle = "black";
     ctx.fillRect(10, canvas.height - 20, 150, 12);
-    ctx.fillStyle = "#3399ff";
+    ctx.fillStyle = "deepskyblue";
     ctx.fillRect(
         10,
         canvas.height - 20,
@@ -561,9 +589,9 @@ function drawUI() {
         12
     );
 
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = "white";
     ctx.strokeRect(10, canvas.height - 20, 150, 12);
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "white";
     ctx.font = "10px monospace";
     
     ctx.fillText(
@@ -577,7 +605,7 @@ function drawUI() {
 function drawMenu() {
     const canvasW = canvas.width, canvasH = canvas.height;
 
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "white";
     ctx.font = "bold 48px Arial";
     ctx.textAlign = "center";
     ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 20);
