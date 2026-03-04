@@ -4,6 +4,10 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// Sprites
+const playerSprite = new Image();
+playerSprite.src = 'assets/sprites/player_placeholder.png';
+
 // Constants - pixels
 const TILE = 48;
 const MAP_W = 80;
@@ -475,19 +479,24 @@ function drawMap() {
 // Draw player
 function drawPlayer() {
     const s = toScreen(player.x, player.y);
-    
-    // Draw player as square
-    ctx.fillStyle = player.dashing ? 'cyan' : player.color;
-    ctx.fillRect(s.x - player.size, s.y - player.size, player.size * 2, player.size * 2);
-    
-    // Border
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(s.x - player.size, s.y - player.size, player.size * 2, player.size * 2);
-    
-    // Direction indicator
-    ctx.fillStyle = 'white';
-    ctx.fillRect(s.x + player.facing * 8, s.y - 3, 8, 6);
+    const size = player.size * 2;
+
+    ctx.save();
+
+    // Flash white when dashing
+    if (player.dashing) {
+        ctx.filter = 'brightness(3)';
+    }
+
+    // Flip sprite horizontally when facing left
+    if (player.facing === -1) {
+        ctx.scale(-1, 1);
+        ctx.drawImage(playerSprite, -(s.x + player.size), s.y - player.size, size, size);
+    } else {
+        ctx.drawImage(playerSprite, s.x - player.size, s.y - player.size, size, size);
+    }
+
+    ctx.restore();
 }
 
 // Draw enemies
