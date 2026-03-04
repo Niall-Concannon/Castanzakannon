@@ -8,6 +8,27 @@ canvas.height = window.innerHeight;
 const playerSprite = new Image();
 playerSprite.src = 'assets/sprites/player_placeholder.png';
 
+const wallSprite = new Image();
+wallSprite.src = 'assets/sprites/wall_placeholder.png';
+
+const floorSprite = new Image();
+floorSprite.src = 'assets/sprites/floor_placeholder.png';
+
+const enemySprites = {
+    basic: new Image(),
+    fast:  new Image(),
+    tank:  new Image()
+};
+enemySprites.basic.src = 'assets/sprites/enemy_basic_placeholder.png';
+enemySprites.fast.src  = 'assets/sprites/enemy_fast_placeholder.png';
+enemySprites.tank.src  = 'assets/sprites/enemy_tank_placeholder.png';
+
+const projectileSprite = new Image();
+projectileSprite.src = 'assets/sprites/projectile_placeholder.png';
+
+const pickupXpSprite = new Image();
+pickupXpSprite.src = 'assets/sprites/pickup_xp_placeholder.png';
+
 // Constants - pixels
 const TILE = 48;
 const MAP_W = 80;
@@ -371,7 +392,7 @@ function updateEnemies() {
 
         if (movedX) e.x += moveX;
         if (movedY) e.y += moveY;
-        
+
         // If fully blocked, pick a new random wander direction
         if (!movedX && !movedY) {
             e.wanderAngle = Math.random() * Math.PI * 2;
@@ -482,15 +503,9 @@ function drawMap() {
             }
             
             if (mapTiles[y][x] === 1) {
-                // Wall
-                ctx.fillStyle = 'dimgray';
-                ctx.fillRect(s.x, s.y, TILE, TILE);
-                ctx.strokeStyle = 'black';
-                ctx.strokeRect(s.x, s.y, TILE, TILE);
+                ctx.drawImage(wallSprite, s.x, s.y, TILE, TILE);
             } else {
-                // Floor
-                ctx.fillStyle = 'black';
-                ctx.fillRect(s.x, s.y, TILE, TILE);
+                ctx.drawImage(floorSprite, s.x, s.y, TILE, TILE);
             }
         }
     }
@@ -525,22 +540,33 @@ function drawEnemies() {
         if (!e.alive) continue; // Skip dead enemies
 
         const s = toScreen(e.x, e.y);
-        ctx.fillStyle = e.hitFlash > 0 ? "white" : e.color;
-        ctx.fillRect(s.x - e.size, s.y - e.size, e.size * 2, e.size * 2);
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(s.x - e.size, s.y - e.size, e.size * 2, e.size * 2);
+        const size = e.size * 2;
+        const sprite = enemySprites[e.type];
+        const facingLeft = player.x < e.x;
+
+        ctx.save();
+        if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
+
+        if (facingLeft) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(sprite, -(s.x + e.size), s.y - e.size, size, size);
+        } else {
+            ctx.drawImage(sprite, s.x - e.size, s.y - e.size, size, size);
+        }
+
+        ctx.restore();
     }
 }
 
 // Draw projectiles
 function drawProjectiles() {
-    ctx.fillStyle = "yellow";
     for (let p of projectiles) {
         const s = toScreen(p.x, p.y);
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
+        ctx.drawImage(projectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.restore();
     }
 }
 
@@ -548,14 +574,7 @@ function drawProjectiles() {
 function drawPickups() {
     for (let p of pickups) {
         const s = toScreen(p.x, p.y);
-
-        ctx.fillStyle = "deepskyblue";
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = "white";
-        ctx.stroke();
+        ctx.drawImage(pickupXpSprite, s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
     }
 }
 
