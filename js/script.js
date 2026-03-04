@@ -246,7 +246,9 @@ function spawnEnemy(type) {
         color: enemy.color,
         hitFlash: 0,
         alive: true,
-        type: type
+        type: type,
+        wanderAngle: 0,
+        wanderTimer: 0
     });
 }
 
@@ -350,14 +352,32 @@ function updateEnemies() {
     for (let e of enemies) {
         if (!e.alive) continue; // skip dead enemies
 
-        // Find the angle to player from enemy
-        const angle = Math.atan2(player.y - e.y, player.x - e.x);
-        const movementX = Math.cos(angle) * e.speed;
-        const movementY = Math.sin(angle) * e.speed;
+        let moveX, moveY;
+        
+        if (e.wanderTimer > 0) {
+            // Wander in random direction until obstruction clears
+            moveX = Math.cos(e.wanderAngle) * e.speed;
+            moveY = Math.sin(e.wanderAngle) * e.speed;
+            e.wanderTimer--;
+        } else {
+            // Normal: move toward player
+            const angle = Math.atan2(player.y - e.y, player.x - e.x);
+            moveX = Math.cos(angle) * e.speed;
+            moveY = Math.sin(angle) * e.speed;
+        }
 
-        // Move enemy if no collision
-        if (!wallCollision(e.x + movementX, e.y, e.size)) e.x += movementX;
-        if (!wallCollision(e.x, e.y + movementY, e.size)) e.y += movementY;
+        const movedX = !wallCollision(e.x + moveX, e.y, e.size);
+        const movedY = !wallCollision(e.x, e.y + moveY, e.size);
+
+        if (movedX) e.x += moveX;
+        if (movedY) e.y += moveY;
+        
+        // If fully blocked, pick a new random wander direction
+        if (!movedX && !movedY) {
+            e.wanderAngle = Math.random() * Math.PI * 2;
+            e.wanderTimer = 30; // Wander in that direction for 30 frames (0.5 seconds)
+        }
+
         if (e.hitFlash > 0) e.hitFlash--; // reduce hit flash timer if hit recently
     }
 }
@@ -483,7 +503,7 @@ function drawPlayer() {
 
     ctx.save();
 
-    // Flash white when dashing
+    // Flash white when dashing //placeholder effect
     if (player.dashing) {
         ctx.filter = 'brightness(3)';
     }
