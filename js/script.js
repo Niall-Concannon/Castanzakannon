@@ -535,69 +535,114 @@ function drawPickups() {
 
 // Draw UI
 function drawUI() {
-    ctx.fillStyle = 'white';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'left';
-    
-    // Instructions
-    ctx.fillText('WASD / Arrow Keys - Move', 10, 25);
-    ctx.fillText("SPACE - Dash   Click - Shoot", 10, 50);
-    
-    ctx.fillText("Score: " + score, 10, 100); // Simple score
+    const padding = 20;
+    const panelWidth = 240;
+    const panelHeight = 180;
+    const barWidth = 200;
 
-    // Dash cooldown
-    const cooldownText = player.dashCooldown > 0 
-        ? 'Dash: ' + (player.dashCooldown / 60).toFixed(1) + 's' 
-        : 'Dash: Ready';
-    ctx.fillText(cooldownText, 10, 75);
-    
-    // Position info (for debugging)
-    ctx.fillText('X: ' + Math.floor(player.x) + ' Y: ' + Math.floor(player.y), 10, canvas.height - 50);
+    // Background Panel
+    ctx.fillStyle = "black";
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(padding - 12, padding - 12, panelWidth, panelHeight);
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = "lightgray";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(padding - 12, padding - 12, panelWidth, panelHeight);
+
+    ctx.textAlign = "left";
+
+    // Level
+    ctx.fillStyle = "white";
+    ctx.font = "bold 18px Arial";
+    ctx.fillText("Level " + player.level, padding, padding + 5);
+
+    // Score
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "lightgray";
+    ctx.fillText("Score: " + score, padding, padding + 25);
 
     // HP
+    const hpY = padding + 45;
+
     ctx.fillStyle = "black";
-    ctx.fillRect(10, canvas.height - 40, 150, 16);
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-        10,
-        canvas.height - 40,
-        150 * (player.hp / player.maxHp),
-        16
-    );
+    ctx.fillRect(padding, hpY, barWidth, 22);
+
+    const hpPercent = player.hp / player.maxHp;
+
+    let hpColor;
+    if (hpPercent > 0.6) hpColor = "mediumseagreen";
+    else if (hpPercent > 0.3) hpColor = "gold";
+    else hpColor = "crimson";
+
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(padding, hpY, barWidth * hpPercent, 22);
 
     ctx.strokeStyle = "white";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(10, canvas.height - 40, 150, 16);
+    ctx.strokeRect(padding, hpY, barWidth, 22);
+
     ctx.fillStyle = "white";
-    ctx.font = "11px monospace";
-    ctx.textAlign = "left";
-    
+    ctx.font = "12px monospace";
     ctx.fillText(
-        "HP " + player.hp + "/" + player.maxHp,
-        14,
-        canvas.height - 28
+        player.hp + " / " + player.maxHp,
+        padding + 8,
+        hpY + 15
     );
 
     // XP
+    const xpY = hpY + 34;
+
     ctx.fillStyle = "black";
-    ctx.fillRect(10, canvas.height - 20, 150, 12);
+    ctx.fillRect(padding, xpY, barWidth, 14);
+
     ctx.fillStyle = "deepskyblue";
     ctx.fillRect(
-        10,
-        canvas.height - 20,
-        150 * (player.xp / player.xpToNextLevel),
-        12
+        padding,
+        xpY,
+        barWidth * (player.xp / player.xpToNextLevel),
+        14
     );
 
     ctx.strokeStyle = "white";
-    ctx.strokeRect(10, canvas.height - 20, 150, 12);
-    ctx.fillStyle = "white";
-    ctx.font = "10px monospace";
-    
+    ctx.strokeRect(padding, xpY, barWidth, 14);
+
+    ctx.fillStyle = "lightgray";
+    ctx.font = "11px monospace";
     ctx.fillText(
-        "XP " + player.xp + " / " + player.xpToNextLevel,
-        14,
-        canvas.height - 10
+        player.xp + " / " + player.xpToNextLevel,
+        padding + 6,
+        xpY + 11
+    );
+
+    // Dash Cooldown
+    const dashY = xpY + 30;
+
+    ctx.font = "13px Arial";
+    ctx.fillStyle = player.dashCooldown > 0 ? "salmon" : "lightgreen";
+
+    const dashText = player.dashCooldown > 0
+        ? "Dash: " + (player.dashCooldown / 60).toFixed(1) + "s"
+        : "Dash Ready";
+
+    ctx.fillText(dashText, padding, dashY);
+
+    // Instructions
+    const tutorialY = dashY + 22;
+
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "silver";
+    ctx.fillText("Move: WASD / Arrows", padding, tutorialY);
+    ctx.fillText("Shoot: Mouse Click", padding, tutorialY + 16);
+    ctx.fillText("Dash: Space", padding, tutorialY + 32);
+
+    // Position info (for debugging)
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "white";
+    ctx.fillText(
+        "X: " + Math.floor(player.x) +
+        "  Y: " + Math.floor(player.y),
+        20,
+        canvas.height - 20
     );
 }
 
