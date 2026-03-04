@@ -41,7 +41,7 @@ let gameState = "menu";
 let mouseX = 0, mouseY = 0, mouseDown = false;
 let projectiles = [];
 let enemies = [];
-let score = 0;
+let score, lastScore = 0;
 let pickups = [];
 
 // Player object
@@ -72,18 +72,13 @@ let player = {
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true; // true when key is pressed
 
-    if (e.key === ' ') { // Spacebar for dash
-        e.preventDefault();
-
-        // Prevent dash from happening if in menu
-        if (gameState === "menu") {
+    if (e.key === ' ' || e.key === 'Enter') {
+        if (gameState === "menu" || gameState === "gameOver") {
             startGame();
-            return;
-          }
-        playerDash();
+        } else {
+            playerDash();
+        }
     }
-
-    if (e.key === "Enter" && gameState === "menu") startGame(); // TEMPORARY
 });
 
 window.addEventListener('keyup', e => { 
@@ -98,7 +93,7 @@ window.addEventListener("mousemove", (e) => {
 
 window.addEventListener("mousedown", () => {
     mouseDown = true;
-    if (gameState === "menu") startGame(); // if mouse clicks then start the game (TEMPORARY)
+    if (gameState === "menu" || gameState === "gameOver") startGame(); // if mouse clicks then start the game (TEMPORARY)
 });
 
 window.addEventListener("mouseup", () => {
@@ -124,7 +119,7 @@ function generateMap() {
     }
     
     // Random interior walls
-    const numStructures = 32;
+    const numStructures = 64;
 
     for (let i = 0; i < numStructures; i++) {
         // Structure starting point - range is 6 tiles from edge both sides
@@ -255,6 +250,7 @@ function spawnEnemy(type) {
 function startGame() {
     generateMap();
     
+    pickups = [];
     enemies = [];
     for (let i = 0; i < MAX_ENEMIES; i++) {
         const types = ["basic", "fast", "tank"];
@@ -335,7 +331,8 @@ function updatePlayer() {
     }
 
     if (player.hp <= 0) {
-        gameState = "menu"; // Back to menu on death (TEMPORARY)
+        lastScore = score;
+        gameState = "gameOver";
     }
 
     // Calculate angle from player center to mouse position
@@ -648,15 +645,49 @@ function drawUI() {
 
 // Draw menu - TEMPORARY DESIGN
 function drawMenu() {
-    const canvasW = canvas.width, canvasH = canvas.height;
+    const canvasW = canvas.width;
+    const canvasH = canvas.height;
 
+    // Background
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Title
     ctx.fillStyle = "white";
-    ctx.font = "bold 48px Arial";
+    ctx.font = "bold 64px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 20);
+    ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 60);
+
+    // Instructions
     ctx.font = "20px Arial";
-    ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2 + 30);
-    ctx.textAlign = "left";
+    ctx.fillStyle = "silver";
+    ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2);
+}
+
+// Draw game over screen
+function drawGameOver() {
+    const canvasW = canvas.width;
+    const canvasH = canvas.height;
+
+    // Background
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // "Game Over"
+    ctx.fillStyle = "crimson";
+    ctx.font = "bold 64px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", canvasW / 2, canvasH / 2 - 60);
+
+    // Score
+    ctx.font = "28px Arial";
+    ctx.fillStyle = "white";
+    ctx.fillText("Score: " + lastScore, canvasW / 2, canvasH / 2 - 10);
+
+    // Restart instructions
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "silver";
+    ctx.fillText("Press ENTER or Click to Restart", canvasW / 2, canvasH / 2 + 40);
 }
 
 // Main game loop
@@ -669,6 +700,8 @@ function gameLoop() {
     
     if (gameState === 'menu') {
         drawMenu();
+    } else if (gameState === 'gameOver') {
+        drawGameOver();
     } else {
         // Update
         updatePlayer();
