@@ -29,6 +29,10 @@ projectileSprite.src = 'assets/sprites/projectile_placeholder.png';
 const pickupXpSprite = new Image();
 pickupXpSprite.src = 'assets/sprites/pickup_xp_placeholder.png';
 
+// TODO: replace with actual cursor image path
+const cursorSprite = new Image();
+// cursorSprite.src = 'assets/sprites/cursor.png';    // Uncomment and set path when cursor sprite is ready
+
 // Constants - pixels
 const TILE = 48;
 const MAP_W = 80;
@@ -765,8 +769,22 @@ function gameLoop() {
         drawProjectiles();
         drawPickups();
         drawUI();
+        drawCursor();
     }
     requestAnimationFrame(gameLoop);
+}
+
+// Initialize and start
+function drawCursor() {
+    if (!cursorSprite.complete || !cursorSprite.src) return;
+
+    // TODO: adjust hotspot offset to match the cursor image's tip point
+    const hotspotX = 0; // pixels from left edge of image to the tip
+    const hotspotY = 0; // pixels from top edge of image to the tip
+    const width = 32;   // display width
+    const height = 32;  // display height
+
+    ctx.drawImage(cursorSprite, mouseX - hotspotX, mouseY - hotspotY, width, height);
 }
 
 // Initialize and start
