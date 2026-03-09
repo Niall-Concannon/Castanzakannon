@@ -72,6 +72,7 @@ let projectiles = [];
 let enemies = [];
 let score, lastScore = 0;
 let pickups = [];
+let navGrid = [];
 
 // Player object
 let player = {
@@ -188,6 +189,76 @@ function generateMap() {
             }
         }
     }
+
+    buildNavGrid(); // Rebuild nav grid whenever the map changes
+}
+
+// Build a flat boolean grid for BFS pathfinding (0 = open, 1 = wall)
+function buildNavGrid() {
+    navGrid = new Uint8Array(MAP_W * MAP_H);
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            navGrid[y * MAP_W + x] = mapTiles[y][x] === 1 ? 1 : 0;
+        }
+    }
+}
+
+// BFS from world pos (fromX,fromY) to (toX,toY). Returns array of world-space waypoints (tile centres).
+function findPath(fromX, fromY, toX, toY) {
+    const sx = Math.floor(fromX / TILE);
+    const sy = Math.floor(fromY / TILE);
+    const gx = Math.floor(toX / TILE);
+    const gy = Math.floor(toY / TILE);
+
+    if (sx === gx && sy === gy) return [];
+
+    // prev stores the index of each tile's parent, -1 for start, -2 for unvisited
+    const prev = new Int32Array(MAP_W * MAP_H).fill(-2);
+    const startIdx = sy * MAP_W + sx;
+    const goalIdx  = gy * MAP_W + gx;
+    prev[startIdx] = -1;
+
+    const queue = [startIdx];
+    let qi = 0;
+    let found = false;
+
+    while (qi < queue.length) {
+        const cur = queue[qi++];
+        const cy = Math.floor(cur / MAP_W);
+        const cx = cur % MAP_W;
+
+        // 4-directional neighbours
+        const neighbours = [
+            cx > 0         ? cur - 1     : -1,
+            cx < MAP_W - 1 ? cur + 1     : -1,
+            cy > 0         ? cur - MAP_W : -1,
+            cy < MAP_H - 1 ? cur + MAP_W : -1
+        ];
+
+        for (const ni of neighbours) {
+            if (ni === -1) continue;
+            if (navGrid[ni] !== 0) continue;
+            if (prev[ni] !== -2) continue;
+
+            prev[ni] = cur;
+            if (ni === goalIdx) { found = true; break; }
+            queue.push(ni);
+        }
+        if (found) break;
+    }
+
+    if (!found) return [];
+
+    // Reconstruct as world-space tile-centre coords, excluding start tile
+    const path = [];
+    let idx = goalIdx;
+    while (prev[idx] !== -1) {
+        const ty = Math.floor(idx / MAP_W);
+        const tx = idx % MAP_W;
+        path.unshift({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 });
+        idx = prev[idx];
+    }
+    return path;
 }
 
 // Check wall collision
@@ -272,8 +343,8 @@ function spawnEnemy(type) {
         hitFlash: 0,
         alive: true,
         type: type,
-        wanderAngle: 0,
-        wanderTimer: 0
+        path: [],
+        pathTimer: Math.floor(Math.random() * 60) // stagger so all enemies don't BFS on the same frame
     });
 }
 
@@ -372,38 +443,88 @@ function updatePlayer() {
     playerShoot();
 }
 
+// Cast a ray in world space - returns true if the straight line between two points is wall-free
+function hasLineOfSight(x1, y1, x2, y2, size) {
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    if (dist === 0) return true;
+    const steps = Math.ceil(dist / (TILE * 0.4));
+    for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const cx = x1 + (x2 - x1) * t;
+        const cy = y1 + (y2 - y1) * t;
+        if (wallCollision(cx, cy, size)) return false;
+    }
+    return true;
+}
+
 // Update enemies
 function updateEnemies() {
     for (let e of enemies) {
-        if (!e.alive) continue; // skip dead enemies
+        if (!e.alive) continue;
 
-        let moveX, moveY;
-        
-        if (e.wanderTimer > 0) {
-            // Wander in random direction until obstruction clears
-            moveX = Math.cos(e.wanderAngle) * e.speed;
-            moveY = Math.sin(e.wanderAngle) * e.speed;
-            e.wanderTimer--;
+        // --- PATH REFRESH ---
+        if (e.pathTimer > 0) {
+            e.pathTimer--;
         } else {
-            // Normal: move toward player
-            const angle = Math.atan2(player.y - e.y, player.x - e.x);
-            moveX = Math.cos(angle) * e.speed;
-            moveY = Math.sin(angle) * e.speed;
+            e.path = findPath(e.x, e.y, player.x, player.y);
+            e.pathTimer = 60;
         }
 
-        const movedX = !wallCollision(e.x + moveX, e.y, e.size);
-        const movedY = !wallCollision(e.x, e.y + moveY, e.size);
-
-        if (movedX) e.x += moveX;
-        if (movedY) e.y += moveY;
-
-        // If fully blocked, pick a new random wander direction
-        if (!movedX && !movedY) {
-            e.wanderAngle = Math.random() * Math.PI * 2;
-            e.wanderTimer = 30; // Wander in that direction for 30 frames (0.5 seconds)
+        // --- TARGET SELECTION ---
+        // If we have direct line of sight to the player, ditch the grid and go straight
+        let targetX, targetY;
+        if (hasLineOfSight(e.x, e.y, player.x, player.y, e.size)) {
+            targetX = player.x;
+            targetY = player.y;
+            e.path = []; // clear stale path so we don't snap back to grid next frame
+        } else if (e.path.length > 0) {
+            // Advance past waypoints already reached
+            while (e.path.length > 1 && Math.hypot(e.path[0].x - e.x, e.path[0].y - e.y) < TILE * 0.55) {
+                e.path.shift();
+            }
+            // Look-ahead: skip to the furthest waypoint we can see directly
+            for (let wi = e.path.length - 1; wi > 0; wi--) {
+                if (hasLineOfSight(e.x, e.y, e.path[wi].x, e.path[wi].y, e.size)) {
+                    e.path.splice(0, wi); // drop all waypoints before the visible one
+                    break;
+                }
+            }
+            targetX = e.path[0].x;
+            targetY = e.path[0].y;
+        } else {
+            targetX = player.x;
+            targetY = player.y;
         }
 
-        if (e.hitFlash > 0) e.hitFlash--; // reduce hit flash timer if hit recently
+        // --- MOVEMENT ---
+        const angle = Math.atan2(targetY - e.y, targetX - e.x);
+        const mx = Math.cos(angle) * e.speed;
+        const my = Math.sin(angle) * e.speed;
+
+        if (!wallCollision(e.x + mx, e.y, e.size)) e.x += mx;
+        if (!wallCollision(e.x, e.y + my, e.size)) e.y += my;
+
+        // --- SEPARATION: push apart enemies that overlap ---
+        for (let other of enemies) {
+            if (other === e || !other.alive) continue;
+            const dx = e.x - other.x;
+            const dy = e.y - other.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = e.size + other.size;
+            if (dist < minDist && dist > 0) {
+                const overlap = (minDist - dist) * 0.5;
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const pushX = nx * overlap;
+                const pushY = ny * overlap;
+                if (!wallCollision(e.x + pushX, e.y, e.size)) e.x += pushX;
+                if (!wallCollision(e.x, e.y + pushY, e.size)) e.y += pushY;
+                if (!wallCollision(other.x - pushX, other.y, other.size)) other.x -= pushX;
+                if (!wallCollision(other.x, other.y - pushY, other.size)) other.y -= pushY;
+            }
+        }
+
+        if (e.hitFlash > 0) e.hitFlash--;
     }
 }
 
