@@ -5,21 +5,24 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // Player animation sprites
-// Frames: idle, idle2 (breath), walk1, walk2, shoot, dash
-const playerSprites = {
-    idle:  new Image(),
-    idle2: new Image(),
-    walk1: new Image(),
-    walk2: new Image(),
-    shoot: new Image(),
-    dash:  new Image(),
-};
-playerSprites.idle.src  = 'assets/sprites/player_idle.png';
-playerSprites.idle2.src = 'assets/sprites/player_idle2.png';
-playerSprites.walk1.src = 'assets/sprites/player_walk1.png';
-playerSprites.walk2.src = 'assets/sprites/player_walk2.png';
-playerSprites.shoot.src = 'assets/sprites/player_shoot.png';
-playerSprites.dash.src  = 'assets/sprites/player_dash.png';
+// Directional aim suffixes: _r (right), _diag_up, _u (up), _diag_dn (down)
+// Base frames: idle, idle2, walk1, walk2, shoot + dash directionals
+const playerSprites = {};
+const ANIM_BASES  = ['idle', 'idle2', 'walk1', 'walk2', 'shoot'];
+const AIM_DIRS    = ['r', 'diag_up', 'u', 'diag_dn'];
+const DASH_FRAMES = ['dash_h', 'dash_u', 'dash_d', 'dash_ur', 'dash_dr'];
+
+for (const base of ANIM_BASES) {
+    for (const dir of AIM_DIRS) {
+        const key = `${base}_${dir}`;
+        playerSprites[key] = new Image();
+        playerSprites[key].src = `assets/sprites/player_${base}_${dir}.png`;
+    }
+}
+for (const d of DASH_FRAMES) {
+    playerSprites[d] = new Image();
+    playerSprites[d].src = `assets/sprites/player_${d}.png`;
+}
 
 // Player animation state
 let playerAnim = {
@@ -140,7 +143,8 @@ let player = {
     invulnTimer: 0,
     xp: 0,
     xpToNextLevel: 100,
-    level: 1
+    level: 1,
+    dashTrail: []  // [{x, y, age}] glow particles
 };
 
 // Input handling
@@ -431,6 +435,11 @@ function updatePlayer() {
     // DASHING
     if (player.dashing) {
         player.dashTime--; // Reduce dash time
+
+        // Spawn glow trail particle every other frame
+        if (player.dashTime % 2 === 0) {
+            player.dashTrail.push({ x: player.x, y: player.y, age: 0 });
+        }
 
         if (player.dashTime <= 0) {
             player.dashing = false; // Stop dashing when time runs out
@@ -730,11 +739,33 @@ function updatePlayerAnim() {
                     keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];
     const shooting = mouseDown && player.shootCooldown > 6;
 
+    // ── Aim direction from mouse angle ────────────────────────────────────
+    // weaponAngle: right=0, down=+π/2, up=-π/2, left=±π
+    const wa = player.weaponAngle;
+    const facingRight = Math.cos(wa) >= 0;
+    player.facing = facingRight ? 1 : -1;
+    // Normalize to right-facing equivalent so diag_up/dn are consistent after flip
+    const normAngle = facingRight ? wa : (wa > 0 ? Math.PI - wa : -Math.PI - wa);
+    const absV = Math.abs(normAngle);
+    let aimDir;
+    if      (absV < Math.PI / 8) aimDir = 'r';
+    else if (absV < Math.PI * 3/8) aimDir = normAngle < 0 ? 'diag_up' : 'diag_dn';
+    else                           aimDir = normAngle < 0 ? 'u'        : 'diag_dn';
+
     if (player.dashing) {
-        playerAnim.frame = 'dash';
+        const dx = player.dashDirX, dy = player.dashDirY;
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+        const diag = adx > 0.3 && ady > 0.3;
+        if (diag) {
+            playerAnim.frame = dy < 0 ? 'dash_ur' : 'dash_dr';
+        } else if (ady > adx) {
+            playerAnim.frame = dy < 0 ? 'dash_u' : 'dash_d';
+        } else {
+            playerAnim.frame = 'dash_h';
+        }
         playerAnim.timer = 0;
     } else if (shooting) {
-        playerAnim.frame = 'shoot';
+        playerAnim.frame = `shoot_${aimDir}`;
         playerAnim.timer = 8;
     } else if (moving) {
         playerAnim.timer--;
@@ -742,29 +773,106 @@ function updatePlayerAnim() {
             playerAnim.walkToggle = !playerAnim.walkToggle;
             playerAnim.timer = 10;
         }
-        playerAnim.frame = playerAnim.walkToggle ? 'walk1' : 'walk2';
+        playerAnim.frame = `${playerAnim.walkToggle ? 'walk1' : 'walk2'}_${aimDir}`;
     } else {
-        // idle breath: swap idle/idle2 every 35 frames
         playerAnim.idleTimer = (playerAnim.idleTimer + 1) % 70;
-        playerAnim.frame = playerAnim.idleTimer < 35 ? 'idle' : 'idle2';
+        playerAnim.frame = `${playerAnim.idleTimer < 35 ? 'idle' : 'idle2'}_${aimDir}`;
     }
 }
 
 // Draw player
 function drawPlayer() {
     const s = toScreen(player.x, player.y);
-    const size = player.size * 2;
-    const sprite = playerSprites[playerAnim.frame] || playerSprites.idle;
+    const size = player.size * 2;  // 40px base display size
+    const GHOST_SPACING = 13;
+    const N_GHOSTS = 4;
+    const TRAIL_PX = N_GHOSTS * GHOST_SPACING; // 52px ghost tail length
+
+    // ── Draw glow trail particles (behind everything) ─────────────────────
+    player.dashTrail = player.dashTrail.filter(p => p.age < 8);
+    for (const p of player.dashTrail) {
+        p.age++;
+        const ps = toScreen(p.x, p.y);
+        const alpha = 1 - p.age / 8;
+        const radius = size * 0.35 * (1 - p.age / 10);
+        const colors = ['#00eeff', '#7060ff', '#ff40ff'];
+        const col = colors[Math.floor(p.age / 4) % colors.length];
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.55;
+        ctx.beginPath();
+        ctx.arc(ps.x, ps.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // ── Draw player sprite ─────────────────────────────────────────────────
+    const frame = playerAnim.frame;
+    const sprite = playerSprites[frame] || playerSprites['idle_r'];
+    const isDash = player.dashing || frame.startsWith('dash');
 
     ctx.save();
-
-    // Invulnerability flicker when hit
     if (player.invulnTimer > 0 && Math.floor(player.invulnTimer / 4) % 2 === 0) {
         ctx.globalAlpha = 0.35;
     }
 
-    // Flip sprite horizontally when facing left
-    if (player.facing === -1) {
+    if (isDash) {
+        const dx = player.dashDirX, dy = player.dashDirY;
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+        const diag = adx > 0.3 && ady > 0.3;
+        const horiz = adx >= ady && !diag;
+        const vert  = ady > adx && !diag;
+        const flipX = player.facing === -1;
+        const flipDiagX = dx < 0;
+
+        const sc = size / 48; // scale factor: display pixels per source pixel
+        if (horiz) {
+            // dash_h.png: 100x48 — player at source x=52, player center x=76
+            const sw = 100 * sc;
+            const anchorX = 76 * sc; // center of player within sprite
+            if (flipX) {
+                ctx.translate(s.x, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(sprite, -anchorX, s.y - player.size, sw, size);
+            } else {
+                ctx.drawImage(sprite, s.x - anchorX, s.y - player.size, sw, size);
+            }
+        } else if (vert) {
+            // dash_u.png: 48x100 — player at source y=0, center y=24
+            // dash_d.png: 48x100 — player at source y=52, center y=76
+            const sh = 100 * sc;
+            if (dy < 0) {
+                // moving up: player at top, trail below — anchor at player center y=24
+                ctx.drawImage(sprite, s.x - player.size, s.y - 24 * sc, size, sh);
+            } else {
+                // moving down: player at bottom, trail above — anchor at player center y=76
+                ctx.drawImage(sprite, s.x - player.size, s.y - 76 * sc, size, sh);
+            }
+        } else {
+            // dash_ur/dash_dr: 84x84
+            // dash_ur: player at source (36,0), center (60,24)
+            // dash_dr: player at source (36,36), center (60,60)
+            const sd = 84 * sc;
+            const anchorX = 60 * sc;
+            if (flipDiagX) {
+                ctx.translate(s.x, 0);
+                ctx.scale(-1, 1);
+                if (dy < 0) {
+                    ctx.drawImage(sprite, -anchorX, s.y - 24 * sc, sd, sd);
+                } else {
+                    ctx.drawImage(sprite, -anchorX, s.y - 60 * sc, sd, sd);
+                }
+            } else {
+                if (dy < 0) {
+                    ctx.drawImage(sprite, s.x - anchorX, s.y - 24 * sc, sd, sd);
+                } else {
+                    ctx.drawImage(sprite, s.x - anchorX, s.y - 60 * sc, sd, sd);
+                }
+            }
+        }
+    } else if (player.facing === -1) {
         ctx.translate(s.x, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(sprite, -player.size, s.y - player.size, size, size);
