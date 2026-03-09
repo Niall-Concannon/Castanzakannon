@@ -14,14 +14,36 @@ wallSprite.src = 'assets/sprites/wall_placeholder.png';
 const floorSprite = new Image();
 floorSprite.src = 'assets/sprites/floor_placeholder.png';
 
-const enemySprites = {
-    basic: new Image(),
-    fast:  new Image(),
-    tank:  new Image()
+// Enemy animation frames — each array is the sequence of sprites played in order, looping.
+// Add or remove frame paths here; the rest of the code handles cycling automatically.
+// animSpeed (in ENEMY_TYPES below) controls how many game-frames each sprite frame is held for.
+const ENEMY_SPRITE_PATHS = {
+    basic: [
+        'assets/sprites/enemy_basic_frame1.png',
+        'assets/sprites/enemy_basic_frame2.png',
+        'assets/sprites/enemy_basic_frame3.png',
+    ],
+    fast: [
+        'assets/sprites/enemy_fast_frame1.png',
+        'assets/sprites/enemy_fast_frame2.png',
+        'assets/sprites/enemy_fast_frame3.png',
+    ],
+    tank: [
+        'assets/sprites/enemy_tank_frame1.png',
+        'assets/sprites/enemy_tank_frame2.png',
+        'assets/sprites/enemy_tank_frame3.png',
+    ]
 };
-enemySprites.basic.src = 'assets/sprites/enemy_basic_placeholder.png';
-enemySprites.fast.src  = 'assets/sprites/enemy_fast_placeholder.png';
-enemySprites.tank.src  = 'assets/sprites/enemy_tank_placeholder.png';
+
+// Pre-load every frame for every type
+const enemySprites = {};
+for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
+    enemySprites[type] = paths.map(src => {
+        const img = new Image();
+        img.src = src;
+        return img;
+    });
+}
 
 const projectileSprite = new Image();
 projectileSprite.src = 'assets/sprites/projectile_placeholder.png';
@@ -45,19 +67,22 @@ const ENEMY_TYPES = {
         hp: 3,
         size: 14,
         speed: 2,
-        color: "green"
+        color: "green",
+        animSpeed: 10   // game-frames each animation frame is held for
     },
     fast: {
         hp: 2,
         size: 12,
         speed: 3.5,
-        color: "yellow"
+        color: "yellow",
+        animSpeed: 6    // faster enemy, snappier animation
     },
     tank: {
         hp: 8,
         size: 20,
         speed: 1.2,
-        color: "red"
+        color: "red",
+        animSpeed: 14   // slow lumbering animation
     }
 };
 
@@ -343,6 +368,8 @@ function spawnEnemy(type) {
         hitFlash: 0,
         alive: true,
         type: type,
+        animFrame: 0,                                                          // current animation frame index
+        animTimer: Math.floor(Math.random() * ENEMY_TYPES[type].animSpeed),   // stagger so enemies don't all animate in sync
         path: [],
         pathTimer: Math.floor(Math.random() * 60) // stagger so all enemies don't BFS on the same frame
     });
@@ -525,6 +552,13 @@ function updateEnemies() {
         }
 
         if (e.hitFlash > 0) e.hitFlash--;
+
+        // Advance animation frame
+        e.animTimer--;
+        if (e.animTimer <= 0) {
+            e.animFrame = (e.animFrame + 1) % enemySprites[e.type].length;
+            e.animTimer = ENEMY_TYPES[e.type].animSpeed;
+        }
     }
 }
 
@@ -698,7 +732,7 @@ function drawEnemies() {
 
         const s = toScreen(e.x, e.y);
         const size = e.size * 2;
-        const sprite = enemySprites[e.type];
+        const sprite = enemySprites[e.type][e.animFrame];
         const facingLeft = player.x < e.x;
 
         ctx.save();
