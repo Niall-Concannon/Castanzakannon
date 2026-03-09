@@ -559,6 +559,8 @@ function updateProjectiles() {
                     pickups.push({
                         x: e.x,
                         y: e.y,
+                        vx: 0,
+                        vy: 0,
                         size: 10,
                         type: "xp" // Might change later for different pickup types
                     });
@@ -575,13 +577,43 @@ function updateProjectiles() {
     }
 }
 
+// XP orb attraction constants
+const XP_ATTRACT_RADIUS = 150; // pixels - distance at which orbs start moving toward player
+const XP_ATTRACT_SPEED  = 3;   // max pixels per frame when fully attracted
+
 // Update pickups
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
 
+        // Ensure velocity fields exist (safety for any pickups spawned without them)
+        if (p.vx === undefined) { p.vx = 0; p.vy = 0; }
+
+        // --- ATTRACTION ---
+        const dist = Math.hypot(player.x - p.x, player.y - p.y);
+        if (dist < XP_ATTRACT_RADIUS && dist > 0) {
+            // Accelerate toward player; speed scales with proximity
+            const pull = XP_ATTRACT_SPEED * (1 - dist / XP_ATTRACT_RADIUS) + 0.5;
+            p.vx += (player.x - p.x) / dist * pull * 0.15;
+            p.vy += (player.y - p.y) / dist * pull * 0.15;
+
+            // Clamp velocity so orbs don't overshoot wildly
+            const speed = Math.hypot(p.vx, p.vy);
+            if (speed > XP_ATTRACT_SPEED) {
+                p.vx = (p.vx / speed) * XP_ATTRACT_SPEED;
+                p.vy = (p.vy / speed) * XP_ATTRACT_SPEED;
+            }
+        } else {
+            // Light friction when out of range so any residual velocity decays
+            p.vx *= 0.85;
+            p.vy *= 0.85;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
         // Check collision with player
-        if (Math.hypot(player.x - p.x, player.y - p.y) < player.size + p.size) {
+        if (dist < player.size + p.size) {
 
             // type of pickup - currently only xp but can add more types later
             if (p.type === "xp") {
@@ -699,7 +731,44 @@ function drawProjectiles() {
 function drawPickups() {
     for (let p of pickups) {
         const s = toScreen(p.x, p.y);
-        ctx.drawImage(pickupXpSprite, s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
+
+        if (p.type === "xp") {
+            // Pulse the glow using a sine wave tied to the global frame counter
+            const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.04);
+
+            ctx.save();
+
+            // --- Outer soft halo (large, low-alpha radial gradient) ---
+            const haloRadius = p.size * 3.5 * pulse;
+            const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, haloRadius);
+            halo.addColorStop(0,   'rgba(57, 255, 20, 0.35)');
+            halo.addColorStop(0.5, 'rgba(57, 255, 20, 0.12)');
+            halo.addColorStop(1,   'rgba(57, 255, 20, 0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, haloRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // --- Canvas shadow glow on the orb itself ---
+            ctx.shadowColor  = '#39ff14';          // neon green
+            ctx.shadowBlur   = 18 * pulse;
+
+            // Draw the sprite (or a solid circle fallback if sprite hasn't loaded)
+            if (pickupXpSprite.complete && pickupXpSprite.naturalWidth > 0) {
+                ctx.drawImage(pickupXpSprite, s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
+            } else {
+                // Fallback: bright neon green circle so the orb is always visible
+                ctx.fillStyle = '#39ff14';
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else {
+            // Non-XP pickups: draw normally
+            ctx.drawImage(pickupXpSprite, s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
+        }
     }
 }
 
