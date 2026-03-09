@@ -4,9 +4,30 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Sprites
-const playerSprite = new Image();
-playerSprite.src = 'assets/sprites/player_placeholder.png';
+// Player animation sprites
+// Frames: idle, idle2 (breath), walk1, walk2, shoot, dash
+const playerSprites = {
+    idle:  new Image(),
+    idle2: new Image(),
+    walk1: new Image(),
+    walk2: new Image(),
+    shoot: new Image(),
+    dash:  new Image(),
+};
+playerSprites.idle.src  = 'assets/sprites/player_idle.png';
+playerSprites.idle2.src = 'assets/sprites/player_idle2.png';
+playerSprites.walk1.src = 'assets/sprites/player_walk1.png';
+playerSprites.walk2.src = 'assets/sprites/player_walk2.png';
+playerSprites.shoot.src = 'assets/sprites/player_shoot.png';
+playerSprites.dash.src  = 'assets/sprites/player_dash.png';
+
+// Player animation state
+let playerAnim = {
+    frame: 'idle',      // current sprite key
+    timer: 0,           // frames until next step cycle
+    walkToggle: false,  // alternates walk1/walk2
+    idleTimer: 0,       // counter for idle breath cycle
+};
 
 const wallSprite = new Image();
 wallSprite.src = 'assets/sprites/wall_placeholder.png';
@@ -468,6 +489,7 @@ function updatePlayer() {
     player.weaponAngle = Math.atan2(mouseY - canvas.height / 2, mouseX - canvas.width / 2);
 
     playerShoot();
+    updatePlayerAnim();
 }
 
 // Cast a ray in world space - returns true if the straight line between two points is wall-free
@@ -702,24 +724,52 @@ function drawMap() {
     }
 }
 
+// Update player animation state — called once per frame inside updatePlayer
+function updatePlayerAnim() {
+    const moving  = keys['w'] || keys['s'] || keys['a'] || keys['d'] ||
+                    keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];
+    const shooting = mouseDown && player.shootCooldown > 6;
+
+    if (player.dashing) {
+        playerAnim.frame = 'dash';
+        playerAnim.timer = 0;
+    } else if (shooting) {
+        playerAnim.frame = 'shoot';
+        playerAnim.timer = 8;
+    } else if (moving) {
+        playerAnim.timer--;
+        if (playerAnim.timer <= 0) {
+            playerAnim.walkToggle = !playerAnim.walkToggle;
+            playerAnim.timer = 10;
+        }
+        playerAnim.frame = playerAnim.walkToggle ? 'walk1' : 'walk2';
+    } else {
+        // idle breath: swap idle/idle2 every 35 frames
+        playerAnim.idleTimer = (playerAnim.idleTimer + 1) % 70;
+        playerAnim.frame = playerAnim.idleTimer < 35 ? 'idle' : 'idle2';
+    }
+}
+
 // Draw player
 function drawPlayer() {
     const s = toScreen(player.x, player.y);
     const size = player.size * 2;
+    const sprite = playerSprites[playerAnim.frame] || playerSprites.idle;
 
     ctx.save();
 
-    // Flash white when dashing //placeholder effect
-    if (player.dashing) {
-        ctx.filter = 'brightness(3)';
+    // Invulnerability flicker when hit
+    if (player.invulnTimer > 0 && Math.floor(player.invulnTimer / 4) % 2 === 0) {
+        ctx.globalAlpha = 0.35;
     }
 
     // Flip sprite horizontally when facing left
     if (player.facing === -1) {
+        ctx.translate(s.x, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(playerSprite, -(s.x + player.size), s.y - player.size, size, size);
+        ctx.drawImage(sprite, -player.size, s.y - player.size, size, size);
     } else {
-        ctx.drawImage(playerSprite, s.x - player.size, s.y - player.size, size, size);
+        ctx.drawImage(sprite, s.x - player.size, s.y - player.size, size, size);
     }
 
     ctx.restore();
