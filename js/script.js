@@ -121,6 +121,7 @@ let camera = { x: 0, y: 0 };
 let mapTiles = [];
 let frameCount = 0;
 let gameState = "menu";
+let menuPage = "main"; // "main" or "cursors"
 let selectedCursor = 0;
 let mouseX = 0, mouseY = 0, mouseDown = false;
 let projectiles = [];
@@ -158,10 +159,19 @@ let player = {
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true; // true when key is pressed
 
+    if (e.key === 'Escape') {
+        if (gameState === "menu" && menuPage === "cursors") {
+            menuPage = "main";
+        }
+    }
+
     if (e.key === ' ' || e.key === 'Enter') {
-        if (gameState === "menu" || gameState === "gameOver") {
+        if (gameState === "menu" && menuPage === "main") {
             startGame();
-        } else {
+        } else if (gameState === "gameOver") {
+            gameState = "menu";
+            menuPage = "main";
+        } else if (gameState === "playing") {
             playerDash();
         }
     }
@@ -180,19 +190,31 @@ window.addEventListener("mousemove", (e) => {
 window.addEventListener("mousedown", () => {
     mouseDown = true;
     if (gameState === "menu") {
-        const boxes = getCursorBoxes();
-        let clickedBox = false;
-        for (let i = 0; i < boxes.length; i++) {
-            const b = boxes[i];
-            if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
-                selectedCursor = i;
-                clickedBox = true;
-                break;
+        if (menuPage === "main") {
+            const btn = getSelectCursorButton();
+            if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+                menuPage = "cursors";
+            } else {
+                startGame();
+            }
+        } else if (menuPage === "cursors") {
+            const backBtn = getBackButton();
+            if (mouseX >= backBtn.x && mouseX <= backBtn.x + backBtn.w && mouseY >= backBtn.y && mouseY <= backBtn.y + backBtn.h) {
+                menuPage = "main";
+            } else {
+                const boxes = getCursorBoxes();
+                for (let i = 0; i < boxes.length; i++) {
+                    const b = boxes[i];
+                    if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
+                        selectedCursor = i;
+                        break;
+                    }
+                }
             }
         }
-        if (!clickedBox) startGame();
     } else if (gameState === "gameOver") {
-        startGame();
+        gameState = "menu";
+        menuPage = "main";
     }
 });
 
@@ -1098,6 +1120,16 @@ function drawUI() {
 }
 
 // Draw menu - TEMPORARY DESIGN
+function getSelectCursorButton() {
+    const w = 160, h = 36;
+    return { x: canvas.width / 2 - w / 2, y: canvas.height / 2 + 30, w, h };
+}
+
+function getBackButton() {
+    const w = 120, h = 36;
+    return { x: canvas.width / 2 - w / 2, y: canvas.height / 2 + 150, w, h };
+}
+
 function getCursorBoxes() {
     const boxSize = 52;
     const gap = 12;
@@ -1116,43 +1148,72 @@ function drawMenu() {
     const canvasW = canvas.width;
     const canvasH = canvas.height;
 
-    // Background
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvasW, canvasH);
 
-    // Title
-    ctx.fillStyle = "white";
-    ctx.font = "bold 64px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 80);
+    if (menuPage === "main") {
+        // Title
+        ctx.fillStyle = "white";
+        ctx.font = "bold 64px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 80);
 
-    // Instructions
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "silver";
-    ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2 - 20);
+        // Instructions
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "silver";
+        ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2 - 20);
 
-    // Cursor selection
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "silver";
-    ctx.fillText("Select Cursor", canvasW / 2, canvasH / 2 + 34);
+        // Select Cursor button
+        const btn = getSelectCursorButton();
+        ctx.fillStyle = "#222";
+        ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+        ctx.strokeStyle = "grey";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
+        ctx.fillStyle = "silver";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Select Cursor  >", btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
 
-    const boxes = getCursorBoxes();
-    for (let i = 0; i < cursorSprites.length; i++) {
-        const b = boxes[i];
-        const isSelected = i === selectedCursor;
+    } else if (menuPage === "cursors") {
+        // Title
+        ctx.fillStyle = "white";
+        ctx.font = "bold 40px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Select Cursor", canvasW / 2, canvasH / 2 - 80);
 
-        ctx.fillStyle = isSelected ? "lightblue" : "black";
-        ctx.fillRect(b.x, b.y, b.w, b.h);
+        // Cursor boxes
+        const boxes = getCursorBoxes();
+        for (let i = 0; i < cursorSprites.length; i++) {
+            const b = boxes[i];
+            const isSelected = i === selectedCursor;
 
-        ctx.drawImage(cursorSprites[i].img, b.x + 4, b.y + 4, b.w - 8, b.h - 8);
+            ctx.fillStyle = isSelected ? "lightblue" : "black";
+            ctx.fillRect(b.x, b.y, b.w, b.h);
 
-        ctx.strokeStyle = isSelected ? "red" : "grey";
-        ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.strokeRect(b.x, b.y, b.w, b.h);
+            ctx.drawImage(cursorSprites[i].img, b.x + 4, b.y + 4, b.w - 8, b.h - 8);
 
-        ctx.fillStyle = isSelected ? "white" : "silver";
-        ctx.font = "11px Arial";
-        ctx.fillText(cursorSprites[i].name, b.x + b.w / 2, b.y + b.h + 14);
+            ctx.strokeStyle = isSelected ? "red" : "grey";
+            ctx.lineWidth = isSelected ? 2 : 1;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+            ctx.fillStyle = isSelected ? "white" : "silver";
+            ctx.font = "11px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(cursorSprites[i].name, b.x + b.w / 2, b.y + b.h + 14);
+        }
+
+        // Back button
+        const backBtn = getBackButton();
+        ctx.fillStyle = "#222";
+        ctx.fillRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h);
+        ctx.strokeStyle = "grey";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h);
+        ctx.fillStyle = "silver";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("<  Back", backBtn.x + backBtn.w / 2, backBtn.y + backBtn.h / 2 + 6);
     }
 
     drawCursor();
@@ -1178,10 +1239,10 @@ function drawGameOver() {
     ctx.fillStyle = "white";
     ctx.fillText("Score: " + lastScore, canvasW / 2, canvasH / 2 - 10);
 
-    // Restart instructions
+    // Back to menu instructions
     ctx.font = "20px Arial";
     ctx.fillStyle = "silver";
-    ctx.fillText("Press ENTER or Click to Restart", canvasW / 2, canvasH / 2 + 40);
+    ctx.fillText("Press ENTER or Click to return to Menu", canvasW / 2, canvasH / 2 + 40);
 }
 
 // Main game loop
