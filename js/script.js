@@ -75,9 +75,14 @@ projectileSprite.src = 'assets/sprites/projectile_placeholder.png';
 const pickupXpSprite = new Image();
 pickupXpSprite.src = 'assets/sprites/pickup_xp_placeholder.png';
 
-// TODO: replace with actual cursor image path
-const cursorSprite = new Image();
-// cursorSprite.src = 'assets/sprites/cursor.png';    // Uncomment and set path when cursor sprite is ready
+const cursorSprites = [
+    { name: 'Crosshair',  img: Object.assign(new Image(), { src: 'assets/sprites/cursor_crosshair.png'  }) },
+    { name: 'Reticle',    img: Object.assign(new Image(), { src: 'assets/sprites/cursor_reticle.png'    }) },
+    { name: 'Scope',      img: Object.assign(new Image(), { src: 'assets/sprites/cursor_scope.png'      }) },
+    { name: 'Skull',      img: Object.assign(new Image(), { src: 'assets/sprites/cursor_skull.png'      }) },
+    { name: 'Tactical',   img: Object.assign(new Image(), { src: 'assets/sprites/cursor_tactical.png'   }) },
+    { name: 'Neon Arrow', img: Object.assign(new Image(), { src: 'assets/sprites/cursor_neon_arrow.png' }) },
+];
 
 // Constants - pixels
 const TILE = 48;
@@ -116,6 +121,7 @@ let camera = { x: 0, y: 0 };
 let mapTiles = [];
 let frameCount = 0;
 let gameState = "menu";
+let selectedCursor = 0;
 let mouseX = 0, mouseY = 0, mouseDown = false;
 let projectiles = [];
 let enemies = [];
@@ -173,7 +179,21 @@ window.addEventListener("mousemove", (e) => {
 
 window.addEventListener("mousedown", () => {
     mouseDown = true;
-    if (gameState === "menu" || gameState === "gameOver") startGame(); // if mouse clicks then start the game (TEMPORARY)
+    if (gameState === "menu") {
+        const boxes = getCursorBoxes();
+        let clickedBox = false;
+        for (let i = 0; i < boxes.length; i++) {
+            const b = boxes[i];
+            if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
+                selectedCursor = i;
+                clickedBox = true;
+                break;
+            }
+        }
+        if (!clickedBox) startGame();
+    } else if (gameState === "gameOver") {
+        startGame();
+    }
 });
 
 window.addEventListener("mouseup", () => {
@@ -1078,6 +1098,20 @@ function drawUI() {
 }
 
 // Draw menu - TEMPORARY DESIGN
+function getCursorBoxes() {
+    const boxSize = 52;
+    const gap = 12;
+    const totalW = cursorSprites.length * (boxSize + gap) - gap;
+    const startX = canvas.width / 2 - totalW / 2;
+    const startY = canvas.height / 2 + 50;
+    return cursorSprites.map((_, i) => ({
+        x: startX + i * (boxSize + gap),
+        y: startY,
+        w: boxSize,
+        h: boxSize
+    }));
+}
+
 function drawMenu() {
     const canvasW = canvas.width;
     const canvasH = canvas.height;
@@ -1090,12 +1124,38 @@ function drawMenu() {
     ctx.fillStyle = "white";
     ctx.font = "bold 64px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 60);
+    ctx.fillText("Castanzakannon", canvasW / 2, canvasH / 2 - 80);
 
     // Instructions
     ctx.font = "20px Arial";
     ctx.fillStyle = "silver";
-    ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2);
+    ctx.fillText("Press ENTER or Click to Start", canvasW / 2, canvasH / 2 - 20);
+
+    // Cursor selection
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "silver";
+    ctx.fillText("Select Cursor", canvasW / 2, canvasH / 2 + 34);
+
+    const boxes = getCursorBoxes();
+    for (let i = 0; i < cursorSprites.length; i++) {
+        const b = boxes[i];
+        const isSelected = i === selectedCursor;
+
+        ctx.fillStyle = isSelected ? "lightblue" : "black";
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+
+        ctx.drawImage(cursorSprites[i].img, b.x + 4, b.y + 4, b.w - 8, b.h - 8);
+
+        ctx.strokeStyle = isSelected ? "red" : "grey";
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+        ctx.fillStyle = isSelected ? "white" : "silver";
+        ctx.font = "11px Arial";
+        ctx.fillText(cursorSprites[i].name, b.x + b.w / 2, b.y + b.h + 14);
+    }
+
+    drawCursor();
 }
 
 // Draw game over screen
@@ -1158,15 +1218,15 @@ function gameLoop() {
 
 // Initialize and start
 function drawCursor() {
-    if (!cursorSprite.complete || !cursorSprite.src) return;
+    const sprite = cursorSprites[selectedCursor].img;
+    if (!sprite.complete || !sprite.naturalWidth) return;
 
-    // TODO: adjust hotspot offset to match the cursor image's tip point
-    const hotspotX = 0; // pixels from left edge of image to the tip
-    const hotspotY = 0; // pixels from top edge of image to the tip
-    const width = 32;   // display width
-    const height = 32;  // display height
+    const hotspotX = 0;
+    const hotspotY = 0;
+    const width = 32;
+    const height = 32;
 
-    ctx.drawImage(cursorSprite, mouseX - hotspotX, mouseY - hotspotY, width, height);
+    ctx.drawImage(sprite, mouseX - hotspotX, mouseY - hotspotY, width, height);
 }
 
 // Initialize and start

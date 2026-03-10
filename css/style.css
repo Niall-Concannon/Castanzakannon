@@ -13,4 +13,5 @@ body {
 canvas {
     display: block;
     background: #333;
+    cursor: none;
 }
