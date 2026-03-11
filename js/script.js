@@ -474,10 +474,12 @@ function spawnEnemy(type) {
         x: enemyX,
         y: enemyY,
         hp: enemy.hp,
+        maxHp: enemy.hp,
         size: enemy.size,
         speed: enemy.speed,
         color: enemy.color,
         hitFlash: 0,
+        hpBarTimer: 0,
         alive: true,
         type: type,
         animFrame: 0,
@@ -643,6 +645,8 @@ function updateEnemies() {
 
         if (e.hitFlash > 0) e.hitFlash--;
 
+        if (e.hpBarTimer > 0) e.hpBarTimer--;
+
         e.animTimer--;
         if (e.animTimer <= 0) {
             e.animFrame = (e.animFrame + 1) % enemySprites[e.type].length;
@@ -668,6 +672,7 @@ function updateProjectiles() {
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.size + e.size) {
                 e.hp--;
                 e.hitFlash = 8;
+                e.hpBarTimer = 120; // show HP bar for 2 seconds after hit
                 if (e.hp <= 0) {
                     e.alive = false;
                     score++;
@@ -885,6 +890,31 @@ function drawEnemies() {
         const size = e.size * 2;
         const sprite = enemySprites[e.type][e.animFrame];
         const facingLeft = player.x < e.x;
+
+        // Draw HP bar if hit
+        if (e.hpBarTimer > 0) {
+            const barWidth = e.size * 2;
+            const barHeight = 4;
+
+            const hpFrac = e.hp / e.maxHp;
+
+            const barX = s.x - barWidth / 2;
+            const barY = s.y - e.size - 12;
+
+            // Background
+            ctx.fillStyle = "black";
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            // HP fill
+            ctx.fillStyle = hpFrac > 0.5 ? "green" : hpFrac > 0.25 ? "yellow" : "red";
+
+            ctx.fillRect(barX, barY, barWidth * hpFrac, barHeight);
+
+            // Border
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
 
         ctx.save();
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
