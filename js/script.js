@@ -644,7 +644,8 @@ const XP_ATTRACT_SPEED  = 3;
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
-        if (p.vx === undefined) { p.vx = 0; p.vy = 0; }
+        if (p.vx    === undefined) { p.vx = 0; p.vy = 0; }
+        if (p.trail === undefined) { p.trail = []; }
 
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
         if (dist < XP_ATTRACT_RADIUS && dist > 0) {
@@ -656,9 +657,20 @@ function updatePickups() {
                 p.vx = (p.vx / speed) * XP_ATTRACT_SPEED;
                 p.vy = (p.vy / speed) * XP_ATTRACT_SPEED;
             }
+
+            // Spawn a trail particle every 2 frames while attracted
+            if (p.type === 'xp' && frameCount % 2 === 0) {
+                p.trail.push({ x: p.x, y: p.y, age: 0 });
+            }
         } else {
             p.vx *= 0.85;
             p.vy *= 0.85;
+        }
+
+        // Age and cull trail particles
+        for (let t = p.trail.length - 1; t >= 0; t--) {
+            p.trail[t].age++;
+            if (p.trail[t].age > 12) p.trail.splice(t, 1);
         }
 
         p.x += p.vx;
@@ -854,6 +866,25 @@ function drawProjectiles() {
 function drawPickups() {
     for (let p of pickups) {
         const s = toScreen(p.x, p.y);
+
+        // Draw green trail particles behind the orb
+        if (p.type === 'xp' && p.trail && p.trail.length > 0) {
+            for (const t of p.trail) {
+                const ts   = toScreen(t.x, t.y);
+                const life = 1 - t.age / 12;          // 1 → 0 as particle ages
+                const r    = p.size * 0.55 * life;     // shrinks over time
+                ctx.save();
+                ctx.globalAlpha = life * 0.7;
+                ctx.shadowColor = '#39ff14';
+                ctx.shadowBlur  = 6 * life;
+                ctx.fillStyle   = `rgba(57,255,20,${life * 0.85})`;
+                ctx.beginPath();
+                ctx.arc(ts.x, ts.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
         if (p.type === "xp") {
             const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.04);
             ctx.save();
