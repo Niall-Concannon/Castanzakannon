@@ -1613,8 +1613,19 @@ function drawGameOver() {
     ctx.fillText("Press ENTER or Click to return to Menu", canvasW / 2, canvasH / 2 + 40);
 }
 
+// FPS variables
+const FPS = 60;
+const FRAME_TIME = 1000 / FPS;
+let lastFrameTime = 0;
+
 // Main game loop
-function gameLoop() {
+function gameLoop(timestamp) {
+    if (timestamp - lastFrameTime < FRAME_TIME) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    lastFrameTime = timestamp;
     frameCount++;
 
     ctx.fillStyle = '#1a1a1a';
@@ -1660,4 +1671,4 @@ function drawCursor() {
 }
 
 generateMap();
-gameLoop();
+requestAnimationFrame(gameLoop);
