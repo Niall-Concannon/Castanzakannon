@@ -567,9 +567,16 @@ function updateEnemies() {
             targetY = player.y;
         }
 
+        // Off-screen enemies move much faster so the player can't kite forever.
+        const esx = e.x - camera.x;
+        const esy = e.y - camera.y;
+        const offScreen = esx < -e.size || esx > canvas.width  + e.size ||
+                          esy < -e.size || esy > canvas.height + e.size;
+        const speedMult = offScreen ? 3.0 : 1.0;
+
         const angle = Math.atan2(targetY - e.y, targetX - e.x);
-        const mx = Math.cos(angle) * e.speed;
-        const my = Math.sin(angle) * e.speed;
+        const mx = Math.cos(angle) * e.speed * speedMult;
+        const my = Math.sin(angle) * e.speed * speedMult;
         if (!wallCollision(e.x + mx, e.y, e.size)) e.x += mx;
         if (!wallCollision(e.x, e.y + my, e.size)) e.y += my;
 
