@@ -85,6 +85,24 @@ const cursorSprites = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  XP BAR SPRITES  (bottom-centre HUD)
+// ─────────────────────────────────────────────────────────────────────────────
+const xpBarBgSprite   = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_bg.png'   });
+const xpBarFillSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_fill.png' });
+const xpBarFrameSprite= Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_frame.png'});
+const xpBarGlowSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_glow.png' });
+
+// Source dimensions must match gen_xpbar.py
+const XP_PNG_W = 620, XP_PNG_H = 24;
+const XP_GLOW_W = 700, XP_GLOW_H = 74; // BAR_W+80, BAR_H+50
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LEVEL-UP MENU SPRITES
+// ─────────────────────────────────────────────────────────────────────────────
+const lvlCardBgSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_levelup_card_bg.png' });
+const lvlSkipBgSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_levelup_skip_bg.png' });
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  VIAL UI SPRITES & GEOMETRY
 //  These must match the dimensions used in gen_vials2.py exactly.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,6 +179,10 @@ let score, lastScore = 0;
 let pickups = [];
 let navGrid = [];
 
+// Level-up menu state
+let levelUpMenuHover = -1; // which card/button the mouse is over (-1 = none, 0-2 = cards, 3 = skip)
+let xpBarFlash = 0;        // countdown for the bar flash effect on pickup
+
 // Player object
 let player = {
     x: MAP_W * TILE / 2,
@@ -201,6 +223,9 @@ window.addEventListener('keydown', e => {
         } else if (gameState === "gameOver") {
             gameState = "menu";
             menuPage = "main";
+        } else if (gameState === "levelUp") {
+            // Space/Enter skips the level-up (same as clicking Skip)
+            gameState = "playing";
         } else if (gameState === "playing") {
             playerDash();
         }
@@ -244,6 +269,25 @@ window.addEventListener("mousedown", () => {
     } else if (gameState === "gameOver") {
         gameState = "menu";
         menuPage = "main";
+    } else if (gameState === "levelUp") {
+        // Check which card / skip button was clicked
+        const zones = getLevelUpZones();
+        // Cards 0-2
+        for (let i = 0; i < 3; i++) {
+            const z = zones.cards[i];
+            if (mouseX >= z.x && mouseX <= z.x + z.w &&
+                mouseY >= z.y && mouseY <= z.y + z.h) {
+                // Placeholder: no power-up logic yet — just resume
+                gameState = "playing";
+                return;
+            }
+        }
+        // Skip button
+        const s = zones.skip;
+        if (mouseX >= s.x && mouseX <= s.x + s.w &&
+            mouseY >= s.y && mouseY <= s.y + s.h) {
+            gameState = "playing";
+        }
     }
 });
 
@@ -679,9 +723,11 @@ function updatePickups() {
         if (dist < player.size + p.size) {
             if (p.type === "xp") {
                 player.xp += 5;
+                xpBarFlash = 12; // brief flash on the bar
                 if (player.xp >= player.xpToNextLevel) {
                     player.xp -= player.xpToNextLevel;
                     player.level++;
+                    gameState = "levelUp"; // pause and open upgrade menu
                 }
             }
             pickups.splice(i, 1);
@@ -1139,16 +1185,282 @@ function drawVials() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  MAIN UI  (left panel: level / score / xp / instructions)
+//  BOTTOM-CENTRE XP BAR
 // ─────────────────────────────────────────────────────────────────────────────
+
+function drawXpBar() {
+    if (xpBarFlash > 0) xpBarFlash--;
+
+    // ── Layout ──────────────────────────────────────────────────────────────
+    const DISP_W = 560;
+    const DISP_H = Math.round(DISP_W * 28 / 620); // matches new PNG height
+    const RADIUS = Math.round(7 * DISP_W / 620);  // scaled corner radius
+    const barX   = canvas.width  / 2 - DISP_W / 2;
+    const barY   = canvas.height - DISP_H - 22;
+
+    const xpFrac  = Math.min(player.xp / player.xpToNextLevel, 1);
+    const fillW   = Math.floor(xpFrac * DISP_W);
+
+    // Animation params
+    const t       = frameCount * 0.04;
+    const flash   = xpBarFlash > 0;
+    const pulse   = flash ? 1.0 : 0.6 + 0.4 * Math.sin(t * 1.3);
+    const shimmer = (Math.sin(t * 2.1) * 0.5 + 0.5); // 0..1
+
+    // ── Helper: rounded-rect clip path ──────────────────────────────────────
+    function clipToBar(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y,     x + w, y + r,     r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x,     y + h, x,     y + h - r, r);
+        ctx.lineTo(x,     y + r);
+        ctx.arcTo(x,     y,     x + r, y,         r);
+        ctx.closePath();
+    }
+
+    // ── 1. Draw dark background (no clipping needed — it IS the shape) ──────
+    ctx.drawImage(xpBarBgSprite, barX, barY, DISP_W, DISP_H);
+
+    // ── 2. Everything below is clipped to the FILLED portion of the bar ──────
+    if (fillW > 1) {
+        ctx.save();
+        clipToBar(barX, barY, fillW, DISP_H, RADIUS);
+        ctx.clip();
+
+        // 2a. PNG fill base
+        const bright = flash ? 1 + xpBarFlash * 0.07 : 1;
+        ctx.filter = `brightness(${bright})`;
+        ctx.drawImage(xpBarFillSprite, barX, barY, DISP_W, DISP_H);
+        ctx.filter = 'none';
+
+        // 2b. Animated inner glow — radial gradient that rides along the fill edge
+        const glowX  = barX + fillW;          // right edge of fill
+        const glowCY = barY + DISP_H / 2;
+        const glowR  = DISP_H * (1.6 + pulse * 0.8);
+        const ig = ctx.createRadialGradient(glowX, glowCY, 0, glowX, glowCY, glowR);
+        ig.addColorStop(0,   `rgba(180,255,80,${0.55 * pulse})`);
+        ig.addColorStop(0.4, `rgba(100,255,30,${0.30 * pulse})`);
+        ig.addColorStop(1,   'rgba(30,180,0,0)');
+        ctx.fillStyle = ig;
+        ctx.fillRect(barX, barY, fillW, DISP_H);
+
+        // 2c. Horizontal shimmer band — a bright streak that sweeps back and forth
+        const shimX   = barX + shimmer * fillW;
+        const shimW   = DISP_W * 0.12;
+        const shimG   = ctx.createLinearGradient(shimX - shimW, 0, shimX + shimW, 0);
+        shimG.addColorStop(0,   'rgba(255,255,200,0)');
+        shimG.addColorStop(0.5, `rgba(255,255,220,${0.22 * pulse})`);
+        shimG.addColorStop(1,   'rgba(255,255,200,0)');
+        ctx.fillStyle = shimG;
+        ctx.fillRect(barX, barY, fillW, DISP_H);
+
+        // 2d. Top edge inner-glow streak
+        const topG = ctx.createLinearGradient(0, barY, 0, barY + DISP_H * 0.45);
+        topG.addColorStop(0,   `rgba(220,255,140,${0.45 * pulse})`);
+        topG.addColorStop(1,   'rgba(100,220,30,0)');
+        ctx.fillStyle = topG;
+        ctx.fillRect(barX, barY, fillW, DISP_H);
+
+        ctx.restore(); // end fill clip
+    }
+
+    // ── 3. Frame overlay drawn OVER fill (always full width) ─────────────────
+    ctx.drawImage(xpBarFrameSprite, barX, barY, DISP_W, DISP_H);
+
+    // ── 4. Level label + XP text ─────────────────────────────────────────────
+    ctx.save();
+    ctx.textAlign = 'center';
+
+    // Level — sits above the bar
+    ctx.font       = 'bold 15px Arial';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur  = 7;
+    ctx.fillStyle  = '#d8ff50';
+    ctx.fillText(`Level  ${player.level}`, canvas.width / 2, barY - 6);
+
+    // XP fraction — centred inside the bar, white with drop shadow
+    ctx.font       = 'bold 12px Arial';
+    ctx.shadowBlur  = 5;
+    ctx.fillStyle  = 'rgba(255,255,255,0.88)';
+    ctx.fillText(`${player.xp} / ${player.xpToNextLevel} XP`,
+                 canvas.width / 2, barY + DISP_H / 2 + 4);
+
+    ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LEVEL-UP MENU  — layout helper + draw
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns screen-space rects for the 3 upgrade cards and the skip button.
+ * All drawing and hit-testing use this single source of truth.
+ */
+function getLevelUpZones() {
+    const CW = 200, CH = 270;  // card dimensions (match PNG source)
+    const GAP = 24;
+    const totalW = CW * 3 + GAP * 2;
+    const startX = canvas.width  / 2 - totalW / 2;
+    const cardY  = canvas.height / 2 - CH / 2 - 30;
+
+    const cards = [0, 1, 2].map(i => ({
+        x: startX + i * (CW + GAP),
+        y: cardY,
+        w: CW,
+        h: CH
+    }));
+
+    const skipW = 200, skipH = 54;
+    const skip  = {
+        x: canvas.width / 2 - skipW / 2,
+        y: cardY + CH + 22,
+        w: skipW,
+        h: skipH
+    };
+
+    return { cards, skip };
+}
+
+function drawLevelUpMenu() {
+    // ── 1. Frozen game world is already drawn behind us ─────────────────────
+    // Semi-transparent dark overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Subtle radial vignette
+    const vig = ctx.createRadialGradient(
+        canvas.width/2, canvas.height/2, canvas.height * 0.2,
+        canvas.width/2, canvas.height/2, canvas.height * 0.85
+    );
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // ── 2. Title ────────────────────────────────────────────────────────────
+    ctx.save();
+    ctx.textAlign  = 'center';
+    ctx.font       = 'bold 42px Arial';
+    ctx.shadowColor = '#ffe066';
+    ctx.shadowBlur  = 22;
+    ctx.fillStyle  = '#fff8c0';
+    ctx.fillText('LEVEL UP!', canvas.width / 2, canvas.height / 2 - 270);
+    ctx.font       = '18px Arial';
+    ctx.shadowBlur  = 8;
+    ctx.fillStyle  = 'rgba(200,220,255,0.85)';
+    ctx.fillText('Choose an upgrade  —  or skip', canvas.width / 2, canvas.height / 2 - 235);
+    ctx.restore();
+
+    const { cards, skip } = getLevelUpZones();
+
+    // Update hover index
+    levelUpMenuHover = -1;
+    for (let i = 0; i < 3; i++) {
+        const c = cards[i];
+        if (mouseX >= c.x && mouseX <= c.x + c.w &&
+            mouseY >= c.y && mouseY <= c.y + c.h) {
+            levelUpMenuHover = i;
+        }
+    }
+    if (mouseX >= skip.x && mouseX <= skip.x + skip.w &&
+        mouseY >= skip.y && mouseY <= skip.y + skip.h) {
+        levelUpMenuHover = 3;
+    }
+
+    // ── 3. Upgrade cards (placeholder) ──────────────────────────────────────
+    const CARD_LABELS = ['Upgrade Slot 1', 'Upgrade Slot 2', 'Upgrade Slot 3'];
+    const CARD_ICONS  = ['❶', '❷', '❸'];   // temp icons
+
+    for (let i = 0; i < 3; i++) {
+        const c     = cards[i];
+        const hover = levelUpMenuHover === i;
+        const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.06 + i * 1.1);
+
+        ctx.save();
+
+        // Hover glow behind card
+        if (hover) {
+            ctx.shadowColor = '#88aaff';
+            ctx.shadowBlur  = 28;
+            ctx.globalAlpha = pulse;
+        }
+
+        // Card background PNG
+        ctx.drawImage(lvlCardBgSprite, c.x, c.y, c.w, c.h);
+
+        // Hover highlight border
+        if (hover) {
+            ctx.strokeStyle = `rgba(140,180,255,${pulse})`;
+            ctx.lineWidth   = 2;
+            // rounded rect stroke
+            const r = 14;
+            ctx.beginPath();
+            ctx.moveTo(c.x + r, c.y);
+            ctx.lineTo(c.x + c.w - r, c.y);
+            ctx.arcTo(c.x + c.w, c.y, c.x + c.w, c.y + r, r);
+            ctx.lineTo(c.x + c.w, c.y + c.h - r);
+            ctx.arcTo(c.x + c.w, c.y + c.h, c.x + c.w - r, c.y + c.h, r);
+            ctx.lineTo(c.x + r, c.y + c.h);
+            ctx.arcTo(c.x, c.y + c.h, c.x, c.y + c.h - r, r);
+            ctx.lineTo(c.x, c.y + r);
+            ctx.arcTo(c.x, c.y, c.x + r, c.y, r);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur  = 0;
+
+        // Icon
+        ctx.textAlign  = 'center';
+        ctx.font       = '44px Arial';
+        ctx.fillText(CARD_ICONS[i], c.x + c.w / 2, c.y + 42);
+
+        // Placeholder title text
+        ctx.font       = 'bold 14px Arial';
+        ctx.fillStyle  = hover ? '#ddeeff' : '#aabbcc';
+        ctx.fillText(CARD_LABELS[i], c.x + c.w / 2, c.y + 78);
+
+        // Dotted "coming soon" body
+        ctx.font       = '12px Arial';
+        ctx.fillStyle  = 'rgba(160,170,190,0.6)';
+        ctx.fillText('—  coming soon  —', c.x + c.w / 2, c.y + 140);
+        ctx.fillText('Upgrade details', c.x + c.w / 2, c.y + 162);
+        ctx.fillText('will appear here', c.x + c.w / 2, c.y + 180);
+
+        ctx.restore();
+    }
+
+    // ── 4. Skip button ───────────────────────────────────────────────────────
+    const skipHover = levelUpMenuHover === 3;
+    const skipPulse = 0.85 + 0.15 * Math.sin(frameCount * 0.06);
+
+    ctx.save();
+    if (skipHover) {
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur  = 16;
+        ctx.globalAlpha = skipPulse;
+    }
+    ctx.drawImage(lvlSkipBgSprite, skip.x, skip.y, skip.w, skip.h);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
+
+    ctx.textAlign  = 'center';
+    ctx.font       = `bold 16px Arial`;
+    ctx.fillStyle  = skipHover ? '#ffffff' : 'rgba(200,200,200,0.85)';
+    ctx.fillText('Skip  ›', skip.x + skip.w / 2, skip.y + skip.h / 2 + 6);
+    ctx.restore();
+}
+
+
 function drawUI() {
     const padding    = 20;
     const panelWidth = 240;
-    const barWidth   = 200;
-
-    // Measure how tall the panel needs to be (no HP/dash rows any more)
-    // Level + Score + XP bar + instructions = ~130px
-    const panelHeight = 150;
+    const panelHeight = 115;
 
     // Background panel
     ctx.fillStyle  = "black";
@@ -1172,21 +1484,8 @@ function drawUI() {
     ctx.fillStyle = "lightgray";
     ctx.fillText("Score: " + score, padding, padding + 25);
 
-    // XP bar
-    const xpY = padding + 40;
-    ctx.fillStyle = "black";
-    ctx.fillRect(padding, xpY, barWidth, 14);
-    ctx.fillStyle = "deepskyblue";
-    ctx.fillRect(padding, xpY, barWidth * (player.xp / player.xpToNextLevel), 14);
-    ctx.strokeStyle = "white";
-    ctx.lineWidth   = 1;
-    ctx.strokeRect(padding, xpY, barWidth, 14);
-    ctx.fillStyle  = "lightgray";
-    ctx.font       = "11px monospace";
-    ctx.fillText(player.xp + " / " + player.xpToNextLevel, padding + 6, xpY + 11);
-
     // Instructions
-    const tutY = xpY + 28;
+    const tutY = padding + 44;
     ctx.font      = "12px Arial";
     ctx.fillStyle = "silver";
     ctx.fillText("Move: WASD / Arrows", padding, tutY);
@@ -1201,8 +1500,11 @@ function drawUI() {
         20, canvas.height - 20
     );
 
-    // ── Right-side vials ─────────────────────────────────────────────────────
+    // ── Vials (left side) ────────────────────────────────────────────────────
     drawVials();
+
+    // ── XP bar (bottom centre) ───────────────────────────────────────────────
+    drawXpBar();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1322,6 +1624,17 @@ function gameLoop() {
         drawMenu();
     } else if (gameState === 'gameOver') {
         drawGameOver();
+    } else if (gameState === 'levelUp') {
+        // Draw the frozen game world behind the overlay (no updates)
+        updateCamera();
+        drawMap();
+        drawPlayer();
+        drawEnemies();
+        drawProjectiles();
+        drawPickups();
+        drawUI();         // includes XP bar at bottom
+        drawLevelUpMenu();
+        drawCursor();
     } else {
         updatePlayer();
         updateEnemies();
