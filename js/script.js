@@ -164,6 +164,29 @@ const ENEMY_TYPES = {
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  FPS / TIMESTEP CONTROL
+// ─────────────────────────────────────────────────────────────────────────────
+const LOGIC_HZ = 60;
+const LOGIC_MS = 1000 / LOGIC_HZ; // 16 ms per logic tick
+
+let targetFps         = 60;   // desired render cap (60-240)
+let fpsUnlimited      = false; // true = no render cap, runs as fast as rAF allows
+let fpsSliderDragging = false;
+
+// Returns the screen-space rect for the FPS slider track.
+// Positioned below the cursor-select button so nothing overlaps.
+function getFpsSliderRect() {
+    const w = 240, h = 14;
+    return {
+        x: canvas.width / 2 - w / 2,
+        y: canvas.height / 2 + 135,
+        w, h
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Game state
 let keys = {};
 let camera = { x: 0, y: 0 };
@@ -182,6 +205,9 @@ let navGrid = [];
 // Level-up menu state
 let levelUpMenuHover = -1; // which card/button the mouse is over (-1 = none, 0-2 = cards, 3 = skip)
 let xpBarFlash = 0;        // countdown for the bar flash effect on pickup
+
+// Fixed-timestep accumulator — tracks leftover real time between logic ticks
+let accumulator = 0;
 
 // Player object
 let player = {
@@ -239,12 +265,41 @@ window.addEventListener('keyup', e => {
 window.addEventListener("mousemove", (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
+
+    // Drag FPS slider.  Dragging past the right end of the track (into the ∞ zone)
+    // activates unlimited mode; dragging back left restores the capped value.
+    if (fpsSliderDragging) {
+        const sr = getFpsSliderRect();
+        if (mouseX > sr.x + sr.w + 20) {
+            fpsUnlimited = true;
+        } else {
+            fpsUnlimited = false;
+            const t   = Math.max(0, Math.min(1, (mouseX - sr.x) / sr.w));
+            targetFps = Math.round(60 + t * (240 - 60));
+        }
+    }
 });
 
 window.addEventListener("mousedown", () => {
     mouseDown = true;
     if (gameState === "menu") {
         if (menuPage === "main") {
+            // Check FPS slider first so a click on it doesn't fall through to startGame()
+            const sr = getFpsSliderRect();
+            const hitX = mouseX >= sr.x - 8  && mouseX <= sr.x + sr.w + 40; // +40 covers ∞ zone
+            const hitY = mouseY >= sr.y - 12 && mouseY <= sr.y + sr.h + 12;
+            if (hitX && hitY) {
+                fpsSliderDragging = true;
+                if (mouseX > sr.x + sr.w + 20) {
+                    fpsUnlimited = true;
+                } else {
+                    fpsUnlimited = false;
+                    const t   = Math.max(0, Math.min(1, (mouseX - sr.x) / sr.w));
+                    targetFps = Math.round(60 + t * (240 - 60));
+                }
+                return;
+            }
+
             const btn = getSelectCursorButton();
             if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
                 menuPage = "cursors";
@@ -293,6 +348,7 @@ window.addEventListener("mousedown", () => {
 
 window.addEventListener("mouseup", () => {
     mouseDown = false;
+    fpsSliderDragging = false;
 });
 
 // Map generation
@@ -505,6 +561,7 @@ function startGame() {
     score = 0;
     player.xp = 0;
     player.level = 1;
+    accumulator = 0; // prevent a tick burst if restarting mid-session
     gameState = "playing";
 }
 
@@ -1560,6 +1617,103 @@ function getCursorBoxes() {
     }));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  FPS SLIDER  (main menu only)
+//
+//  Track covers 60–240 fps.  A small ∞ symbol sits to the right of the track.
+//  Dragging past the track's right edge (into the ∞ zone) removes the render
+//  cap; dragging back left restores a capped value.
+// ─────────────────────────────────────────────────────────────────────────────
+function drawFpsSlider() {
+    const sr       = getFpsSliderRect();
+    const infX     = sr.x + sr.w + 16; // left edge of the ∞ symbol
+    const thumbT   = (targetFps - 60) / (240 - 60);
+    const thumbX   = sr.x + sr.w * thumbT;
+    const midY     = sr.y + sr.h / 2;
+    const r        = sr.h / 2;
+
+    ctx.save();
+
+    // ── Track background ────────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.beginPath();
+    ctx.roundRect(sr.x, sr.y, sr.w, sr.h, r);
+    ctx.fill();
+
+    // ── Filled portion (left of thumb) ──────────────────────────────────────
+    if (!fpsUnlimited && thumbT > 0) {
+        const fillGrad = ctx.createLinearGradient(sr.x, 0, thumbX, 0);
+        fillGrad.addColorStop(0, 'rgba(100,160,255,0.45)');
+        fillGrad.addColorStop(1, 'rgba(160,200,255,0.80)');
+        ctx.fillStyle = fillGrad;
+        ctx.beginPath();
+        ctx.roundRect(sr.x, sr.y, thumbX - sr.x, sr.h, r);
+        ctx.fill();
+    }
+
+    // ── Track border ────────────────────────────────────────────────────────
+    ctx.strokeStyle = fpsUnlimited ? 'rgba(255,200,60,0.55)' : 'rgba(130,170,255,0.45)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.roundRect(sr.x, sr.y, sr.w, sr.h, r);
+    ctx.stroke();
+
+    // ── Tick marks at common targets: 60, 120, 144, 240 ─────────────────────
+    const ticks = [60, 120, 144, 240];
+    for (const v of ticks) {
+        const tx = sr.x + sr.w * ((v - 60) / (240 - 60));
+        ctx.fillStyle = 'rgba(180,200,255,0.3)';
+        ctx.fillRect(tx - 0.75, sr.y - 5, 1.5, 4);
+        ctx.font      = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(155,180,225,0.6)';
+        ctx.fillText(v, tx, sr.y - 8);
+    }
+
+    // ── Thumb — replaced by a golden track glow when unlimited ──────────────
+    if (fpsUnlimited) {
+        const glow = ctx.createLinearGradient(sr.x, 0, sr.x + sr.w, 0);
+        glow.addColorStop(0,   'rgba(255,175,0,0.12)');
+        glow.addColorStop(0.5, 'rgba(255,215,50,0.42)');
+        glow.addColorStop(1,   'rgba(255,175,0,0.12)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.roundRect(sr.x, sr.y, sr.w, sr.h, r);
+        ctx.fill();
+    } else {
+        ctx.fillStyle   = '#c8dcff';
+        ctx.shadowColor = 'rgba(160,200,255,0.85)';
+        ctx.shadowBlur  = 7;
+        ctx.beginPath();
+        ctx.arc(thumbX, midY, r + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+
+    // ── ∞ symbol to the right of the track (lights up when active) ──────────
+    ctx.textAlign   = 'center';
+    ctx.font        = 'bold 16px Arial';
+    ctx.fillStyle   = fpsUnlimited ? '#ffd84a' : 'rgba(170,170,170,0.4)';
+    ctx.shadowColor = fpsUnlimited ? '#ffaa00' : 'transparent';
+    ctx.shadowBlur  = fpsUnlimited ? 10 : 0;
+    ctx.fillText('∞', infX + 10, midY + 5);
+    ctx.shadowBlur  = 0;
+
+    // ── Label above the slider showing the current value ─────────────────────
+    ctx.textAlign = 'center';
+    ctx.font      = '13px Arial';
+    ctx.fillStyle = fpsUnlimited ? '#ffd84a' : 'rgba(195,210,255,0.80)';
+    ctx.fillText(
+        fpsUnlimited
+            ? 'Render: Unlimited  (drag ← to cap)'
+            : `Render: ${targetFps} FPS  (drag past 240 → for ∞)`,
+        sr.x + sr.w / 2,
+        sr.y - 20
+    );
+
+    ctx.restore();
+}
+
 function drawMenu() {
     const canvasW = canvas.width;
     const canvasH = canvas.height;
@@ -1586,6 +1740,9 @@ function drawMenu() {
         ctx.font       = "16px Arial";
         ctx.textAlign  = "center";
         ctx.fillText("Select Cursor  >", btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
+
+        // FPS slider — sits well below the buttons above it
+        drawFpsSlider();
 
     } else if (menuPage === "cursors") {
         ctx.fillStyle  = "white";
@@ -1648,25 +1805,39 @@ const FPS = 60;
 const FRAME_TIME = 1000 / FPS;
 let lastFrameTime = 0;
 
+// One fixed-rate logic step
+function runLogicTick() {
+    frameCount++;
+    updatePlayer();
+    updateEnemies();
+    updateProjectiles();
+    updatePickups();
+}
+
 // Main game loop
 function gameLoop(timestamp) {
-    if (timestamp - lastFrameTime < FRAME_TIME) {
-        requestAnimationFrame(gameLoop);
-        return;
-    }
+    requestAnimationFrame(gameLoop);
 
+    const elapsed = timestamp - lastFrameTime;
+
+    // Render-rate cap: bail out early if the frame arrived too soon.
+    // When fpsUnlimited is true every rAF callback produces a frame.
+    if (!fpsUnlimited && elapsed < (1000 / targetFps) - 0.5) return;
     lastFrameTime = timestamp;
-    frameCount++;
 
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === 'menu') {
+        // Keep frameCount ticking so menu animations (cursor glow etc.) stay smooth
+        frameCount += elapsed * (LOGIC_HZ / 1000);
         drawMenu();
     } else if (gameState === 'gameOver') {
         drawGameOver();
     } else if (gameState === 'levelUp') {
-        // Draw the frozen game world behind the overlay (no updates)
+        // Draw the frozen game world behind the overlay (no logic ticks).
+        // Advance frameCount so vial waves / XP bar / card pulses keep animating.
+        frameCount += elapsed * (LOGIC_HZ / 1000);
         updateCamera();
         drawMap();
         drawPlayer();
@@ -1677,12 +1848,15 @@ function gameLoop(timestamp) {
         drawLevelUpMenu();
         drawCursor();
     } else {
-        updatePlayer();
-        updateEnemies();
-        updateProjectiles();
-        updatePickups();
-        updateCamera();
+        // Fixed timestep: run as many 60 Hz logic ticks as elapsed time demands.
+        // Cap accumulator to 200 ms to avoid a "spiral of death" after tab switches.
+        accumulator += Math.min(elapsed, 200);
+        while (accumulator >= LOGIC_MS) {
+            runLogicTick();
+            accumulator -= LOGIC_MS;
+        }
 
+        updateCamera();
         drawMap();
         drawPlayer();
         drawEnemies();
@@ -1691,7 +1865,6 @@ function gameLoop(timestamp) {
         drawUI();
         drawCursor();
     }
-    requestAnimationFrame(gameLoop);
 }
 
 function drawCursor() {
