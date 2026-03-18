@@ -873,8 +873,23 @@ function drawPlayer() {
 }
 
 function drawEnemies() {
+    const innerRadius = 120; // fully visible
+    const outerRadius = 420; // fully hidden
+    
     for (let e of enemies) {
         if (!e.alive) continue;
+
+        // Distance to player
+        const dist = Math.hypot(player.x - e.x, player.y - e.y);
+
+        // Completely invisible outside vision
+        if (dist >= outerRadius) continue;
+
+        // Fade between inner and outer radius
+        let alpha = 1;
+        if (dist > innerRadius) {
+            alpha = 1 - (dist - innerRadius) / (outerRadius - innerRadius);
+        }
 
         // Interpolate enemy position
         const rx = (e.prevX ?? e.x) + (e.x - (e.prevX ?? e.x)) * renderAlpha;
@@ -884,31 +899,44 @@ function drawEnemies() {
         const sprite = enemySprites[e.type][e.animFrame];
         const facingLeft = player.x < e.x;
 
-        if (e.hpBarTimer > 0) {
-            const barWidth = e.size * 2;
-            const barHeight = 4;
-            const hpFrac = e.hp / e.maxHp;
-            const barX = s.x - barWidth / 2;
-            const barY = s.y - e.size - 12;
-
-            ctx.fillStyle = "black";
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-            ctx.fillStyle = hpFrac > 0.5 ? "green" : hpFrac > 0.25 ? "yellow" : "red";
-            ctx.fillRect(barX, barY, barWidth * hpFrac, barHeight);
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
-        }
-
         ctx.save();
+        ctx.globalAlpha = alpha; // set enemy transparency based on distance from player
+
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
+
+        // Draw enemy sprite
         if (facingLeft) {
             ctx.scale(-1, 1);
             ctx.drawImage(sprite, -(s.x + e.size), s.y - e.size, size, size);
         } else {
             ctx.drawImage(sprite, s.x - e.size, s.y - e.size, size, size);
         }
+
         ctx.restore();
+
+        // Draw HP bar if visible enough
+        if (alpha > 0.15 && e.hpBarTimer > 0) {
+            const barWidth = e.size * 2;
+            const barHeight = 4;
+            const hpFrac = e.hp / e.maxHp;
+            const barX = s.x - barWidth / 2;
+            const barY = s.y - e.size - 12;
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            ctx.fillStyle = "black";
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            ctx.fillStyle = hpFrac > 0.5 ? "green" : hpFrac > 0.25 ? "yellow" : "red";
+            ctx.fillRect(barX, barY, barWidth * hpFrac, barHeight);
+
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+            ctx.restore();
+        }
     }
 }
 
@@ -1438,6 +1466,34 @@ function drawUI() {
     drawXpBar();
 }
 
+function drawVisibilityMask() {
+    // Interpolated player position
+    const rx = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
+    const ry = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
+    const s  = toScreen(rx, ry);
+
+    const innerRadius = 120;   // fully visible zone
+    const outerRadius = 420;   // full darkness
+
+    ctx.save();
+
+    // Radial gradient darkness
+    const gradient = ctx.createRadialGradient(
+        s.x, s.y, innerRadius,
+        s.x, s.y, outerRadius
+    );
+
+    gradient.addColorStop(0,   "rgba(0,0,0,0)");    // clear near player
+    gradient.addColorStop(0.4, "rgba(0,0,0,0.4)");  // dim
+    gradient.addColorStop(0.7, "rgba(0,0,0,0.75)"); // darker
+    gradient.addColorStop(1,   "rgba(0,0,0,1)");    // full black
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.restore();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  MENU HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1605,6 +1661,7 @@ function gameLoop(timestamp) {
     updateCamera(renderAlpha);
 
     drawMap();
+    drawVisibilityMask();
     drawPlayer();
     drawEnemies();
     drawProjectiles();
