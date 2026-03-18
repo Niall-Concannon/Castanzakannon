@@ -26,10 +26,10 @@ for (const d of DASH_FRAMES) {
 
 // Player animation state
 let playerAnim = {
-    frame: 'idle',      // current sprite key
-    timer: 0,           // frames until next step cycle
-    walkToggle: false,  // alternates walk1/walk2
-    idleTimer: 0,       // counter for idle breath cycle
+    frame: 'idle',
+    timer: 0,
+    walkToggle: false,
+    idleTimer: 0,
 };
 
 const wallSprite = new Image();
@@ -38,9 +38,6 @@ wallSprite.src = 'assets/sprites/wall_placeholder.png';
 const floorSprite = new Image();
 floorSprite.src = 'assets/sprites/floor_placeholder.png';
 
-// Enemy animation frames — each array is the sequence of sprites played in order, looping.
-// Add or remove frame paths here; the rest of the code handles cycling automatically.
-// animSpeed (in ENEMY_TYPES below) controls how many game-frames each sprite frame is held for.
 const ENEMY_SPRITE_PATHS = {
     basic: [
         'assets/sprites/enemy_basic_frame1.png',
@@ -59,7 +56,6 @@ const ENEMY_SPRITE_PATHS = {
     ]
 };
 
-// Pre-load every frame for every type
 const enemySprites = {};
 for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
     enemySprites[type] = paths.map(src => {
@@ -84,38 +80,25 @@ const cursorSprites = [
     { name: 'Neon Arrow', img: Object.assign(new Image(), { src: 'assets/sprites/cursor_neon_arrow.png' }) },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  XP BAR SPRITES  (bottom-centre HUD)
-// ─────────────────────────────────────────────────────────────────────────────
 const xpBarBgSprite   = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_bg.png'   });
 const xpBarFillSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_fill.png' });
 const xpBarFrameSprite= Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_frame.png'});
 const xpBarGlowSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_xpbar_glow.png' });
 
-// Source dimensions must match gen_xpbar.py
 const XP_PNG_W = 620, XP_PNG_H = 24;
-const XP_GLOW_W = 700, XP_GLOW_H = 74; // BAR_W+80, BAR_H+50
+const XP_GLOW_W = 700, XP_GLOW_H = 74;
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  LEVEL-UP MENU SPRITES
-// ─────────────────────────────────────────────────────────────────────────────
 const lvlCardBgSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_levelup_card_bg.png' });
 const lvlSkipBgSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_levelup_skip_bg.png' });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  VIAL UI SPRITES & GEOMETRY
-//  These must match the dimensions used in gen_vials2.py exactly.
-// ─────────────────────────────────────────────────────────────────────────────
 const vialFrameSprite   = Object.assign(new Image(), { src: 'assets/sprites/ui_vial_frame.png'    });
 const vialBgSprite      = Object.assign(new Image(), { src: 'assets/sprites/ui_vial_bg.png'       });
 const vialGlowHpSprite  = Object.assign(new Image(), { src: 'assets/sprites/ui_vial_glow_hp.png'  });
 const vialGlowDashSprite= Object.assign(new Image(), { src: 'assets/sprites/ui_vial_glow_dash.png'});
 const vialBubblesSprite = Object.assign(new Image(), { src: 'assets/sprites/ui_vial_bubbles.png'  });
 
-// Vial source dimensions (pixel size of the PNG)
 const VSRC_W = 72, VSRC_H = 220;
 
-// Bottle geometry — mirrors gen_vials2.py constants
 const VCORK_W = 22, VCORK_H = 16, VCORK_Y1 = 2;
 const VCORK_Y2 = VCORK_Y1 + VCORK_H;
 const VNECK_W = 24;
@@ -123,45 +106,25 @@ const VNECK_Y1 = VCORK_Y2, VNECK_Y2 = VNECK_Y1 + 28;
 const VSHOULDER_Y1 = VNECK_Y2, VSHOULDER_Y2 = VSHOULDER_Y1 + 18;
 const VBODY_W = 56;
 const VBODY_Y1 = VSHOULDER_Y2, VBODY_Y2 = VSRC_H - 5;
-const VBRAD = 10;          // body corner radius
-const VCX   = VSRC_W / 2; // centre-x in source coords
+const VBRAD = 10;
+const VCX   = VSRC_W / 2;
 
-// Display scale: how much bigger to render the vials on screen
 const VIAL_SCALE = 0.88;
-const VIAL_W = VSRC_W  * VIAL_SCALE;   // ~63px
-const VIAL_H = VSRC_H  * VIAL_SCALE;   // ~194px
+const VIAL_W = VSRC_W  * VIAL_SCALE;
+const VIAL_H = VSRC_H  * VIAL_SCALE;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Constants - pixels
 const TILE = 48;
 const MAP_W = 80;
 const MAP_H = 60;
 const DASH_SPEED = 16;
-const DASH_DURATION = 15; // 0.25 second dash
+const DASH_DURATION = 15;
 const MAX_ENEMIES = 20;
 const ENEMY_TYPES = {
-    basic: {
-        hp: 3,
-        size: 14,
-        speed: 2,
-        color: "green",
-        animSpeed: 10
-    },
-    fast: {
-        hp: 2,
-        size: 12,
-        speed: 3.5,
-        color: "yellow",
-        animSpeed: 6
-    },
-    tank: {
-        hp: 8,
-        size: 20,
-        speed: 1.2,
-        color: "red",
-        animSpeed: 14
-    }
+    basic: { hp: 3,  size: 14, speed: 2,   color: "green",  animSpeed: 10 },
+    fast:  { hp: 2,  size: 12, speed: 3.5, color: "yellow", animSpeed: 6  },
+    tank:  { hp: 8,  size: 20, speed: 1.2, color: "red",    animSpeed: 14 }
 };
 
 // Game state
@@ -170,7 +133,7 @@ let camera = { x: 0, y: 0 };
 let mapTiles = [];
 let frameCount = 0;
 let gameState = "menu";
-let menuPage = "main"; // "main" or "cursors"
+let menuPage = "main";
 let selectedCursor = 0;
 let mouseX = 0, mouseY = 0, mouseDown = false;
 let projectiles = [];
@@ -179,14 +142,20 @@ let score, lastScore = 0;
 let pickups = [];
 let navGrid = [];
 
-// Level-up menu state
-let levelUpMenuHover = -1; // which card/button the mouse is over (-1 = none, 0-2 = cards, 3 = skip)
-let xpBarFlash = 0;        // countdown for the bar flash effect on pickup
+// Fixed-timestep / interpolation state
+const FIXED_STEP  = 1000 / 60;   // logic runs at 60 Hz
+let lastTimestamp  = 0;
+let accumulator    = 0;
+let renderAlpha    = 1;           // interpolation factor for the current render frame
 
-// Player object
+let levelUpMenuHover = -1;
+let xpBarFlash = 0;
+
 let player = {
     x: MAP_W * TILE / 2,
     y: MAP_H * TILE / 2,
+    prevX: MAP_W * TILE / 2,
+    prevY: MAP_H * TILE / 2,
     size: 20,
     speed: 4,
     color: 'blue',
@@ -224,7 +193,6 @@ window.addEventListener('keydown', e => {
             gameState = "menu";
             menuPage = "main";
         } else if (gameState === "levelUp") {
-            // Space/Enter skips the level-up (same as clicking Skip)
             gameState = "playing";
         } else if (gameState === "playing") {
             playerDash();
@@ -270,19 +238,15 @@ window.addEventListener("mousedown", () => {
         gameState = "menu";
         menuPage = "main";
     } else if (gameState === "levelUp") {
-        // Check which card / skip button was clicked
         const zones = getLevelUpZones();
-        // Cards 0-2
         for (let i = 0; i < 3; i++) {
             const z = zones.cards[i];
             if (mouseX >= z.x && mouseX <= z.x + z.w &&
                 mouseY >= z.y && mouseY <= z.y + z.h) {
-                // Placeholder: no power-up logic yet — just resume
                 gameState = "playing";
                 return;
             }
         }
-        // Skip button
         const s = zones.skip;
         if (mouseX >= s.x && mouseX <= s.x + s.w &&
             mouseY >= s.y && mouseY <= s.y + s.h) {
@@ -452,6 +416,8 @@ function playerShoot() {
     projectiles.push({
         x: player.x,
         y: player.y,
+        prevX: player.x,
+        prevY: player.y,
         velocityX: Math.cos(player.weaponAngle) * 12,
         velocityY: Math.sin(player.weaponAngle) * 12,
         size: 5,
@@ -473,6 +439,8 @@ function spawnEnemy(type) {
     enemies.push({
         x: enemyX,
         y: enemyY,
+        prevX: enemyX,
+        prevY: enemyY,
         hp: enemy.hp,
         maxHp: enemy.hp,
         size: enemy.size,
@@ -501,11 +469,17 @@ function startGame() {
 
     player.x = (MAP_W * TILE) / 2;
     player.y = (MAP_H * TILE) / 2;
+    player.prevX = player.x;
+    player.prevY = player.y;
     player.hp = player.maxHp;
     score = 0;
     player.xp = 0;
     player.level = 1;
     gameState = "playing";
+
+    // Reset timing so first frame doesn't accumulate a huge dt
+    lastTimestamp = 0;
+    accumulator   = 0;
 }
 
 function updatePlayer() {
@@ -613,7 +587,6 @@ function updateEnemies() {
             targetY = player.y;
         }
 
-        // Off-screen enemies move much faster so the player can't kite forever.
         const esx = e.x - camera.x;
         const esy = e.y - camera.y;
         const offScreen = esx < -e.size || esx > canvas.width  + e.size ||
@@ -644,7 +617,6 @@ function updateEnemies() {
         }
 
         if (e.hitFlash > 0) e.hitFlash--;
-
         if (e.hpBarTimer > 0) e.hpBarTimer--;
 
         e.animTimer--;
@@ -672,11 +644,11 @@ function updateProjectiles() {
             if (Math.hypot(p.x - e.x, p.y - e.y) < p.size + e.size) {
                 e.hp--;
                 e.hitFlash = 8;
-                e.hpBarTimer = 120; // show HP bar for 2 seconds after hit
+                e.hpBarTimer = 120;
                 if (e.hp <= 0) {
                     e.alive = false;
                     score++;
-                    pickups.push({ x: e.x, y: e.y, vx: 0, vy: 0, size: 10, type: "xp" });
+                    pickups.push({ x: e.x, y: e.y, prevX: e.x, prevY: e.y, vx: 0, vy: 0, size: 10, type: "xp" });
                     const types = ["basic", "fast", "tank"];
                     spawnEnemy(types[Math.floor(Math.random() * types.length)]);
                 }
@@ -707,7 +679,6 @@ function updatePickups() {
                 p.vy = (p.vy / speed) * XP_ATTRACT_SPEED;
             }
 
-            // Spawn a trail particle every 2 frames while attracted
             if (p.type === 'xp' && frameCount % 2 === 0) {
                 p.trail.push({ x: p.x, y: p.y, age: 0 });
             }
@@ -716,7 +687,6 @@ function updatePickups() {
             p.vy *= 0.85;
         }
 
-        // Age and cull trail particles
         for (let t = p.trail.length - 1; t >= 0; t--) {
             p.trail[t].age++;
             if (p.trail[t].age > 12) p.trail.splice(t, 1);
@@ -728,11 +698,11 @@ function updatePickups() {
         if (dist < player.size + p.size) {
             if (p.type === "xp") {
                 player.xp += 5;
-                xpBarFlash = 12; // brief flash on the bar
+                xpBarFlash = 12;
                 if (player.xp >= player.xpToNextLevel) {
                     player.xp -= player.xpToNextLevel;
                     player.level++;
-                    gameState = "levelUp"; // pause and open upgrade menu
+                    gameState = "levelUp";
                 }
             }
             pickups.splice(i, 1);
@@ -740,9 +710,25 @@ function updatePickups() {
     }
 }
 
-function updateCamera() {
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
+// Snapshot current positions into prevX/prevY for all entities.
+// Called at the start of every logic tick so the renderer can interpolate
+// between the previous tick and the current one.
+function savePrevPositions() {
+    player.prevX = player.x;
+    player.prevY = player.y;
+    for (const e of enemies)     { e.prevX = e.x; e.prevY = e.y; }
+    for (const p of projectiles) { p.prevX = p.x; p.prevY = p.y; }
+    for (const p of pickups)     { p.prevX = p.x; p.prevY = p.y; }
+}
+
+// Camera centres on the interpolated player position so map scrolling is
+// perfectly in sync with the sprite and has no jitter.
+function updateCamera(alpha) {
+    const a  = (alpha !== undefined) ? alpha : 1;
+    const px = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * a;
+    const py = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * a;
+    camera.x = px - canvas.width  / 2;
+    camera.y = py - canvas.height / 2;
 }
 
 function toScreen(x, y) {
@@ -808,7 +794,10 @@ function updatePlayerAnim() {
 }
 
 function drawPlayer() {
-    const s = toScreen(player.x, player.y);
+    // Interpolate between the previous logic position and the current one
+    const rx = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
+    const ry = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
+    const s  = toScreen(rx, ry);
     const size = player.size * 2;
 
     // Glow trail
@@ -886,31 +875,26 @@ function drawPlayer() {
 function drawEnemies() {
     for (let e of enemies) {
         if (!e.alive) continue;
-        const s = toScreen(e.x, e.y);
+
+        // Interpolate enemy position
+        const rx = (e.prevX ?? e.x) + (e.x - (e.prevX ?? e.x)) * renderAlpha;
+        const ry = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
+        const s  = toScreen(rx, ry);
         const size = e.size * 2;
         const sprite = enemySprites[e.type][e.animFrame];
         const facingLeft = player.x < e.x;
 
-        // Draw HP bar if hit
         if (e.hpBarTimer > 0) {
             const barWidth = e.size * 2;
             const barHeight = 4;
-
             const hpFrac = e.hp / e.maxHp;
-
             const barX = s.x - barWidth / 2;
             const barY = s.y - e.size - 12;
 
-            // Background
             ctx.fillStyle = "black";
             ctx.fillRect(barX, barY, barWidth, barHeight);
-
-            // HP fill
             ctx.fillStyle = hpFrac > 0.5 ? "green" : hpFrac > 0.25 ? "yellow" : "red";
-
             ctx.fillRect(barX, barY, barWidth * hpFrac, barHeight);
-
-            // Border
             ctx.strokeStyle = "white";
             ctx.lineWidth = 1;
             ctx.strokeRect(barX, barY, barWidth, barHeight);
@@ -930,7 +914,10 @@ function drawEnemies() {
 
 function drawProjectiles() {
     for (let p of projectiles) {
-        const s = toScreen(p.x, p.y);
+        // Interpolate projectile position
+        const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
+        const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
+        const s   = toScreen(prx, pry);
         ctx.save();
         ctx.translate(s.x, s.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
@@ -941,14 +928,17 @@ function drawProjectiles() {
 
 function drawPickups() {
     for (let p of pickups) {
-        const s = toScreen(p.x, p.y);
+        // Interpolate pickup position
+        const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
+        const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
+        const s   = toScreen(prx, pry);
 
         // Draw green trail particles behind the orb
         if (p.type === 'xp' && p.trail && p.trail.length > 0) {
             for (const t of p.trail) {
                 const ts   = toScreen(t.x, t.y);
-                const life = 1 - t.age / 12;          // 1 → 0 as particle ages
-                const r    = p.size * 0.55 * life;     // shrinks over time
+                const life = 1 - t.age / 12;
+                const r    = p.size * 0.55 * life;
                 ctx.save();
                 ctx.globalAlpha = life * 0.7;
                 ctx.shadowColor = '#39ff14';
@@ -994,12 +984,6 @@ function drawPickups() {
 //  VIAL DRAWING
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Adds the bottle interior shape to the current canvas path (already inside
- * ctx.save/restore and translated to vial top-left origin).
- * Used for both clipping and hit-testing.
- * All coordinates are in *source* space (VSRC_W × VSRC_H), scaled via `sc`.
- */
 function vialInteriorPath(sc) {
     const ncx = VCX * sc;
     const nW2  = (VNECK_W / 2) * sc;
@@ -1014,17 +998,14 @@ function vialInteriorPath(sc) {
     const bY2  = VBODY_Y2 * sc;
     const br   = VBRAD * sc;
 
-    // Neck rectangle
     ctx.rect(ncx - nW2, nY1, nW2 * 2, nY2 - nY1);
 
-    // Shoulder trapezoid
     ctx.moveTo(ncx - nW2, sY1);
     ctx.lineTo(ncx + nW2, sY1);
     ctx.lineTo(bX2,        sY2);
     ctx.lineTo(bX1,        sY2);
     ctx.closePath();
 
-    // Body rounded rectangle
     ctx.moveTo(bX1 + br, bY1);
     ctx.lineTo(bX2 - br, bY1);
     ctx.arcTo(bX2, bY1,  bX2, bY1 + br, br);
@@ -1037,25 +1018,14 @@ function vialInteriorPath(sc) {
     ctx.closePath();
 }
 
-/**
- * Draw a single animated potion vial.
- *
- * @param {number} screenX     - top-left x on screen
- * @param {number} screenY     - top-left y on screen
- * @param {number} fillPercent - 0..1 how full the liquid is
- * @param {object} colors      - { top, mid, bot } CSS colour strings for liquid gradient
- * @param {Image}  glowSprite  - the coloured glow PNG
- * @param {string} label       - text drawn beneath
- */
 function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
-    const sc   = VIAL_SCALE;          // source → screen scale
-    const W    = VSRC_W  * sc;        // screen vial width
-    const H    = VSRC_H  * sc;        // screen vial height
+    const sc   = VIAL_SCALE;
+    const W    = VSRC_W  * sc;
+    const H    = VSRC_H  * sc;
 
     const GW   = (VSRC_W  + 40) * sc;
     const GH   = (VSRC_H  + 40) * sc;
 
-    // ── 1. Outer glow ───────────────────────────────────────────────────────
     const glowPulse = 0.75 + 0.25 * Math.sin(frameCount * 0.04);
     ctx.save();
     ctx.globalAlpha = glowPulse * 0.85;
@@ -1066,29 +1036,24 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
     ctx.save();
     ctx.translate(screenX, screenY);
 
-    // ── 2. Dark background (empty vial interior) ────────────────────────────
     ctx.drawImage(vialBgSprite, 0, 0, W, H);
 
-    // ── 3. Liquid fill (clipped to bottle interior) ─────────────────────────
     ctx.save();
     ctx.beginPath();
     vialInteriorPath(sc);
     ctx.clip();
 
-    // liquid top Y in screen coords (clamped so it doesn't exceed the neck)
     const liqAreaTop    = VSHOULDER_Y1 * sc;
     const liqAreaBottom = VBODY_Y2     * sc;
     const liqHeight     = (liqAreaBottom - liqAreaTop) * Math.max(0, Math.min(1, fillPercent));
     const liqTopY       = liqAreaBottom - liqHeight;
 
-    // Wave parameters
     const wAmp   = 3.5 * sc;
     const wFreq  = 0.10 / sc;
     const wPhase = frameCount * 0.055;
     const w2Freq = wFreq * 1.6;
     const w2Phase= frameCount * 0.038;
 
-    // Liquid gradient
     const liqGrad = ctx.createLinearGradient(0, liqTopY, 0, liqAreaBottom);
     liqGrad.addColorStop(0,   colors.top);
     liqGrad.addColorStop(0.4, colors.mid);
@@ -1111,7 +1076,6 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
     ctx.closePath();
     ctx.fill();
 
-    // Liquid sheen: brighter strip near the wave surface
     const sheenGrad = ctx.createLinearGradient(0, liqTopY, 0, liqTopY + 18 * sc);
     sheenGrad.addColorStop(0,   'rgba(255,255,255,0.22)');
     sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
@@ -1129,7 +1093,6 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
     ctx.closePath();
     ctx.fill();
 
-    // Bubbles sprite-sheet (4 frames, cycled)
     if (fillPercent > 0.08 && vialBubblesSprite.complete && vialBubblesSprite.naturalWidth > 0) {
         const bubFrame  = Math.floor(frameCount / 7) % 4;
         const bubSrcX   = bubFrame * VSRC_W;
@@ -1138,12 +1101,10 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
         ctx.globalAlpha = 1;
     }
 
-    ctx.restore(); // remove clip
+    ctx.restore();
 
-    // ── 4. Glass frame overlay ──────────────────────────────────────────────
     ctx.drawImage(vialFrameSprite, 0, 0, W, H);
 
-    // ── 5. Low-HP flicker: red tint when nearly empty ───────────────────────
     if (colors.bot === '#660008' && fillPercent < 0.25) {
         const flicker = 0.12 + 0.12 * Math.sin(frameCount * 0.35);
         ctx.save();
@@ -1155,7 +1116,6 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
         ctx.restore();
     }
 
-    // ── 6. Label beneath the vial ───────────────────────────────────────────
     ctx.textAlign  = 'center';
     ctx.font       = `bold ${Math.round(13 * sc)}px Arial`;
     ctx.shadowColor = 'black';
@@ -1164,23 +1124,18 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
     ctx.fillText(label, W / 2, H + 18 * sc);
     ctx.shadowBlur  = 0;
 
-    ctx.restore(); // undo translate
+    ctx.restore();
 }
 
-/**
- * Draw both vials (HP + Dash) stacked vertically on the left side of the screen.
- * Called from drawUI().
- */
 function drawVials() {
-    const leftPad  = 22;   // distance from left edge of screen
-    const topPad   = 170;  // start below the info panel
-    const gap      = 30;   // vertical gap between the two vials (includes label space)
+    const leftPad  = 22;
+    const topPad   = 170;
+    const gap      = 30;
 
     const startX   = leftPad;
     const hpY      = topPad;
     const dashY    = topPad + VIAL_H + gap;
 
-    // ── HP vial ──────────────────────────────────────────────────────────────
     const hpFill = player.hp / player.maxHp;
     const hpColors = hpFill > 0.5
         ? { top: '#ff8888', mid: '#dd2222', bot: '#660008' }
@@ -1190,7 +1145,6 @@ function drawVials() {
 
     drawVial(startX, hpY, hpFill, hpColors, vialGlowHpSprite, '❤  HP');
 
-    // ── Dash vial ────────────────────────────────────────────────────────────
     const dashFill  = player.dashCooldown > 0 ? 1 - player.dashCooldown / 120 : 1;
     const dashReady = player.dashCooldown === 0;
     const dashColors = dashReady
@@ -1199,7 +1153,6 @@ function drawVials() {
 
     drawVial(startX, dashY, dashFill, dashColors, vialGlowDashSprite, '⚡ DASH');
 
-    // "READY" flash above the dash vial when fully recharged
     if (dashReady) {
         const readyAlpha = 0.55 + 0.45 * Math.abs(Math.sin(frameCount * 0.07));
         ctx.save();
@@ -1221,23 +1174,20 @@ function drawVials() {
 function drawXpBar() {
     if (xpBarFlash > 0) xpBarFlash--;
 
-    // ── Layout ──────────────────────────────────────────────────────────────
     const DISP_W = 560;
-    const DISP_H = Math.round(DISP_W * 28 / 620); // matches new PNG height
-    const RADIUS = Math.round(7 * DISP_W / 620);  // scaled corner radius
+    const DISP_H = Math.round(DISP_W * 28 / 620);
+    const RADIUS = Math.round(7 * DISP_W / 620);
     const barX   = canvas.width  / 2 - DISP_W / 2;
     const barY   = canvas.height - DISP_H - 22;
 
     const xpFrac  = Math.min(player.xp / player.xpToNextLevel, 1);
     const fillW   = Math.floor(xpFrac * DISP_W);
 
-    // Animation params
     const t       = frameCount * 0.04;
     const flash   = xpBarFlash > 0;
     const pulse   = flash ? 1.0 : 0.6 + 0.4 * Math.sin(t * 1.3);
-    const shimmer = (Math.sin(t * 2.1) * 0.5 + 0.5); // 0..1
+    const shimmer = (Math.sin(t * 2.1) * 0.5 + 0.5);
 
-    // ── Helper: rounded-rect clip path ──────────────────────────────────────
     function clipToBar(x, y, w, h, r) {
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -1252,23 +1202,19 @@ function drawXpBar() {
         ctx.closePath();
     }
 
-    // ── 1. Draw dark background (no clipping needed — it IS the shape) ──────
     ctx.drawImage(xpBarBgSprite, barX, barY, DISP_W, DISP_H);
 
-    // ── 2. Everything below is clipped to the FILLED portion of the bar ──────
     if (fillW > 1) {
         ctx.save();
         clipToBar(barX, barY, fillW, DISP_H, RADIUS);
         ctx.clip();
 
-        // 2a. PNG fill base
         const bright = flash ? 1 + xpBarFlash * 0.07 : 1;
         ctx.filter = `brightness(${bright})`;
         ctx.drawImage(xpBarFillSprite, barX, barY, DISP_W, DISP_H);
         ctx.filter = 'none';
 
-        // 2b. Animated inner glow — radial gradient that rides along the fill edge
-        const glowX  = barX + fillW;          // right edge of fill
+        const glowX  = barX + fillW;
         const glowCY = barY + DISP_H / 2;
         const glowR  = DISP_H * (1.6 + pulse * 0.8);
         const ig = ctx.createRadialGradient(glowX, glowCY, 0, glowX, glowCY, glowR);
@@ -1278,7 +1224,6 @@ function drawXpBar() {
         ctx.fillStyle = ig;
         ctx.fillRect(barX, barY, fillW, DISP_H);
 
-        // 2c. Horizontal shimmer band — a bright streak that sweeps back and forth
         const shimX   = barX + shimmer * fillW;
         const shimW   = DISP_W * 0.12;
         const shimG   = ctx.createLinearGradient(shimX - shimW, 0, shimX + shimW, 0);
@@ -1288,50 +1233,38 @@ function drawXpBar() {
         ctx.fillStyle = shimG;
         ctx.fillRect(barX, barY, fillW, DISP_H);
 
-        // 2d. Top edge inner-glow streak
         const topG = ctx.createLinearGradient(0, barY, 0, barY + DISP_H * 0.45);
         topG.addColorStop(0,   `rgba(220,255,140,${0.45 * pulse})`);
         topG.addColorStop(1,   'rgba(100,220,30,0)');
         ctx.fillStyle = topG;
         ctx.fillRect(barX, barY, fillW, DISP_H);
 
-        ctx.restore(); // end fill clip
+        ctx.restore();
     }
 
-    // ── 3. Frame overlay drawn OVER fill (always full width) ─────────────────
     ctx.drawImage(xpBarFrameSprite, barX, barY, DISP_W, DISP_H);
 
-    // ── 4. Level label + XP text ─────────────────────────────────────────────
     ctx.save();
     ctx.textAlign = 'center';
-
-    // Level — sits above the bar
     ctx.font       = 'bold 15px Arial';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur  = 7;
     ctx.fillStyle  = '#d8ff50';
     ctx.fillText(`Level  ${player.level}`, canvas.width / 2, barY - 6);
-
-    // XP fraction — centred inside the bar, white with drop shadow
     ctx.font       = 'bold 12px Arial';
     ctx.shadowBlur  = 5;
     ctx.fillStyle  = 'rgba(255,255,255,0.88)';
     ctx.fillText(`${player.xp} / ${player.xpToNextLevel} XP`,
                  canvas.width / 2, barY + DISP_H / 2 + 4);
-
     ctx.restore();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  LEVEL-UP MENU  — layout helper + draw
+//  LEVEL-UP MENU
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Returns screen-space rects for the 3 upgrade cards and the skip button.
- * All drawing and hit-testing use this single source of truth.
- */
 function getLevelUpZones() {
-    const CW = 200, CH = 270;  // card dimensions (match PNG source)
+    const CW = 200, CH = 270;
     const GAP = 24;
     const totalW = CW * 3 + GAP * 2;
     const startX = canvas.width  / 2 - totalW / 2;
@@ -1356,12 +1289,9 @@ function getLevelUpZones() {
 }
 
 function drawLevelUpMenu() {
-    // ── 1. Frozen game world is already drawn behind us ─────────────────────
-    // Semi-transparent dark overlay
     ctx.fillStyle = 'rgba(0,0,0,0.72)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Subtle radial vignette
     const vig = ctx.createRadialGradient(
         canvas.width/2, canvas.height/2, canvas.height * 0.2,
         canvas.width/2, canvas.height/2, canvas.height * 0.85
@@ -1371,7 +1301,6 @@ function drawLevelUpMenu() {
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // ── 2. Title ────────────────────────────────────────────────────────────
     ctx.save();
     ctx.textAlign  = 'center';
     ctx.font       = 'bold 42px Arial';
@@ -1387,7 +1316,6 @@ function drawLevelUpMenu() {
 
     const { cards, skip } = getLevelUpZones();
 
-    // Update hover index
     levelUpMenuHover = -1;
     for (let i = 0; i < 3; i++) {
         const c = cards[i];
@@ -1401,9 +1329,8 @@ function drawLevelUpMenu() {
         levelUpMenuHover = 3;
     }
 
-    // ── 3. Upgrade cards (placeholder) ──────────────────────────────────────
     const CARD_LABELS = ['Upgrade Slot 1', 'Upgrade Slot 2', 'Upgrade Slot 3'];
-    const CARD_ICONS  = ['❶', '❷', '❸'];   // temp icons
+    const CARD_ICONS  = ['❶', '❷', '❸'];
 
     for (let i = 0; i < 3; i++) {
         const c     = cards[i];
@@ -1411,22 +1338,15 @@ function drawLevelUpMenu() {
         const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.06 + i * 1.1);
 
         ctx.save();
-
-        // Hover glow behind card
         if (hover) {
             ctx.shadowColor = '#88aaff';
             ctx.shadowBlur  = 28;
             ctx.globalAlpha = pulse;
         }
-
-        // Card background PNG
         ctx.drawImage(lvlCardBgSprite, c.x, c.y, c.w, c.h);
-
-        // Hover highlight border
         if (hover) {
             ctx.strokeStyle = `rgba(140,180,255,${pulse})`;
             ctx.lineWidth   = 2;
-            // rounded rect stroke
             const r = 14;
             ctx.beginPath();
             ctx.moveTo(c.x + r, c.y);
@@ -1441,31 +1361,22 @@ function drawLevelUpMenu() {
             ctx.closePath();
             ctx.stroke();
         }
-
         ctx.globalAlpha = 1;
         ctx.shadowBlur  = 0;
-
-        // Icon
         ctx.textAlign  = 'center';
         ctx.font       = '44px Arial';
         ctx.fillText(CARD_ICONS[i], c.x + c.w / 2, c.y + 42);
-
-        // Placeholder title text
         ctx.font       = 'bold 14px Arial';
         ctx.fillStyle  = hover ? '#ddeeff' : '#aabbcc';
         ctx.fillText(CARD_LABELS[i], c.x + c.w / 2, c.y + 78);
-
-        // Dotted "coming soon" body
         ctx.font       = '12px Arial';
         ctx.fillStyle  = 'rgba(160,170,190,0.6)';
         ctx.fillText('—  coming soon  —', c.x + c.w / 2, c.y + 140);
         ctx.fillText('Upgrade details', c.x + c.w / 2, c.y + 162);
         ctx.fillText('will appear here', c.x + c.w / 2, c.y + 180);
-
         ctx.restore();
     }
 
-    // ── 4. Skip button ───────────────────────────────────────────────────────
     const skipHover = levelUpMenuHover === 3;
     const skipPulse = 0.85 + 0.15 * Math.sin(frameCount * 0.06);
 
@@ -1478,7 +1389,6 @@ function drawLevelUpMenu() {
     ctx.drawImage(lvlSkipBgSprite, skip.x, skip.y, skip.w, skip.h);
     ctx.globalAlpha = 1;
     ctx.shadowBlur  = 0;
-
     ctx.textAlign  = 'center';
     ctx.font       = `bold 16px Arial`;
     ctx.fillStyle  = skipHover ? '#ffffff' : 'rgba(200,200,200,0.85)';
@@ -1492,7 +1402,6 @@ function drawUI() {
     const panelWidth = 240;
     const panelHeight = 115;
 
-    // Background panel
     ctx.fillStyle  = "black";
     ctx.globalAlpha = 0.55;
     ctx.fillRect(padding - 12, padding - 12, panelWidth, panelHeight);
@@ -1503,18 +1412,14 @@ function drawUI() {
     ctx.strokeRect(padding - 12, padding - 12, panelWidth, panelHeight);
 
     ctx.textAlign = "left";
-
-    // Level
     ctx.fillStyle = "white";
     ctx.font      = "bold 18px Arial";
     ctx.fillText("Level " + player.level, padding, padding + 5);
 
-    // Score
     ctx.font      = "14px Arial";
     ctx.fillStyle = "lightgray";
     ctx.fillText("Score: " + score, padding, padding + 25);
 
-    // Instructions
     const tutY = padding + 44;
     ctx.font      = "12px Arial";
     ctx.fillStyle = "silver";
@@ -1522,7 +1427,6 @@ function drawUI() {
     ctx.fillText("Shoot: Mouse Click",  padding, tutY + 16);
     ctx.fillText("Dash: Space",          padding, tutY + 32);
 
-    // Debug position (bottom-left)
     ctx.font      = "12px monospace";
     ctx.fillStyle = "white";
     ctx.fillText(
@@ -1530,15 +1434,12 @@ function drawUI() {
         20, canvas.height - 20
     );
 
-    // ── Vials (left side) ────────────────────────────────────────────────────
     drawVials();
-
-    // ── XP bar (bottom centre) ───────────────────────────────────────────────
     drawXpBar();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  MENU HELPERS (unchanged)
+//  MENU HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 function getSelectCursorButton() {
     const w = 160, h = 36;
@@ -1643,61 +1544,79 @@ function drawGameOver() {
     ctx.fillText("Press ENTER or Click to return to Menu", canvasW / 2, canvasH / 2 + 40);
 }
 
-// FPS variables
-const FPS = 60;
-const FRAME_TIME = 1000 / FPS;
-let lastFrameTime = 0;
+function drawCursor() {
+    const sprite = cursorSprites[selectedCursor].img;
+    if (!sprite.complete || !sprite.naturalWidth) return;
+    ctx.drawImage(sprite, mouseX, mouseY, 32, 32);
+}
 
-// Main game loop
+// ─────────────────────────────────────────────────────────────────────────────
+//  MAIN LOOP  —  fixed 60 Hz logic, uncapped render rate with interpolation
+//
+//  Logic always ticks at exactly 1/60 s regardless of monitor refresh rate.
+//  Between ticks, renderAlpha (0..1) is the fraction of a tick that has
+//  elapsed, and every entity's screen position is lerped between its previous
+//  and current logic positions by that fraction.  This gives sub-pixel smooth
+//  motion on any display without ever tying speed to frame rate.
+// ─────────────────────────────────────────────────────────────────────────────
 function gameLoop(timestamp) {
-    if (timestamp - lastFrameTime < FRAME_TIME) {
-        requestAnimationFrame(gameLoop);
-        return;
-    }
-
-    lastFrameTime = timestamp;
-    frameCount++;
+    // Bootstrap: treat the very first frame as zero elapsed time
+    if (lastTimestamp === 0) lastTimestamp = timestamp;
+    // Cap delta to 100 ms so a tab becoming visible after being hidden doesn't
+    // cause a huge burst of logic ticks.
+    const dt = Math.min(timestamp - lastTimestamp, 100);
+    lastTimestamp = timestamp;
 
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === 'menu') {
         drawMenu();
-    } else if (gameState === 'gameOver') {
-        drawGameOver();
-    } else if (gameState === 'levelUp') {
-        // Draw the frozen game world behind the overlay (no updates)
-        updateCamera();
-        drawMap();
-        drawPlayer();
-        drawEnemies();
-        drawProjectiles();
-        drawPickups();
-        drawUI();         // includes XP bar at bottom
-        drawLevelUpMenu();
-        drawCursor();
-    } else {
-        updatePlayer();
-        updateEnemies();
-        updateProjectiles();
-        updatePickups();
-        updateCamera();
-
-        drawMap();
-        drawPlayer();
-        drawEnemies();
-        drawProjectiles();
-        drawPickups();
-        drawUI();
-        drawCursor();
+        requestAnimationFrame(gameLoop);
+        return;
     }
-    requestAnimationFrame(gameLoop);
-}
+    if (gameState === 'gameOver') {
+        drawGameOver();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
 
-function drawCursor() {
-    const sprite = cursorSprites[selectedCursor].img;
-    if (!sprite.complete || !sprite.naturalWidth) return;
-    ctx.drawImage(sprite, mouseX, mouseY, 32, 32);
+    if (gameState === 'playing') {
+        accumulator += dt;
+        // Drain the accumulator in fixed 1/60 s steps
+        while (accumulator >= FIXED_STEP) {
+            savePrevPositions();     // snapshot positions for interpolation
+            updatePlayer();
+            updateEnemies();
+            updateProjectiles();
+            updatePickups();
+            frameCount++;
+            accumulator -= FIXED_STEP;
+        }
+        // How far we are through the next (not-yet-run) tick
+        renderAlpha = accumulator / FIXED_STEP;
+    } else {
+        // levelUp: logic frozen, but animations & UI still animate
+        frameCount++;
+        renderAlpha = 1;
+    }
+
+    // Camera tracks interpolated player position
+    updateCamera(renderAlpha);
+
+    drawMap();
+    drawPlayer();
+    drawEnemies();
+    drawProjectiles();
+    drawPickups();
+    drawUI();
+
+    if (gameState === 'levelUp') {
+        drawLevelUpMenu();
+    }
+
+    drawCursor();
+    requestAnimationFrame(gameLoop);
 }
 
 generateMap();
