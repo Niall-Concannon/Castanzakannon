@@ -149,6 +149,10 @@ let score, lastScore = 0;
 let pickups = [];
 let navGrid = [];
 
+// Offscreen fog layer so mask cutouts do not erase world pixels.
+const fogCanvas = document.createElement('canvas');
+const fogCtx = fogCanvas.getContext('2d');
+
 // Fixed-timestep / interpolation state
 const FIXED_STEP  = 1000 / 60;   // logic runs at 60 Hz
 let lastTimestamp  = 0;
@@ -1499,6 +1503,11 @@ function drawUI() {
 }
 
 function drawVisibilityMask() {
+    if (fogCanvas.width !== canvas.width || fogCanvas.height !== canvas.height) {
+        fogCanvas.width = canvas.width;
+        fogCanvas.height = canvas.height;
+    }
+
     // Interpolated player position
     const rx = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
     const ry = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
@@ -1507,10 +1516,12 @@ function drawVisibilityMask() {
     const innerRadius = 120;   // fully visible zone
     const outerRadius = 420;   // full darkness
 
-    ctx.save();
+    fogCtx.save();
+
+    fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
 
     // Radial gradient darkness
-    const gradient = ctx.createRadialGradient(
+    const gradient = fogCtx.createRadialGradient(
         s.x, s.y, innerRadius,
         s.x, s.y, outerRadius
     );
@@ -1520,10 +1531,27 @@ function drawVisibilityMask() {
     gradient.addColorStop(0.7, "rgba(0,0,0,0.75)"); // darker
     gradient.addColorStop(1,   "rgba(0,0,0,1)");    // full black
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    fogCtx.fillStyle = gradient;
+    fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
-    ctx.restore();
+    // Bullets simply clear fog in their fired path area.
+    fogCtx.globalCompositeOperation = 'destination-out';
+    for (const p of projectiles) {
+        const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
+        const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
+        const ps  = toScreen(prx, pry);
+
+        // Clear a round area around the bullet itself.
+        fogCtx.fillStyle = 'rgba(0,0,0,1)';
+        fogCtx.beginPath();
+        fogCtx.arc(ps.x, ps.y, Math.max(28, p.size * 7), 0, Math.PI * 2);
+        fogCtx.fill();
+    }
+    fogCtx.globalCompositeOperation = 'source-over';
+
+    fogCtx.restore();
+
+    ctx.drawImage(fogCanvas, 0, 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
