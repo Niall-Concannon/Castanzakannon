@@ -71,6 +71,13 @@ projectileSprite.src = 'assets/sprites/projectile_placeholder.png';
 const pickupXpSprite = new Image();
 pickupXpSprite.src = 'assets/sprites/pickup_xp_placeholder.png';
 
+const XP_PICKUP_BASE_VALUE = 5;
+const TANK_XP_MULTIPLIER = 1.5;
+const XP_PICKUP_VARIANTS = {
+    green: { shadow: '#39ff14', rgb: '57,255,20' },
+    blue:  { shadow: '#31b6ff', rgb: '49,182,255' }
+};
+
 const cursorSprites = [
     { name: 'Crosshair',  img: Object.assign(new Image(), { src: 'assets/sprites/cursor_crosshair.png'  }) },
     { name: 'Reticle',    img: Object.assign(new Image(), { src: 'assets/sprites/cursor_reticle.png'    }) },
@@ -648,7 +655,20 @@ function updateProjectiles() {
                 if (e.hp <= 0) {
                     e.alive = false;
                     score++;
-                    pickups.push({ x: e.x, y: e.y, prevX: e.x, prevY: e.y, vx: 0, vy: 0, size: 10, type: "xp" });
+                    const variant = e.type === 'tank' ? 'blue' : 'green';
+                    const value = XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1);
+                    pickups.push({
+                        x: e.x,
+                        y: e.y,
+                        prevX: e.x,
+                        prevY: e.y,
+                        vx: 0,
+                        vy: 0,
+                        size: 10,
+                        type: 'xp',
+                        variant,
+                        value
+                    });
                     const types = ["basic", "fast", "tank"];
                     spawnEnemy(types[Math.floor(Math.random() * types.length)]);
                 }
@@ -667,6 +687,10 @@ function updatePickups() {
         const p = pickups[i];
         if (p.vx    === undefined) { p.vx = 0; p.vy = 0; }
         if (p.trail === undefined) { p.trail = []; }
+        if (p.variant === undefined) { p.variant = 'green'; }
+        if (p.value === undefined) {
+            p.value = XP_PICKUP_BASE_VALUE * (p.variant === 'blue' ? TANK_XP_MULTIPLIER : 1);
+        }
 
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
         if (dist < XP_ATTRACT_RADIUS && dist > 0) {
@@ -697,7 +721,7 @@ function updatePickups() {
 
         if (dist < player.size + p.size) {
             if (p.type === "xp") {
-                player.xp += 5;
+                player.xp += p.value;
                 xpBarFlash = 12;
                 if (player.xp >= player.xpToNextLevel) {
                     player.xp -= player.xpToNextLevel;
@@ -960,8 +984,9 @@ function drawPickups() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const s   = toScreen(prx, pry);
+        const variant = XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
 
-        // Draw green trail particles behind the orb
+        // Draw variant-colored trail particles behind the orb
         if (p.type === 'xp' && p.trail && p.trail.length > 0) {
             for (const t of p.trail) {
                 const ts   = toScreen(t.x, t.y);
@@ -969,9 +994,9 @@ function drawPickups() {
                 const r    = p.size * 0.55 * life;
                 ctx.save();
                 ctx.globalAlpha = life * 0.7;
-                ctx.shadowColor = '#39ff14';
+                ctx.shadowColor = variant.shadow;
                 ctx.shadowBlur  = 6 * life;
-                ctx.fillStyle   = `rgba(57,255,20,${life * 0.85})`;
+                ctx.fillStyle   = `rgba(${variant.rgb},${life * 0.85})`;
                 ctx.beginPath();
                 ctx.arc(ts.x, ts.y, r, 0, Math.PI * 2);
                 ctx.fill();
@@ -984,19 +1009,25 @@ function drawPickups() {
             ctx.save();
             const haloRadius = p.size * 3.5 * pulse;
             const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, haloRadius);
-            halo.addColorStop(0,   'rgba(57, 255, 20, 0.35)');
-            halo.addColorStop(0.5, 'rgba(57, 255, 20, 0.12)');
-            halo.addColorStop(1,   'rgba(57, 255, 20, 0)');
+            halo.addColorStop(0,   `rgba(${variant.rgb},0.35)`);
+            halo.addColorStop(0.5, `rgba(${variant.rgb},0.12)`);
+            halo.addColorStop(1,   `rgba(${variant.rgb},0)`);
             ctx.fillStyle = halo;
             ctx.beginPath();
             ctx.arc(s.x, s.y, haloRadius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowColor = '#39ff14';
+            ctx.shadowColor = variant.shadow;
             ctx.shadowBlur  = 18 * pulse;
             if (pickupXpSprite.complete && pickupXpSprite.naturalWidth > 0) {
                 ctx.drawImage(pickupXpSprite, s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
+                if (p.variant === 'blue') {
+                    ctx.globalCompositeOperation = 'source-atop';
+                    ctx.fillStyle = 'rgba(49,182,255,0.55)';
+                    ctx.fillRect(s.x - p.size, s.y - p.size, p.size * 2, p.size * 2);
+                    ctx.globalCompositeOperation = 'source-over';
+                }
             } else {
-                ctx.fillStyle = '#39ff14';
+                ctx.fillStyle = variant.shadow;
                 ctx.beginPath();
                 ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -1282,7 +1313,8 @@ function drawXpBar() {
     ctx.font       = 'bold 12px Arial';
     ctx.shadowBlur  = 5;
     ctx.fillStyle  = 'rgba(255,255,255,0.88)';
-    ctx.fillText(`${player.xp} / ${player.xpToNextLevel} XP`,
+    const xpText = Number.isInteger(player.xp) ? player.xp : player.xp.toFixed(1);
+    ctx.fillText(`${xpText} / ${player.xpToNextLevel} XP`,
                  canvas.width / 2, barY + DISP_H / 2 + 4);
     ctx.restore();
 }
