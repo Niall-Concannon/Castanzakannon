@@ -89,9 +89,9 @@ const projectileSprite  = img('assets/sprites/projectile_placeholder.png');
 const pickupXpSprite    = img('assets/sprites/pickup_xp_placeholder.png');
 
 const ENEMY_SPRITE_PATHS = {
-    basic: ['assets/sprites/enemy_basic_frame1.png', 'assets/sprites/enemy_basic_frame2.png', 'assets/sprites/enemy_basic_frame3.png'],
-    fast:  ['assets/sprites/enemy_fast_frame1.png',  'assets/sprites/enemy_fast_frame2.png',  'assets/sprites/enemy_fast_frame3.png' ],
-    tank:  ['assets/sprites/enemy_tank_frame1.png',  'assets/sprites/enemy_tank_frame2.png',  'assets/sprites/enemy_tank_frame3.png' ],
+    basic: ['assets/sprites/enemies/enemy_basic_frame1.png', 'assets/sprites/enemies/enemy_basic_frame2.png', 'assets/sprites/enemies/enemy_basic_frame3.png'],
+    fast:  ['assets/sprites/enemies/enemy_fast_frame1.png',  'assets/sprites/enemies/enemy_fast_frame2.png',  'assets/sprites/enemies/enemy_fast_frame3.png' ],
+    tank:  ['assets/sprites/enemies/enemy_tank_frame1.png',  'assets/sprites/enemies/enemy_tank_frame2.png',  'assets/sprites/enemies/enemy_tank_frame3.png' ],
 };
 const enemySprites = {};
 for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
