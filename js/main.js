@@ -99,12 +99,12 @@ for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
 }
 
 const cursorSprites = [
-    { name: 'Crosshair',  img: img('assets/sprites/cursor_crosshair.png')  },
-    { name: 'Reticle',    img: img('assets/sprites/cursor_reticle.png')    },
-    { name: 'Scope',      img: img('assets/sprites/cursor_scope.png')      },
-    { name: 'Skull',      img: img('assets/sprites/cursor_skull.png')      },
-    { name: 'Tactical',   img: img('assets/sprites/cursor_tactical.png')   },
-    { name: 'Neon Arrow', img: img('assets/sprites/cursor_neon_arrow.png') },
+    { name: 'Crosshair',  img: img('assets/sprites/cursors/cursor_crosshair.png')  },
+    { name: 'Reticle',    img: img('assets/sprites/cursors/cursor_reticle.png')    },
+    { name: 'Scope',      img: img('assets/sprites/cursors/cursor_scope.png')      },
+    { name: 'Skull',      img: img('assets/sprites/cursors/cursor_skull.png')      },
+    { name: 'Tactical',   img: img('assets/sprites/cursors/cursor_tactical.png')   },
+    { name: 'Neon Arrow', img: img('assets/sprites/cursors/cursor_neon_arrow.png') },
 ];
 
 // UI sprites
