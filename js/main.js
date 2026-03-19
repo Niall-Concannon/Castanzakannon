@@ -108,17 +108,17 @@ const cursorSprites = [
 ];
 
 // UI sprites
-const xpBarBgSprite      = img('assets/sprites/ui_xpbar_bg.png');
-const xpBarFillSprite    = img('assets/sprites/ui_xpbar_fill.png');
-const xpBarFrameSprite   = img('assets/sprites/ui_xpbar_frame.png');
-const xpBarGlowSprite    = img('assets/sprites/ui_xpbar_glow.png');
-const lvlCardBgSprite    = img('assets/sprites/ui_levelup_card_bg.png');
-const lvlSkipBgSprite    = img('assets/sprites/ui_levelup_skip_bg.png');
-const vialFrameSprite    = img('assets/sprites/ui_vial_frame.png');
-const vialBgSprite       = img('assets/sprites/ui_vial_bg.png');
-const vialGlowHpSprite   = img('assets/sprites/ui_vial_glow_hp.png');
-const vialGlowDashSprite = img('assets/sprites/ui_vial_glow_dash.png');
-const vialBubblesSprite  = img('assets/sprites/ui_vial_bubbles.png');
+const xpBarBgSprite      = img('assets/sprites/ui/ui_xpbar_bg.png');
+const xpBarFillSprite    = img('assets/sprites/ui/ui_xpbar_fill.png');
+const xpBarFrameSprite   = img('assets/sprites/ui/ui_xpbar_frame.png');
+const xpBarGlowSprite    = img('assets/sprites/ui/ui_xpbar_glow.png');
+const lvlCardBgSprite    = img('assets/sprites/ui/ui_levelup_card_bg.png');
+const lvlSkipBgSprite    = img('assets/sprites/ui/ui_levelup_skip_bg.png');
+const vialFrameSprite    = img('assets/sprites/ui/ui_vial_frame.png');
+const vialBgSprite       = img('assets/sprites/ui/ui_vial_bg.png');
+const vialGlowHpSprite   = img('assets/sprites/ui/ui_vial_glow_hp.png');
+const vialGlowDashSprite = img('assets/sprites/ui/ui_vial_glow_dash.png');
+const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
 
 
 // =============================================================================
