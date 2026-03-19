@@ -83,10 +83,11 @@ const gunSprites = {
     shoot: img('assets/sprites/guns/gun_shoot.png'),
 };
 
-const wallSprite        = img('assets/sprites/wall_placeholder.png');
-const floorSprite       = img('assets/sprites/floor_placeholder.png');
-const projectileSprite  = img('assets/sprites/projectile_placeholder.png');
-const pickupXpSprite    = img('assets/sprites/pickup_xp_placeholder.png');
+const wallSprite         = img('assets/sprites/wall_placeholder.png');
+const floorSprite        = img('assets/sprites/floor_placeholder.png');
+const projectileSprite   = img('assets/sprites/projectile_placeholder.png');
+const pickupXpSprite     = img('assets/sprites/pickup_xp_placeholder.png');
+const pickupXpBlueSprite = img('assets/sprites/pickup_xp_blue_placeholder.png');
 
 const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/enemy_basic_frame1.png', 'assets/sprites/enemies/enemy_basic_frame2.png', 'assets/sprites/enemies/enemy_basic_frame3.png'],
@@ -723,7 +724,9 @@ function updateProjectiles() {
                     const variant = e.type === 'tank' ? 'blue' : 'green';
                     pickups.push({
                         x: e.x, y: e.y, prevX: e.x, prevY: e.y,
-                        vx: 0, vy: 0, size: 10, type: 'xp', variant,
+                        vx: 0, vy: 0,
+                        size: variant === 'blue' ? 15 : 10,
+                        type: 'xp', variant,
                         value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
                     });
                     spawnEnemy(['basic', 'fast', 'tank'][Math.floor(Math.random() * 3)]);
@@ -807,6 +810,7 @@ function drawPickups() {
         const sc  = toScreen(prx, pry);
         const variant = XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
 
+        // Trail dots
         if (p.type === 'xp' && p.trail?.length) {
             for (const t of p.trail) {
                 const ts   = toScreen(t.x, t.y);
@@ -827,31 +831,31 @@ function drawPickups() {
         if (p.type === 'xp') {
             const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.04);
             ctx.save();
+
+            // Halo glow
             const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, p.size * 3.5 * pulse);
             halo.addColorStop(0,   `rgba(${variant.rgb},0.35)`);
             halo.addColorStop(0.5, `rgba(${variant.rgb},0.12)`);
             halo.addColorStop(1,   `rgba(${variant.rgb},0)`);
-            ctx.fillStyle   = halo;
+            ctx.fillStyle = halo;
             ctx.beginPath();
             ctx.arc(sc.x, sc.y, p.size * 3.5 * pulse, 0, Math.PI * 2);
             ctx.fill();
+
             ctx.shadowColor = variant.shadow;
             ctx.shadowBlur  = 18 * pulse;
 
-            if (pickupXpSprite.complete && pickupXpSprite.naturalWidth) {
-                ctx.drawImage(pickupXpSprite, sc.x - p.size, sc.y - p.size, p.size * 2, p.size * 2);
-                if (p.variant === 'blue') {
-                    ctx.globalCompositeOperation = 'source-atop';
-                    ctx.fillStyle = 'rgba(49,182,255,0.55)';
-                    ctx.fillRect(sc.x - p.size, sc.y - p.size, p.size * 2, p.size * 2);
-                    ctx.globalCompositeOperation = 'source-over';
-                }
+            // Blue uses its own PNG, green uses the original
+            const sprite = p.variant === 'blue' ? pickupXpBlueSprite : pickupXpSprite;
+            if (sprite.complete && sprite.naturalWidth) {
+                ctx.drawImage(sprite, sc.x - p.size, sc.y - p.size, p.size * 2, p.size * 2);
             } else {
                 ctx.fillStyle = variant.shadow;
                 ctx.beginPath();
                 ctx.arc(sc.x, sc.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
             }
+
             ctx.restore();
         } else {
             ctx.drawImage(pickupXpSprite, sc.x - p.size, sc.y - p.size, p.size * 2, p.size * 2);
