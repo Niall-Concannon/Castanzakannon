@@ -79,8 +79,8 @@ const playerSprites = {
 };
 
 const gunSprites = {
-    idle:  img('assets/sprites/gun_idle.png'),
-    shoot: img('assets/sprites/gun_shoot.png'),
+    idle:  img('assets/sprites/guns/gun_idle.png'),
+    shoot: img('assets/sprites/guns/gun_shoot.png'),
 };
 
 const wallSprite        = img('assets/sprites/wall_placeholder.png');
