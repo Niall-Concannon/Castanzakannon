@@ -200,6 +200,7 @@ let gameState      = 'menu';
 let menuPage       = 'main';
 let selectedCursor = 0;
 let selectedCharacter = 0;
+let characterHoverAnim = CHARACTER_LOADOUTS.map(() => 0);
 let mouseX         = 0;
 let mouseY         = 0;
 let mouseDown      = false;
@@ -208,8 +209,7 @@ let enemies        = [];
 let pickups        = [];
 let muzzleFlashes  = [];
 let navGrid        = [];
-let score;
-let lastScore      = 0;
+let lastLevelDied  = 1;
 let levelUpMenuHover = -1;
 let xpBarFlash     = 0;
 let lastTimestamp  = 0;
@@ -217,6 +217,7 @@ let accumulator    = 0;
 let renderAlpha    = 1;
 let fps            = 0;
 let showPerfGuide  = false;
+let showFpsCounter = true;
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -285,10 +286,13 @@ window.addEventListener('mousedown', () => {
             const btn = getSelectCursorButton();
             const ftb = getFogToggleButton();
             const pb  = getPerfButton();
+            const fpb = getFpsToggleButton();
             if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
                 menuPage = 'characters';
             } else if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
                 showPerfGuide = !showPerfGuide;
+            } else if (mouseX >= fpb.x && mouseX <= fpb.x + fpb.w && mouseY >= fpb.y && mouseY <= fpb.y + fpb.h) {
+                showFpsCounter = !showFpsCounter;
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
                 fogEnabled = !fogEnabled;
             } else if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
@@ -486,7 +490,6 @@ function startGame() {
     player.hp    = player.maxHp;
     player.xp    = 0;
     player.level = 1;
-    score        = 0;
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
@@ -619,7 +622,7 @@ function updatePlayer() {
         }
     }
 
-    if (player.hp <= 0) { lastScore = score; gameState = 'gameOver'; }
+    if (player.hp <= 0) { lastLevelDied = player.level; gameState = 'gameOver'; }
 
     player.weaponAngle = Math.atan2(mouseY - canvas.height / 2, mouseX - canvas.width / 2);
     playerShoot();
@@ -1051,7 +1054,6 @@ function updateProjectiles() {
 
                 if (e.hp <= 0) {
                     e.alive = false;
-                    score++;
                     if (player.lifestealOnKill > 0 && player.hp > 0) {
                         const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
                         player.hp = Math.min(player.maxHp, player.hp + heal);
@@ -1309,7 +1311,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
 }
 
 function drawVials() {
-    const lp = 22, tp = 170, gap = 14;
+    const lp = 12, tp = 18, gap = 12;
     const hpY   = tp;
     const dashY = tp;
     const hpX   = lp;
@@ -1432,98 +1434,21 @@ function drawXpBar() {
 // =============================================================================
 
 function drawUI() {
-    ctx.save();
-    ctx.textAlign  = 'center';
-    ctx.font       = 'bold 13px monospace';
-    ctx.fillStyle  = fps >= 50 ? '#88ff88' : fps >= 30 ? '#ffcc44' : '#ff4444';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur  = 4;
-    ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
-    ctx.restore();
-
-    const pad = 12;
-    const ph = 30;
-    const pw = 140;
-    const gap = 5;
-    const r = 6;
-
-    function drawPill(x, y, labelText, valueText, valueColor) {
-        // Background
+    if (showFpsCounter) {
         ctx.save();
-        ctx.fillStyle   = 'rgba(10,10,20,0.72)';
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-        ctx.lineWidth   = 0.5;
-        ctx.beginPath();
-        ctx.roundRect(x, y, pw, ph, r);
-        ctx.fill();
-        ctx.stroke();
-
-        // Label
-        ctx.textAlign = 'left';
-        ctx.font      = 'bold 10px monospace';
-        ctx.fillStyle = 'rgba(255,255,255,0.38)';
-        ctx.fillText(labelText.toUpperCase(), x + 10, y + ph / 2 + 4);
-
-        // Value
-        ctx.textAlign = 'right';
-        ctx.font      = 'bold 14px monospace';
-        ctx.fillStyle = valueColor;
-        ctx.fillText(valueText, x + pw - 10, y + ph / 2 + 5);
-        ctx.restore();
-    }
-
-    function drawHintKey(x, y, key, hint) {
-        const keyW = 38, keyH = 18, keyR = 3;
-
-        // Key chip
-        ctx.save();
-        ctx.fillStyle   = 'rgba(255,255,255,0.08)';
-        ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-        ctx.lineWidth   = 0.5;
-        ctx.beginPath();
-        ctx.roundRect(x, y, keyW, keyH, keyR);
-        ctx.fill();
-        ctx.stroke();
         ctx.textAlign  = 'center';
-        ctx.font       = 'bold 10px monospace';
-        ctx.fillStyle  = 'rgba(255,255,255,0.55)';
-        ctx.fillText(key, x + keyW / 2, y + keyH / 2 + 4);
-
-        // Hint text
-        ctx.textAlign  = 'left';
-        ctx.font       = '11px monospace';
-        ctx.fillStyle  = 'rgba(255,255,255,0.38)';
-        ctx.fillText(hint, x + keyW + 6, y + keyH / 2 + 4);
+        ctx.font       = 'bold 13px monospace';
+        ctx.fillStyle  = '#ffffff';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur  = 4;
+        ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
         ctx.restore();
     }
-
-    // Level
-    drawPill(pad, pad, 'Level', String(player.level), '#d8ff50');
-
-    // Score
-    drawPill(pad, pad + ph + gap, 'Score', String(score), '#88ffcc');
-
-    // Hints group background
-    const hintY  = pad + (ph + gap) * 2;
-    const hintH  = 18 * 3 + 8 * 2 + 12; // 3 rows + spacing + padding
-    ctx.save();
-    ctx.fillStyle   = 'rgba(10,10,20,0.55)';
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth   = 0.5;
-    ctx.beginPath();
-    ctx.roundRect(pad, hintY, pw, hintH, r);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-
-    drawHintKey(pad + 8, hintY + 6,         'WASD',  'Move');
-    drawHintKey(pad + 8, hintY + 6 + 26,    'Click', 'Shoot');
-    drawHintKey(pad + 8, hintY + 6 + 26 * 2,'Space', 'Dash');
 
     // Coords
     ctx.save();
     ctx.font      = '10px monospace';
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.textAlign = 'left';
     ctx.fillText('X: ' + Math.floor(player.x) + '  Y: ' + Math.floor(player.y), 20, canvas.height - 20);
     ctx.restore();
@@ -1574,6 +1499,7 @@ function drawVisibilityMask() {
 // =============================================================================
 
 function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
+function getFpsToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 222, w: 160, h: 36 }; }
 function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
 function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
@@ -1708,106 +1634,105 @@ function drawPerfGuide() {
 }
 
 function drawMenu() {
-    const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    bg.addColorStop(0, '#0c1018');
-    bg.addColorStop(0.5, '#101622');
-    bg.addColorStop(1, '#17100d');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const halo = ctx.createRadialGradient(canvas.width * 0.5, canvas.height * 0.3, 40, canvas.width * 0.5, canvas.height * 0.35, canvas.height * 0.75);
-    halo.addColorStop(0, 'rgba(90,170,255,0.16)');
-    halo.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = halo;
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (menuPage === 'main') {
-        ctx.fillStyle  = '#f8fcff';
+        ctx.fillStyle  = '#ffffff';
         ctx.font       = 'bold 64px Arial';
         ctx.textAlign  = 'center';
         ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 80);
         ctx.font       = '20px Arial';
-        ctx.fillStyle  = '#b9c7d8';
+        ctx.fillStyle  = '#ffffff';
         ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 20);
         ctx.font       = '15px Arial';
-        ctx.fillStyle  = '#8fd7ff';
+        ctx.fillStyle  = '#d6d6d6';
         ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 + 6);
 
         const charBtn = getSelectCharacterButton();
-        ctx.fillStyle   = '#1a2231';
+        ctx.fillStyle   = '#000000';
         ctx.fillRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
-        ctx.strokeStyle = '#5b8fb4';
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth   = 1;
         ctx.strokeRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
-        ctx.fillStyle   = '#c8ebff';
+        ctx.fillStyle   = '#ffffff';
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Select Character  >', charBtn.x + charBtn.w / 2, charBtn.y + charBtn.h / 2 + 6);
 
         const btn = getSelectCursorButton();
-        ctx.fillStyle   = '#1a2231';
+        ctx.fillStyle   = '#000000';
         ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.strokeStyle = '#5b8fb4';
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth   = 1;
         ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.fillStyle   = '#c8ebff';
+        ctx.fillStyle   = '#ffffff';
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
 
         // Fog toggle button
         const ftb = getFogToggleButton();
-        ctx.fillStyle   = '#1a2231';
+        ctx.fillStyle   = '#000000';
         ctx.fillRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        ctx.strokeStyle = '#5b8fb4';
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth   = 1;
         ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
         const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
         const pillX = ftb.x + 8;
-        ctx.fillStyle = fogEnabled ? '#4e8a70' : '#3d4c5c';
+        ctx.fillStyle = fogEnabled ? '#4a4a4a' : '#1f1f1f';
         ctx.beginPath();
         ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
         ctx.fill();
         const knobX = fogEnabled ? pillX + pillW - pillH / 2 - 2 : pillX + pillH / 2 + 2;
-        ctx.fillStyle = '#e8e8e8';
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(knobX, pillY + pillH / 2, pillH / 2 - 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle   = fogEnabled ? '#d1ecdf' : '#8e9daf';
+        ctx.fillStyle   = '#ffffff';
         ctx.font        = '14px Arial';
         ctx.textAlign   = 'left';
         ctx.fillText('Fog: ' + (fogEnabled ? 'ON' : 'OFF'), ftb.x + pillW + 16, ftb.y + ftb.h / 2 + 5);
 
-        // Perf guide button
+        // Graphics tutorial button
         const pb = getPerfButton();
-        ctx.fillStyle   = '#1a2231';
+        ctx.fillStyle   = '#000000';
         ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.strokeStyle = '#5b8fb4';
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth   = 1;
         ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.fillStyle   = showPerfGuide ? '#ffffff' : '#9eb8ce';
+        ctx.fillStyle   = '#ffffff';
         ctx.font        = '13px Arial';
         ctx.textAlign   = 'center';
-        ctx.fillText('Performance Guide', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
+        ctx.fillText('Graphics Tutorial', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
+
+        // FPS counter toggle button
+        const fpb = getFpsToggleButton();
+        ctx.fillStyle   = '#000000';
+        ctx.fillRect(fpb.x, fpb.y, fpb.w, fpb.h);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(fpb.x, fpb.y, fpb.w, fpb.h);
+        ctx.fillStyle   = '#ffffff';
+        ctx.font        = '13px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), fpb.x + fpb.w / 2, fpb.y + fpb.h / 2 + 5);
 
         if (showPerfGuide) drawPerfGuide();
     } else if (menuPage === 'characters') {
         const panel = getCharacterPanel();
-        const pg = ctx.createLinearGradient(panel.x, panel.y, panel.x, panel.y + panel.h);
-        pg.addColorStop(0, 'rgba(17,25,38,0.88)');
-        pg.addColorStop(1, 'rgba(12,17,27,0.92)');
-        ctx.fillStyle = pg;
+        ctx.fillStyle = 'rgba(0,0,0,0.93)';
         ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
-        ctx.strokeStyle = 'rgba(120,170,205,0.65)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
         ctx.lineWidth = 2;
         ctx.strokeRect(panel.x, panel.y, panel.w, panel.h);
 
-        ctx.fillStyle = '#f7fbff';
+        ctx.fillStyle = '#ffffff';
         ctx.font      = 'bold 38px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Select Character', canvas.width / 2, panel.y + 46);
         ctx.font      = '16px Arial';
-        ctx.fillStyle = '#a6c5de';
+        ctx.fillStyle = '#d8d8d8';
         ctx.fillText('Chunkster and Dasher are now live with unique passives', canvas.width / 2, panel.y + 74);
 
         const cards = getCharacterCards();
@@ -1817,67 +1742,73 @@ function drawMenu() {
             const isSel = i === selectedCharacter;
             const isHover = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
 
-            const cardGrad = ctx.createLinearGradient(c.x, c.y, c.x, c.y + c.h);
-            cardGrad.addColorStop(0, isSel ? '#203248' : '#1a2030');
-            cardGrad.addColorStop(1, isSel ? '#182435' : '#121824');
-            ctx.fillStyle = cardGrad;
-            ctx.fillRect(c.x, c.y, c.w, c.h);
+            const targetHover = isHover ? 1 : 0;
+            characterHoverAnim[i] += (targetHover - characterHoverAnim[i]) * 0.25;
+            const hoverT = characterHoverAnim[i];
+            const scale = 1 + hoverT * 0.08;
+            const drawW = c.w * scale;
+            const drawH = c.h * scale;
+            const drawX = c.x + (c.w - drawW) / 2;
+            const drawY = c.y + (c.h - drawH) / 2;
 
-            ctx.strokeStyle = isSel ? '#77d8ff' : isHover ? '#4e7ea0' : '#2f4157';
+            ctx.fillStyle = isSel ? '#131313' : '#0a0a0a';
+            ctx.fillRect(drawX, drawY, drawW, drawH);
+
+            ctx.strokeStyle = isSel ? '#ffffff' : isHover ? '#e6e6e6' : '#6b6b6b';
             ctx.lineWidth = isSel ? 2 : 1;
-            ctx.strokeRect(c.x, c.y, c.w, c.h);
+            ctx.strokeRect(drawX, drawY, drawW, drawH);
 
             if (isSel) {
                 ctx.save();
-                ctx.shadowColor = '#5fd4ff';
-                ctx.shadowBlur = 14;
-                ctx.strokeStyle = 'rgba(95,212,255,0.65)';
-                ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+                ctx.shadowColor = 'rgba(255,255,255,0.5)';
+                ctx.shadowBlur = 12;
+                ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+                ctx.strokeRect(drawX + 1, drawY + 1, drawW - 2, drawH - 2);
                 ctx.restore();
             }
 
             const prev = getCharacterPreviewSprite(loadout);
-            const size = Math.min(c.w * 0.72, c.h * 0.45);
-            const px = c.x + c.w / 2 - size / 2;
-            const py = c.y + 20;
+            const size = Math.min(drawW * 0.72, drawH * 0.45);
+            const px = drawX + drawW / 2 - size / 2;
+            const py = drawY + 20;
             ctx.drawImage(prev, px, py, size, size);
 
-            const nameY = c.y + c.h - 88;
-            const spdY  = c.y + c.h - 60;
-            const hpY   = c.y + c.h - 44;
-            const xpY   = c.y + c.h - 28;
-            const tagY  = c.y + c.h - 12;
+            const nameY = drawY + drawH - 88;
+            const spdY  = drawY + drawH - 60;
+            const hpY   = drawY + drawH - 44;
+            const xpY   = drawY + drawH - 28;
+            const tagY  = drawY + drawH - 12;
 
             ctx.textAlign = 'center';
             ctx.font = 'bold 13px Arial';
-            ctx.fillStyle = isSel ? '#e6f9ff' : '#cad8e6';
-            ctx.fillText(loadout.name, c.x + c.w / 2, nameY);
+            ctx.fillStyle = isSel ? '#ffffff' : '#e0e0e0';
+            ctx.fillText(loadout.name, drawX + drawW / 2, nameY);
 
             ctx.font = '12px Arial';
-            ctx.fillStyle = '#9ab4ca';
-            ctx.fillText(`SPD ${loadout.speed.toFixed(1)}`, c.x + c.w / 2, spdY);
-            ctx.fillText(`HP ${loadout.maxHp}`, c.x + c.w / 2, hpY);
-            ctx.fillText(`XP x${loadout.xpGainMult.toFixed(2)}`, c.x + c.w / 2, xpY);
+            ctx.fillStyle = '#bfbfbf';
+            ctx.fillText(`SPD ${loadout.speed.toFixed(1)}`, drawX + drawW / 2, spdY);
+            ctx.fillText(`HP ${loadout.maxHp}`, drawX + drawW / 2, hpY);
+            ctx.fillText(`XP x${loadout.xpGainMult.toFixed(2)}`, drawX + drawW / 2, xpY);
             if ((loadout.lifestealOnKill ?? 0) > 0) {
-                ctx.fillText(`LS ${Math.round(loadout.lifestealOnKill * 100)}%`, c.x + c.w / 2, tagY);
+                ctx.fillText(`LS ${Math.round(loadout.lifestealOnKill * 100)}%`, drawX + drawW / 2, tagY);
             } else {
-                ctx.fillText(`DASH ${loadout.dashCharges ?? 1}x`, c.x + c.w / 2, tagY);
+                ctx.fillText(`DASH ${loadout.dashCharges ?? 1}x`, drawX + drawW / 2, tagY);
             }
 
             if (isSel) {
                 ctx.font = 'bold 11px Arial';
-                ctx.fillStyle = '#7fe3ff';
-                ctx.fillText('ACTIVE', c.x + c.w / 2, c.y + 16);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText('ACTIVE', drawX + drawW / 2, drawY + 16);
             }
         }
 
         const back = getCharacterBackButton();
-        ctx.fillStyle   = '#1a2231';
+        ctx.fillStyle   = '#000000';
         ctx.fillRect(back.x, back.y, back.w, back.h);
-        ctx.strokeStyle = '#5b8fb4';
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth   = 1;
         ctx.strokeRect(back.x, back.y, back.w, back.h);
-        ctx.fillStyle   = '#c8ebff';
+        ctx.fillStyle   = '#ffffff';
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('<  Back', back.x + back.w / 2, back.y + back.h / 2 + 6);
@@ -2015,7 +1946,7 @@ function drawGameOver() {
     ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 60);
     ctx.font      = '28px Arial';
     ctx.fillStyle = 'white';
-    ctx.fillText('Score: ' + lastScore, canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText('You reached Level ' + lastLevelDied, canvas.width / 2, canvas.height / 2 - 10);
     ctx.font      = '20px Arial';
     ctx.fillStyle = 'silver';
     ctx.fillText('Press ENTER or Click to return to Menu', canvas.width / 2, canvas.height / 2 + 40);

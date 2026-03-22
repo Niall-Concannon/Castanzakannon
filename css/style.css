@@ -12,6 +12,6 @@ body {
 
 canvas {
     display: block;
-    background: #333;
+    background: #000;
     cursor: none;
 }
