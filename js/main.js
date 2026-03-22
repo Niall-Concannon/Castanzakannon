@@ -66,6 +66,26 @@ const VIAL_W = VSRC_W * VIAL_SCALE;
 const VIAL_H = VSRC_H * VIAL_SCALE;
 
 
+const TRAIL_LENGTH   = 7;
+const TRAIL_INTERVAL = 2;
+const TRAIL_LIFETIME = 38;
+
+const SANDEV_COLORS = [
+    { r: 255, g: 0,   b: 255 },   // magenta
+    { r: 180, g: 0,   b: 255 },   // violet
+    { r: 0,   g: 80,  b: 255 },   // electric blue
+    { r: 0,   g: 220, b: 255 },   // cyan
+    { r: 0,   g: 255, b: 160 },   // neon green
+    { r: 255, g: 220, b: 0   },   // yellow
+    { r: 255, g: 80,  b: 0   },   // orange  (freshest / closest to player)
+];
+
+const _tintCanvas = document.createElement('canvas');
+_tintCanvas.width  = 128;
+_tintCanvas.height = 128;
+const _tintCtx = _tintCanvas.getContext('2d');
+
+
 // =============================================================================
 //  SPRITES
 // =============================================================================
@@ -155,6 +175,8 @@ let accumulator    = 0;
 let renderAlpha    = 1;
 let fps            = 0;
 let showPerfGuide  = false;
+let dashTrail  = [];
+let trailTimer = 0;
 
 const fogCanvas = document.createElement('canvas');
 const fogCtx    = fogCanvas.getContext('2d');
@@ -370,8 +392,10 @@ function drawMap() {
 function startGame() {
     showPerfGuide = false;
     generateMap();
-    pickups = [];
-    enemies = [];
+    pickups    = [];
+    enemies    = [];
+    dashTrail  = [];
+    trailTimer = 0;
 
     for (let i = 0; i < MAX_ENEMIES; i++) {
         spawnEnemy(['basic', 'fast', 'tank'][Math.floor(Math.random() * 3)]);
@@ -406,6 +430,10 @@ function playerDash() {
     player.dashing     = true;
     player.dashTime    = DASH_DURATION;
     player.dashCooldown = 120;
+
+    // Seed the trail fresh on each new dash
+    dashTrail  = [];
+    trailTimer = 0;
 }
 
 function playerShoot() {
@@ -439,6 +467,19 @@ function updatePlayer() {
             const ny = player.y + player.dashDirY * DASH_SPEED;
             if (!wallCollision(nx,      player.y, player.size)) player.x = nx;
             if (!wallCollision(player.x, ny,      player.size)) player.y = ny;
+
+            // Record a trail ghost every TRAIL_INTERVAL frames
+            if (trailTimer <= 0) {
+                dashTrail.push({
+                    x:     player.x,
+                    y:     player.y,
+                    flipX: player.facing === -1,
+                    age:   0,
+                });
+                if (dashTrail.length > TRAIL_LENGTH) dashTrail.shift();
+                trailTimer = TRAIL_INTERVAL;
+            }
+            trailTimer--;
         }
     } else {
         const n  = Math.hypot(dirX, dirY) || 1;
@@ -454,6 +495,12 @@ function updatePlayer() {
     if (player.dashCooldown  > 0) player.dashCooldown--;
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invulnTimer   > 0) player.invulnTimer--;
+
+    // Age-out trail ghosts when not dashing
+    if (!player.dashing) {
+        for (const g of dashTrail) g.age++;
+        dashTrail = dashTrail.filter(g => g.age < TRAIL_LIFETIME);
+    }
 
     for (const e of enemies) {
         if (!e.alive) continue;
@@ -501,7 +548,108 @@ function updatePlayerAnim() {
     }
 }
 
+
+// =============================================================================
+//  SANDEVISTAN DASH TRAIL
+// =============================================================================
+function buildSilhouette(sprite, dw, dh, flipX, color) {
+    // Grow the tint canvas if needed
+    if (_tintCanvas.width < dw || _tintCanvas.height < dh) {
+        _tintCanvas.width  = Math.max(_tintCanvas.width,  dw);
+        _tintCanvas.height = Math.max(_tintCanvas.height, dh);
+    }
+
+    _tintCtx.clearRect(0, 0, dw, dh);
+
+    // Step 1: draw the sprite (gives us its alpha mask)
+    _tintCtx.save();
+    if (flipX) {
+        _tintCtx.translate(dw, 0);
+        _tintCtx.scale(-1, 1);
+    }
+    _tintCtx.drawImage(sprite, 0, 0, dw, dh);
+    _tintCtx.restore();
+
+    // Step 2: flood-fill the colour over every pixel that has alpha > 0
+    _tintCtx.globalCompositeOperation = 'source-in';
+    _tintCtx.fillStyle = color;
+    _tintCtx.fillRect(0, 0, dw, dh);
+    _tintCtx.globalCompositeOperation = 'source-over';
+}
+
+function drawDashTrail() {
+    if (dashTrail.length === 0) return;
+
+    const total   = dashTrail.length;
+    // Use the same display size as the idle sprite in drawPlayer (size * 2)
+    const size    = player.size * 2;
+    const ghostSprite = playerSprites.idle;
+    if (!ghostSprite.complete || !ghostSprite.naturalWidth) return;
+
+    for (let i = 0; i < total; i++) {
+        const g    = dashTrail[i];
+        const life = 1 - g.age / TRAIL_LIFETIME;
+        if (life <= 0) continue;
+
+        // t: 0 = oldest ghost, 1 = newest ghost (closest to current player pos)
+        const t = i / Math.max(total - 1, 1);
+
+        const ci  = Math.min(Math.floor(t * SANDEV_COLORS.length), SANDEV_COLORS.length - 1);
+        const col = SANDEV_COLORS[ci];
+        const colorStr = `rgb(${col.r},${col.g},${col.b})`;
+
+        const baseAlpha = 0.35 + t * 0.55;
+        const alpha     = baseAlpha * life;
+
+        const sc = toScreen(g.x, g.y);
+
+        // ── 1. OUTER GLOW ─────────────────────────────────────────────────────
+        const glowR = size * (0.9 + t * 0.4) * life;
+        const grd   = ctx.createRadialGradient(sc.x, sc.y, size * 0.1, sc.x, sc.y, glowR);
+        grd.addColorStop(0,   `rgba(${col.r},${col.g},${col.b},${(alpha * 0.6).toFixed(3)})`);
+        grd.addColorStop(0.5, `rgba(${col.r},${col.g},${col.b},${(alpha * 0.2).toFixed(3)})`);
+        grd.addColorStop(1,   `rgba(${col.r},${col.g},${col.b},0)`);
+        ctx.save();
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, glowR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // ── 2. COLOURED SILHOUETTE ────────────────────────────────────────────
+        const dw = size, dh = size;
+        buildSilhouette(ghostSprite, dw, dh, g.flipX, colorStr);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(_tintCanvas, 0, 0, dw, dh, sc.x - dw / 2, sc.y - dh / 2, dw, dh);
+        ctx.restore();
+
+        // ── 3. THIN BRIGHT RIM ────────────────────────────────────────────────
+        if (life > 0.3) {
+            const rimAlpha = alpha * 0.55;
+            const rimScale = 0.82;
+            const rw = dw * rimScale, rh = dh * rimScale;
+            buildSilhouette(ghostSprite, dw, dh, g.flipX, `rgba(255,255,255,0.9)`);
+            ctx.save();
+            ctx.globalAlpha = rimAlpha * life;
+            ctx.globalCompositeOperation = 'screen';
+            ctx.drawImage(_tintCanvas, 0, 0, dw, dh,
+                sc.x - rw / 2, sc.y - rh / 2, rw, rh);
+            ctx.restore();
+        }
+    }
+}
+
+
+// =============================================================================
+//  DRAW PLAYER
+// =============================================================================
+
 function drawPlayer() {
+    // ── Draw trail FIRST (behind player) ──
+    drawDashTrail();
+
     const rx = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
     const ry = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
     const s  = toScreen(rx, ry);
@@ -631,7 +779,6 @@ function updateEnemies() {
         }
 
         const distToPlayer = Math.hypot(e.x - player.x, e.y - player.y);
-        // Scale up speed beyond 200px: +1× per 350px of extra distance, capped at 4×
         const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
         const speedMult = distMult * sanSlowMult;
 
@@ -861,7 +1008,6 @@ function drawPickups() {
             ctx.shadowColor = variant.shadow;
             ctx.shadowBlur  = 18 * pulse;
 
-            // Blue uses its own PNG, green uses the original
             const sprite = p.variant === 'blue' ? pickupXpBlueSprite : pickupXpSprite;
             if (sprite.complete && sprite.naturalWidth) {
                 ctx.drawImage(sprite, sc.x - p.size, sc.y - p.size, p.size * 2, p.size * 2);
@@ -1252,49 +1398,35 @@ function drawPerfGuide() {
     const by = canvas.height / 2 - boxH / 2 - 60;
 
     ctx.save();
-
-    // Background panel
     ctx.fillStyle = 'rgba(22,22,22,0.97)';
     ctx.fillRect(bx, by, boxW, boxH);
     ctx.strokeStyle = '#3a3a3a';
     ctx.lineWidth = 1;
     ctx.strokeRect(bx, by, boxW, boxH);
-
-    // Thin accent line at top
     ctx.fillStyle = '#4a4a4a';
     ctx.fillRect(bx, by, boxW, 3);
-
-    // Title
     ctx.textAlign  = 'center';
     ctx.font       = 'bold 15px Arial';
     ctx.fillStyle  = '#ddd';
     ctx.shadowBlur = 0;
     ctx.fillText('GPU Acceleration  —  ' + browserNames[browser] + ' detected', canvas.width / 2, by + 30);
-
     ctx.font      = '13px Arial';
     ctx.fillStyle = '#777';
     ctx.fillText('Follow these steps for a smoother experience:', canvas.width / 2, by + 52);
-
-    // Divider
     ctx.strokeStyle = '#333';
     ctx.lineWidth   = 1;
     ctx.beginPath();
     ctx.moveTo(bx + PAD, by + 64);
     ctx.lineTo(bx + boxW - PAD, by + 64);
     ctx.stroke();
-
-    // Steps
     ctx.textAlign  = 'left';
     ctx.font       = '13px monospace';
     ctx.fillStyle  = '#bbb';
     list.forEach((line, i) => ctx.fillText(line, bx + PAD, by + 82 + i * LH));
-
-    // Close hint
     ctx.textAlign = 'center';
     ctx.font      = '11px Arial';
     ctx.fillStyle = '#555';
     ctx.fillText('Click Performance Guide again to close', canvas.width / 2, by + boxH - 12);
-
     ctx.restore();
 }
 
@@ -1329,7 +1461,6 @@ function drawMenu() {
         ctx.strokeStyle = '#555';
         ctx.lineWidth   = 1;
         ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        // Slider pill
         const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
         const pillX = ftb.x + 8;
         ctx.fillStyle = fogEnabled ? '#5a8a5a' : '#444';
