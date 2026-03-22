@@ -1441,34 +1441,92 @@ function drawUI() {
     ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
     ctx.restore();
 
-    const pad = 20, pw = 240, ph = 115;
+    const pad = 12;
+    const ph = 30;
+    const pw = 140;
+    const gap = 5;
+    const r = 6;
 
-    ctx.fillStyle  = 'black';
-    ctx.globalAlpha = 0.55;
-    ctx.fillRect(pad - 12, pad - 12, pw, ph);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'lightgray';
-    ctx.lineWidth   = 2;
-    ctx.strokeRect(pad - 12, pad - 12, pw, ph);
+    function drawPill(x, y, labelText, valueText, valueColor) {
+        // Background
+        ctx.save();
+        ctx.fillStyle   = 'rgba(10,10,20,0.72)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth   = 0.5;
+        ctx.beginPath();
+        ctx.roundRect(x, y, pw, ph, r);
+        ctx.fill();
+        ctx.stroke();
 
-    ctx.textAlign  = 'left';
-    ctx.fillStyle  = 'white';
-    ctx.font       = 'bold 18px Arial';
-    ctx.fillText('Level ' + player.level, pad, pad + 5);
-    ctx.font       = '14px Arial';
-    ctx.fillStyle  = 'lightgray';
-    ctx.fillText('Score: ' + score, pad, pad + 25);
+        // Label
+        ctx.textAlign = 'left';
+        ctx.font      = 'bold 10px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.38)';
+        ctx.fillText(labelText.toUpperCase(), x + 10, y + ph / 2 + 4);
 
-    const tutY = pad + 44;
-    ctx.font      = '12px Arial';
-    ctx.fillStyle = 'silver';
-    ctx.fillText('Move: WASD / Arrows', pad, tutY);
-    ctx.fillText('Shoot: Mouse Click',  pad, tutY + 16);
-    ctx.fillText('Dash: Space',         pad, tutY + 32);
+        // Value
+        ctx.textAlign = 'right';
+        ctx.font      = 'bold 14px monospace';
+        ctx.fillStyle = valueColor;
+        ctx.fillText(valueText, x + pw - 10, y + ph / 2 + 5);
+        ctx.restore();
+    }
 
-    ctx.font      = '12px monospace';
-    ctx.fillStyle = 'white';
+    function drawHintKey(x, y, key, hint) {
+        const keyW = 38, keyH = 18, keyR = 3;
+
+        // Key chip
+        ctx.save();
+        ctx.fillStyle   = 'rgba(255,255,255,0.08)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+        ctx.lineWidth   = 0.5;
+        ctx.beginPath();
+        ctx.roundRect(x, y, keyW, keyH, keyR);
+        ctx.fill();
+        ctx.stroke();
+        ctx.textAlign  = 'center';
+        ctx.font       = 'bold 10px monospace';
+        ctx.fillStyle  = 'rgba(255,255,255,0.55)';
+        ctx.fillText(key, x + keyW / 2, y + keyH / 2 + 4);
+
+        // Hint text
+        ctx.textAlign  = 'left';
+        ctx.font       = '11px monospace';
+        ctx.fillStyle  = 'rgba(255,255,255,0.38)';
+        ctx.fillText(hint, x + keyW + 6, y + keyH / 2 + 4);
+        ctx.restore();
+    }
+
+    // Level
+    drawPill(pad, pad, 'Level', String(player.level), '#d8ff50');
+
+    // Score
+    drawPill(pad, pad + ph + gap, 'Score', String(score), '#88ffcc');
+
+    // Hints group background
+    const hintY  = pad + (ph + gap) * 2;
+    const hintH  = 18 * 3 + 8 * 2 + 12; // 3 rows + spacing + padding
+    ctx.save();
+    ctx.fillStyle   = 'rgba(10,10,20,0.55)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth   = 0.5;
+    ctx.beginPath();
+    ctx.roundRect(pad, hintY, pw, hintH, r);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    drawHintKey(pad + 8, hintY + 6,         'WASD',  'Move');
+    drawHintKey(pad + 8, hintY + 6 + 26,    'Click', 'Shoot');
+    drawHintKey(pad + 8, hintY + 6 + 26 * 2,'Space', 'Dash');
+
+    // Coords
+    ctx.save();
+    ctx.font      = '10px monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.textAlign = 'left';
     ctx.fillText('X: ' + Math.floor(player.x) + '  Y: ' + Math.floor(player.y), 20, canvas.height - 20);
+    ctx.restore();
 
     drawVials();
     drawXpBar();
