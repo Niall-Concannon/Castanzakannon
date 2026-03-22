@@ -35,14 +35,11 @@ const ENEMY_TYPES = {
     tank:  { hp: 8, size: 20, speed: 1.2, color: 'red',    animSpeed: 14 },
 };
 
-// Dash sprite canvas size (48px units) and character anchor point
-const DASH_SPRITE_META = {
-    dash_h:  { cw: 100, ch:  48, cx: 76, cy: 24 },
-    dash_u:  { cw:  48, ch: 100, cx: 24, cy: 24 },
-    dash_d:  { cw:  48, ch: 100, cx: 24, cy: 76 },
-    dash_ur: { cw:  84, ch:  84, cx: 63, cy: 21 },
-    dash_dr: { cw:  84, ch:  84, cx: 63, cy: 63 },
-};
+// ── MUZZLE FLASH SETTINGS ─────────────────────────────────────────────────────
+const MUZZLE_LIFE      = 6;    // frames the flash lives
+const MUZZLE_SPARKS    = 5;    // number of sparks per shot
+const SHOOT_COOLDOWN   = 5;    // frames between shots (was 10)
+const BULLET_SPREAD    = 0.10; // max random angle offset in radians (~±6°)
 
 const XP_PICKUP_BASE_VALUE = 5;
 const XP_ATTRACT_RADIUS    = 150;
@@ -65,11 +62,12 @@ const VIAL_SCALE = 0.88;
 const VIAL_W = VSRC_W * VIAL_SCALE;
 const VIAL_H = VSRC_H * VIAL_SCALE;
 
+// ── SANDEVISTAN DASH TRAIL SETTINGS ──────────────────────────────────────────
+const TRAIL_LENGTH   = 7;    // distinct afterimage steps
+const TRAIL_INTERVAL = 2;    // record every N physics frames
+const TRAIL_LIFETIME = 38;   // frames a ghost stays visible after dash ends
 
-const TRAIL_LENGTH   = 7;
-const TRAIL_INTERVAL = 2;
-const TRAIL_LIFETIME = 38;
-
+// Neon Sandevistan palette — oldest ghost first, newest last
 const SANDEV_COLORS = [
     { r: 255, g: 0,   b: 255 },   // magenta
     { r: 180, g: 0,   b: 255 },   // violet
@@ -80,6 +78,7 @@ const SANDEV_COLORS = [
     { r: 255, g: 80,  b: 0   },   // orange  (freshest / closest to player)
 ];
 
+// Persistent offscreen canvas for silhouette tinting — allocated once
 const _tintCanvas = document.createElement('canvas');
 _tintCanvas.width  = 128;
 _tintCanvas.height = 128;
@@ -93,14 +92,9 @@ const _tintCtx = _tintCanvas.getContext('2d');
 const img = src => Object.assign(new Image(), { src });
 
 const playerSprites = {
-    idle:   img('assets/sprites/player_idle.png'),
-    walk1:  img('assets/sprites/player_walk1.png'),
-    walk2:  img('assets/sprites/player_walk2.png'),
-    dash_h: img('assets/sprites/player_dash_h.png'),
-    dash_u: img('assets/sprites/player_dash_u.png'),
-    dash_d: img('assets/sprites/player_dash_d.png'),
-    dash_ur:img('assets/sprites/player_dash_ur.png'),
-    dash_dr:img('assets/sprites/player_dash_dr.png'),
+    idle:  img('assets/sprites/player_idle.png'),
+    walk1: img('assets/sprites/player_walk1.png'),
+    walk2: img('assets/sprites/player_walk2.png'),
 };
 
 const gunSprites = {
@@ -165,6 +159,7 @@ let mouseDown      = false;
 let projectiles    = [];
 let enemies        = [];
 let pickups        = [];
+let muzzleFlashes  = [];
 let navGrid        = [];
 let score;
 let lastScore      = 0;
@@ -175,6 +170,9 @@ let accumulator    = 0;
 let renderAlpha    = 1;
 let fps            = 0;
 let showPerfGuide  = false;
+
+// ── DASH TRAIL ────────────────────────────────────────────────────────────────
+// Each entry: { x, y, flipX, age }
 let dashTrail  = [];
 let trailTimer = 0;
 
@@ -392,9 +390,10 @@ function drawMap() {
 function startGame() {
     showPerfGuide = false;
     generateMap();
-    pickups    = [];
-    enemies    = [];
-    dashTrail  = [];
+    pickups       = [];
+    enemies       = [];
+    muzzleFlashes = [];
+    dashTrail     = [];
     trailTimer = 0;
 
     for (let i = 0; i < MAX_ENEMIES; i++) {
@@ -438,17 +437,38 @@ function playerDash() {
 
 function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
-    player.shootCooldown = 10;
+    player.shootCooldown = SHOOT_COOLDOWN;
+
+    // Bloom: small random angle offset per shot
+    const spread = (Math.random() - 0.5) * BULLET_SPREAD;
+    const angle  = player.weaponAngle + spread;
 
     const gunX = player.x + Math.cos(player.weaponAngle) * RAIL_RADIUS;
     const gunY = player.y + Math.sin(player.weaponAngle) * RAIL_RADIUS;
 
+    // Bullet spawns slightly forward from gun center so it clears the barrel
+    const barrelTip = 22;
+    const bx = gunX + Math.cos(angle) * barrelTip;
+    const by = gunY + Math.sin(angle) * barrelTip;
+
     projectiles.push({
-        x: gunX, y: gunY, prevX: gunX, prevY: gunY,
-        velocityX: Math.cos(player.weaponAngle) * 12,
-        velocityY: Math.sin(player.weaponAngle) * 12,
+        x: bx, y: by, prevX: bx, prevY: by,
+        velocityX: Math.cos(angle) * 12,
+        velocityY: Math.sin(angle) * 12,
         size: 5, framesLeft: 80,
     });
+
+    // Spawn muzzle flash at the barrel tip (world coords)
+    const sparks = [];
+    for (let i = 0; i < MUZZLE_SPARKS; i++) {
+        const sa = angle + (Math.random() - 0.5) * 1.4;  // wide cone
+        sparks.push({
+            vx:   Math.cos(sa) * (2.5 + Math.random() * 4),
+            vy:   Math.sin(sa) * (2.5 + Math.random() * 4),
+            len:  3 + Math.random() * 5,
+        });
+    }
+    muzzleFlashes.push({ x: bx, y: by, angle, age: 0, sparks });
 }
 
 function updatePlayer() {
@@ -524,17 +544,7 @@ function updatePlayerAnim() {
     player.facing = Math.cos(player.weaponAngle) >= 0 ? 1 : -1;
 
     if (player.dashing) {
-        const adx  = Math.abs(player.dashDirX);
-        const ady  = Math.abs(player.dashDirY);
-        const diag = adx > 0.3 && ady > 0.3;
-
-        let frame;
-        if      (diag)    frame = player.dashDirY < 0 ? 'dash_ur' : 'dash_dr';
-        else if (ady > adx) frame = player.dashDirY < 0 ? 'dash_u'  : 'dash_d';
-        else                frame = 'dash_h';
-
-        playerAnim.frame    = frame;
-        playerAnim.dashFrame = frame;
+        playerAnim.frame    = 'walk1';
         playerAnim.dashFlipX = player.dashDirX < 0;
     } else if (moving) {
         playerAnim.timer--;
@@ -551,7 +561,14 @@ function updatePlayerAnim() {
 
 // =============================================================================
 //  SANDEVISTAN DASH TRAIL
+//  Each ghost is a solid-colour silhouette of the idle sprite — no texture,
+//  just the shape filled with a vivid neon hue + matching outer glow.
 // =============================================================================
+
+/**
+ * Render `sprite` as a flat colour silhouette into `_tintCanvas`.
+ * Alpha channel is preserved; every opaque pixel becomes `color`.
+ */
 function buildSilhouette(sprite, dw, dh, flipX, color) {
     // Grow the tint canvas if needed
     if (_tintCanvas.width < dw || _tintCanvas.height < dh) {
@@ -594,11 +611,13 @@ function drawDashTrail() {
         // t: 0 = oldest ghost, 1 = newest ghost (closest to current player pos)
         const t = i / Math.max(total - 1, 1);
 
+        // Pick colour — spread evenly across the SANDEV_COLORS palette
         const ci  = Math.min(Math.floor(t * SANDEV_COLORS.length), SANDEV_COLORS.length - 1);
         const col = SANDEV_COLORS[ci];
         const colorStr = `rgb(${col.r},${col.g},${col.b})`;
 
-        const baseAlpha = 0.35 + t * 0.55;
+        // Silhouette alpha: newer = more opaque; fades as ghost ages post-dash
+        const baseAlpha = 0.35 + t * 0.55;   // 0.35 (oldest) → 0.90 (newest)
         const alpha     = baseAlpha * life;
 
         const sc = toScreen(g.x, g.y);
@@ -643,6 +662,80 @@ function drawDashTrail() {
 
 
 // =============================================================================
+//  MUZZLE FLASH
+// =============================================================================
+
+function drawMuzzleFlashes() {
+    for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
+        const f    = muzzleFlashes[i];
+        f.age++;
+        if (f.age >= MUZZLE_LIFE) { muzzleFlashes.splice(i, 1); continue; }
+
+        const life = 1 - f.age / MUZZLE_LIFE;
+        const sc   = toScreen(f.x, f.y);
+
+        ctx.save();
+
+        // ── Core flash blob ────────────────────────────────────────────────────
+        const flashR = 10 * life;
+        const flashG = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, flashR);
+        flashG.addColorStop(0,   `rgba(255,240,180,${life})`);
+        flashG.addColorStop(0.4, `rgba(255,140,30,${life * 0.85})`);
+        flashG.addColorStop(1,   `rgba(255,80,0,0)`);
+        ctx.fillStyle = flashG;
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, flashR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Forward cone flare ─────────────────────────────────────────────────
+        const flareLen = 18 * life;
+        const flareG   = ctx.createLinearGradient(
+            sc.x, sc.y,
+            sc.x + Math.cos(f.angle) * flareLen,
+            sc.y + Math.sin(f.angle) * flareLen
+        );
+        flareG.addColorStop(0,   `rgba(255,220,100,${life * 0.9})`);
+        flareG.addColorStop(0.5, `rgba(255,100,20,${life * 0.5})`);
+        flareG.addColorStop(1,   'rgba(255,60,0,0)');
+        ctx.strokeStyle = flareG;
+        ctx.lineWidth   = 5 * life;
+        ctx.lineCap     = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sc.x, sc.y);
+        ctx.lineTo(
+            sc.x + Math.cos(f.angle) * flareLen,
+            sc.y + Math.sin(f.angle) * flareLen
+        );
+        ctx.stroke();
+
+        // ── Sparks ─────────────────────────────────────────────────────────────
+        for (const sp of f.sparks) {
+            const tx = sc.x + sp.vx * f.age;
+            const ty = sc.y + sp.vy * f.age;
+            const sparkAlpha = life * 0.9;
+            ctx.strokeStyle = `rgba(255,${180 + Math.floor(70 * life)},50,${sparkAlpha})`;
+            ctx.lineWidth   = 1.5 * life;
+            ctx.shadowColor = 'rgba(255,160,30,0.8)';
+            ctx.shadowBlur  = 4;
+            ctx.beginPath();
+            ctx.moveTo(sc.x, sc.y);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+
+            // Bright tip dot
+            ctx.fillStyle = `rgba(255,240,180,${sparkAlpha})`;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 1.5 * life, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+
+// =============================================================================
 //  DRAW PLAYER
 // =============================================================================
 
@@ -657,32 +750,16 @@ function drawPlayer() {
 
     const flickering = player.invulnTimer > 0 && Math.floor(player.invulnTimer / 4) % 2 === 0;
     const bodySprite = playerSprites[playerAnim.frame] || playerSprites.idle;
-    const isDash     = player.dashing || playerAnim.frame.startsWith('dash');
-    const flipX      = isDash ? player.dashDirX < 0 : player.facing === -1;
-    const scale      = size / 48;
-    const meta       = DASH_SPRITE_META[playerAnim.frame];
+    const flipX      = player.dashing ? playerAnim.dashFlipX : player.facing === -1;
 
     ctx.save();
     if (flickering) ctx.globalAlpha = 0.35;
-
-    if (meta) {
-        const dw = meta.cw * scale, dh = meta.ch * scale;
-        const ox = meta.cx * scale, oy = meta.cy * scale;
-        if (flipX) {
-            ctx.translate(s.x, s.y);
-            ctx.scale(-1, 1);
-            ctx.drawImage(bodySprite, -ox, -oy, dw, dh);
-        } else {
-            ctx.drawImage(bodySprite, s.x - ox, s.y - oy, dw, dh);
-        }
+    if (flipX) {
+        ctx.translate(s.x, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(bodySprite, -size / 2, s.y - size / 2, size, size);
     } else {
-        if (flipX) {
-            ctx.translate(s.x, 0);
-            ctx.scale(-1, 1);
-            ctx.drawImage(bodySprite, -size / 2, s.y - size / 2, size, size);
-        } else {
-            ctx.drawImage(bodySprite, s.x - size / 2, s.y - size / 2, size, size);
-        }
+        ctx.drawImage(bodySprite, s.x - size / 2, s.y - size / 2, size, size);
     }
     ctx.restore();
 
@@ -699,7 +776,7 @@ function drawPlayer() {
     const angle      = player.weaponAngle;
     const gunScreenX = s.x + Math.cos(angle) * RAIL_RADIUS;
     const gunScreenY = s.y + Math.sin(angle) * RAIL_RADIUS;
-    const isFiring   = mouseDown && player.shootCooldown > 6;
+    const isFiring   = mouseDown && player.shootCooldown > 2;
     const gunSprite  = isFiring ? gunSprites.shoot : gunSprites.idle;
 
     ctx.save();
@@ -709,6 +786,8 @@ function drawPlayer() {
     if (Math.abs(angle) > Math.PI / 2) ctx.scale(1, -1);
     ctx.drawImage(gunSprite, -GUN_W / 2, -GUN_H / 2, GUN_W, GUN_H);
     ctx.restore();
+
+    drawMuzzleFlashes();
 }
 
 
