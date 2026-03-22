@@ -6,6 +6,11 @@ const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 canvas.width  = window.innerWidth;
 canvas.height = window.innerHeight;
+canvas.style.willChange     = 'transform';
+canvas.style.transform      = 'translateZ(0)';
+canvas.style.imageRendering = 'pixelated';
+document.body.style.background = '#000';
+document.body.style.overflow   = 'hidden';
 
 
 // =============================================================================
@@ -126,6 +131,7 @@ const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
 //  GAME STATE
 // =============================================================================
 
+let fogEnabled     = true;
 let keys           = {};
 let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
@@ -147,6 +153,8 @@ let xpBarFlash     = 0;
 let lastTimestamp  = 0;
 let accumulator    = 0;
 let renderAlpha    = 1;
+let fps            = 0;
+let showPerfGuide  = false;
 
 const fogCanvas = document.createElement('canvas');
 const fogCtx    = fogCanvas.getContext('2d');
@@ -202,7 +210,13 @@ window.addEventListener('mousedown', () => {
     if (gameState === 'menu') {
         if (menuPage === 'main') {
             const btn = getSelectCursorButton();
-            if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+            const ftb = getFogToggleButton();
+            const pb  = getPerfButton();
+            if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
+                showPerfGuide = !showPerfGuide;
+            } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
+                fogEnabled = !fogEnabled;
+            } else if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
                 menuPage = 'cursors';
             } else {
                 startGame();
@@ -354,6 +368,7 @@ function drawMap() {
 // =============================================================================
 
 function startGame() {
+    showPerfGuide = false;
     generateMap();
     pickups = [];
     enemies = [];
@@ -615,9 +630,10 @@ function updateEnemies() {
             tx = player.x; ty = player.y;
         }
 
-        const offScreen = (e.x - camera.x) < -e.size || (e.x - camera.x) > canvas.width  + e.size ||
-                          (e.y - camera.y) < -e.size || (e.y - camera.y) > canvas.height + e.size;
-        const speedMult = (offScreen ? 3.0 : 1.0) * sanSlowMult;
+        const distToPlayer = Math.hypot(e.x - player.x, e.y - player.y);
+        // Scale up speed beyond 200px: +1× per 350px of extra distance, capped at 4×
+        const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
+        const speedMult = distMult * sanSlowMult;
 
         const angle = Math.atan2(ty - e.y, tx - e.x);
         const mx = Math.cos(angle) * e.speed * speedMult;
@@ -656,9 +672,9 @@ function drawEnemies() {
     for (const e of enemies) {
         if (!e.alive) continue;
         const dist = Math.hypot(player.x - e.x, player.y - e.y);
-        if (dist >= outerR) continue;
+        if (fogEnabled && dist >= outerR) continue;
 
-        const alpha = dist > innerR ? 1 - (dist - innerR) / (outerR - innerR) : 1;
+        const alpha = fogEnabled && dist > innerR ? 1 - (dist - innerR) / (outerR - innerR) : 1;
         const rx  = (e.prevX ?? e.x) + (e.x - (e.prevX ?? e.x)) * renderAlpha;
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
@@ -968,9 +984,11 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
 }
 
 function drawVials() {
-    const lp = 22, tp = 170, gap = 30;
+    const lp = 22, tp = 170, gap = 14;
     const hpY   = tp;
-    const dashY = tp + VIAL_H + gap;
+    const dashY = tp;
+    const hpX   = lp;
+    const dashX = lp + VIAL_W + gap;
     const hf    = player.hp / player.maxHp;
 
     const hc = hf > 0.5
@@ -979,7 +997,7 @@ function drawVials() {
         ? { top: '#ffcc44', mid: '#dd7700', bot: '#883300' }
         : { top: '#ff6633', mid: '#cc2200', bot: '#660008' };
 
-    drawVial(lp, hpY, hf, hc, vialGlowHpSprite, '❤  HP');
+    drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, '❤  HP');
 
     const df = player.dashCooldown > 0 ? 1 - player.dashCooldown / 120 : 1;
     const dr = player.dashCooldown === 0;
@@ -987,7 +1005,7 @@ function drawVials() {
         ? { top: '#88ffff', mid: '#22aaff', bot: '#0030bb' }
         : { top: '#44aadd', mid: '#1060cc', bot: '#001888' };
 
-    drawVial(lp, dashY, df, dc, vialGlowDashSprite, '⚡ DASH');
+    drawVial(dashX, dashY, df, dc, vialGlowDashSprite, '⚡ DASH');
 
     if (dr) {
         const ra = 0.55 + 0.45 * Math.abs(Math.sin(frameCount * 0.07));
@@ -998,7 +1016,7 @@ function drawVials() {
         ctx.textAlign   = 'center';
         ctx.shadowColor = '#00ffff';
         ctx.shadowBlur  = 8;
-        ctx.fillText('READY', lp + VIAL_W / 2, dashY - 6);
+        ctx.fillText('READY', dashX + VIAL_W / 2, dashY - 6);
         ctx.restore();
     }
 }
@@ -1084,6 +1102,15 @@ function drawXpBar() {
 // =============================================================================
 
 function drawUI() {
+    ctx.save();
+    ctx.textAlign  = 'center';
+    ctx.font       = 'bold 13px monospace';
+    ctx.fillStyle  = fps >= 50 ? '#88ff88' : fps >= 30 ? '#ffcc44' : '#ff4444';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur  = 4;
+    ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
+    ctx.restore();
+
     const pad = 20, pw = 240, ph = 115;
 
     ctx.fillStyle  = 'black';
@@ -1158,6 +1185,8 @@ function drawVisibilityMask() {
 //  MENU & SCREENS
 // =============================================================================
 
+function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
+function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30,  w: 160, h: 36 }; }
 function getBackButton()         { return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 }; }
 
@@ -1177,6 +1206,82 @@ function getLevelUpZones() {
     const cards  = [0, 1, 2].map(i => ({ x: startX + i * (CW + GAP), y: cardY, w: CW, h: CH }));
     const skipW  = 200, skipH = 54;
     return { cards, skip: { x: canvas.width / 2 - skipW / 2, y: cardY + CH + 22, w: skipW, h: skipH } };
+}
+
+function drawPerfGuide() {
+    const ua = navigator.userAgent;
+    let browser = 'chrome';
+    if (/Edg\//.test(ua))          browser = 'edge';
+    else if (/Firefox/.test(ua))    browser = 'firefox';
+    else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browser = 'safari';
+
+    const steps = {
+        chrome:  [
+            '1.  Open a new tab and go to:  chrome://settings',
+            '2.  Search for "graphics" in the search bar',
+            '3.  Find "Use graphics acceleration when available"',
+            '4.  Toggle it ON  (if already on, you are all set!)',
+            '5.  Click the Relaunch button to restart Chrome',
+        ],
+        edge:    [
+            '1.  Open a new tab and go to:  edge://settings',
+            '2.  Click "System and performance" in the left sidebar',
+            '3.  Find "Use graphics acceleration when available"',
+            '4.  Toggle it ON  (if already on, you are all set!)',
+            '5.  Click the Restart button to apply changes',
+        ],
+        firefox: [
+            '1.  Open a new tab and go to:  about:preferences',
+            '2.  Scroll down to the Performance section',
+            '3.  Uncheck "Use recommended performance settings"',
+            '4.  Check "Use hardware acceleration when available"',
+            '5.  Restart Firefox for changes to take effect',
+        ],
+        safari:  [
+            'Safari uses GPU acceleration automatically.',
+            'For best performance keep macOS fully up to date.',
+            'Quit and reopen Safari if you notice slowness.',
+        ],
+    };
+
+    const browserNames = { chrome: 'Google Chrome', edge: 'Microsoft Edge', firefox: 'Mozilla Firefox', safari: 'Safari' };
+    const list = steps[browser];
+    const PAD = 28, LH = 28;
+    const boxW = 560, boxH = 96 + list.length * LH + 36;
+    const bx = canvas.width  / 2 - boxW / 2;
+    const by = canvas.height / 2 - boxH / 2 - 60;
+
+    ctx.save();
+    // shadow backdrop
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 14); ctx.fill();
+    ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 14); ctx.stroke();
+
+    // title
+    ctx.textAlign = 'center';
+    ctx.font      = 'bold 17px Arial';
+    ctx.fillStyle = '#88ccff';
+    ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 10;
+    ctx.fillText('⚡  GPU Acceleration  —  ' + browserNames[browser] + ' detected', canvas.width / 2, by + 32);
+    ctx.shadowBlur = 0;
+
+    ctx.font      = '13px Arial';
+    ctx.fillStyle = 'rgba(160,190,255,0.6)';
+    ctx.fillText('Follow these steps for a much smoother experience:', canvas.width / 2, by + 56);
+
+    // steps
+    ctx.textAlign = 'left';
+    ctx.font      = '14px monospace';
+    ctx.fillStyle = '#ddeeff';
+    list.forEach((line, i) => ctx.fillText(line, bx + PAD, by + 82 + i * LH));
+
+    // close hint
+    ctx.textAlign = 'center';
+    ctx.font      = '12px Arial';
+    ctx.fillStyle = 'rgba(130,150,180,0.65)';
+    ctx.fillText('Click  ⚡ Performance Guide  to close', canvas.width / 2, by + boxH - 12);
+    ctx.restore();
 }
 
 function drawMenu() {
@@ -1202,6 +1307,43 @@ function drawMenu() {
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
+        // Fog toggle button
+        const ftb = getFogToggleButton();
+        ctx.fillStyle   = fogEnabled ? '#1a3a1a' : '#2a1a2a';
+        ctx.fillRect(ftb.x, ftb.y, ftb.w, ftb.h);
+        ctx.strokeStyle = fogEnabled ? '#44cc44' : '#cc44cc';
+        ctx.lineWidth   = 2;
+        ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
+        // slider pill
+        const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
+        const pillX = ftb.x + 8;
+        ctx.fillStyle   = fogEnabled ? '#44cc44' : '#884488';
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+        ctx.fill();
+        const knobX = fogEnabled ? pillX + pillW - pillH / 2 - 2 : pillX + pillH / 2 + 2;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(knobX, pillY + pillH / 2, pillH / 2 - 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle   = 'silver';
+        ctx.font        = '14px Arial';
+        ctx.textAlign   = 'left';
+        ctx.fillText('Fog: ' + (fogEnabled ? 'ON' : 'OFF'), ftb.x + pillW + 16, ftb.y + ftb.h / 2 + 5);
+
+        // Perf guide button
+        const pb = getPerfButton();
+        ctx.fillStyle   = showPerfGuide ? '#0a1a3a' : '#1a1a2e';
+        ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
+        ctx.strokeStyle = showPerfGuide ? '#88ccff' : '#4488ff';
+        ctx.lineWidth   = 2;
+        ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
+        ctx.fillStyle   = showPerfGuide ? '#ffffff' : '#88bbff';
+        ctx.font        = '13px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('⚡ Performance Guide', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
+
+        if (showPerfGuide) drawPerfGuide();
     } else {
         ctx.fillStyle = 'white';
         ctx.font      = 'bold 40px Arial';
@@ -1383,6 +1525,8 @@ function gameLoop(timestamp) {
     const dt = Math.min(timestamp - lastTimestamp, 100);
     lastTimestamp = timestamp;
 
+    fps = dt > 0 ? Math.round(1000 / dt) : fps;
+
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1409,7 +1553,7 @@ function gameLoop(timestamp) {
 
     updateCamera(renderAlpha);
     drawMap();
-    drawVisibilityMask();
+    if (fogEnabled) drawVisibilityMask();
     drawPlayer();
     drawEnemies();
     drawProjectiles();
