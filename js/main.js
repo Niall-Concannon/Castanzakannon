@@ -1247,40 +1247,54 @@ function drawPerfGuide() {
     const browserNames = { chrome: 'Google Chrome', edge: 'Microsoft Edge', firefox: 'Mozilla Firefox', safari: 'Safari' };
     const list = steps[browser];
     const PAD = 28, LH = 28;
-    const boxW = 560, boxH = 96 + list.length * LH + 36;
+    const boxW = 540, boxH = 88 + list.length * LH + 36;
     const bx = canvas.width  / 2 - boxW / 2;
     const by = canvas.height / 2 - boxH / 2 - 60;
 
     ctx.save();
-    // shadow backdrop
-    ctx.fillStyle = 'rgba(0,0,0,0.88)';
-    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 14); ctx.fill();
-    ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 14); ctx.stroke();
 
-    // title
-    ctx.textAlign = 'center';
-    ctx.font      = 'bold 17px Arial';
-    ctx.fillStyle = '#88ccff';
-    ctx.shadowColor = '#4488ff'; ctx.shadowBlur = 10;
-    ctx.fillText('⚡  GPU Acceleration  —  ' + browserNames[browser] + ' detected', canvas.width / 2, by + 32);
+    // Background panel
+    ctx.fillStyle = 'rgba(22,22,22,0.97)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, boxW, boxH);
+
+    // Thin accent line at top
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(bx, by, boxW, 3);
+
+    // Title
+    ctx.textAlign  = 'center';
+    ctx.font       = 'bold 15px Arial';
+    ctx.fillStyle  = '#ddd';
     ctx.shadowBlur = 0;
+    ctx.fillText('GPU Acceleration  —  ' + browserNames[browser] + ' detected', canvas.width / 2, by + 30);
 
     ctx.font      = '13px Arial';
-    ctx.fillStyle = 'rgba(160,190,255,0.6)';
-    ctx.fillText('Follow these steps for a much smoother experience:', canvas.width / 2, by + 56);
+    ctx.fillStyle = '#777';
+    ctx.fillText('Follow these steps for a smoother experience:', canvas.width / 2, by + 52);
 
-    // steps
-    ctx.textAlign = 'left';
-    ctx.font      = '14px monospace';
-    ctx.fillStyle = '#ddeeff';
+    // Divider
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(bx + PAD, by + 64);
+    ctx.lineTo(bx + boxW - PAD, by + 64);
+    ctx.stroke();
+
+    // Steps
+    ctx.textAlign  = 'left';
+    ctx.font       = '13px monospace';
+    ctx.fillStyle  = '#bbb';
     list.forEach((line, i) => ctx.fillText(line, bx + PAD, by + 82 + i * LH));
 
-    // close hint
+    // Close hint
     ctx.textAlign = 'center';
-    ctx.font      = '12px Arial';
-    ctx.fillStyle = 'rgba(130,150,180,0.65)';
-    ctx.fillText('Click  ⚡ Performance Guide  to close', canvas.width / 2, by + boxH - 12);
+    ctx.font      = '11px Arial';
+    ctx.fillStyle = '#555';
+    ctx.fillText('Click Performance Guide again to close', canvas.width / 2, by + boxH - 12);
+
     ctx.restore();
 }
 
@@ -1298,50 +1312,51 @@ function drawMenu() {
         ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 20);
 
         const btn = getSelectCursorButton();
-        ctx.fillStyle   = '#222';
+        ctx.fillStyle   = '#1c1c1c';
         ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.strokeStyle = 'grey';
+        ctx.strokeStyle = '#555';
         ctx.lineWidth   = 1;
         ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
         ctx.fillStyle   = 'silver';
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
+
         // Fog toggle button
         const ftb = getFogToggleButton();
-        ctx.fillStyle   = fogEnabled ? '#1a3a1a' : '#2a1a2a';
+        ctx.fillStyle   = '#1c1c1c';
         ctx.fillRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        ctx.strokeStyle = fogEnabled ? '#44cc44' : '#cc44cc';
-        ctx.lineWidth   = 2;
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth   = 1;
         ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        // slider pill
+        // Slider pill
         const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
         const pillX = ftb.x + 8;
-        ctx.fillStyle   = fogEnabled ? '#44cc44' : '#884488';
+        ctx.fillStyle = fogEnabled ? '#5a8a5a' : '#444';
         ctx.beginPath();
         ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
         ctx.fill();
         const knobX = fogEnabled ? pillX + pillW - pillH / 2 - 2 : pillX + pillH / 2 + 2;
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = '#e8e8e8';
         ctx.beginPath();
         ctx.arc(knobX, pillY + pillH / 2, pillH / 2 - 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle   = 'silver';
+        ctx.fillStyle   = fogEnabled ? '#ccc' : '#888';
         ctx.font        = '14px Arial';
         ctx.textAlign   = 'left';
         ctx.fillText('Fog: ' + (fogEnabled ? 'ON' : 'OFF'), ftb.x + pillW + 16, ftb.y + ftb.h / 2 + 5);
 
         // Perf guide button
         const pb = getPerfButton();
-        ctx.fillStyle   = showPerfGuide ? '#0a1a3a' : '#1a1a2e';
+        ctx.fillStyle   = '#1c1c1c';
         ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.strokeStyle = showPerfGuide ? '#88ccff' : '#4488ff';
-        ctx.lineWidth   = 2;
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth   = 1;
         ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.fillStyle   = showPerfGuide ? '#ffffff' : '#88bbff';
+        ctx.fillStyle   = showPerfGuide ? '#fff' : '#aaa';
         ctx.font        = '13px Arial';
         ctx.textAlign   = 'center';
-        ctx.fillText('⚡ Performance Guide', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
+        ctx.fillText('Performance Guide', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
 
         if (showPerfGuide) drawPerfGuide();
     } else {
