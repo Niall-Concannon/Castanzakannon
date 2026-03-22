@@ -91,11 +91,57 @@ const _tintCtx = _tintCanvas.getContext('2d');
 
 const img = src => Object.assign(new Image(), { src });
 
-const playerSprites = {
-    idle:  img('assets/sprites/player_idle.png'),
-    walk1: img('assets/sprites/player_walk1.png'),
-    walk2: img('assets/sprites/player_walk2.png'),
-};
+function imgWithFallback(sources) {
+    const sprite = new Image();
+    let index = 0;
+
+    const tryNext = () => {
+        if (index >= sources.length) return;
+        sprite.src = sources[index++];
+    };
+
+    sprite.addEventListener('error', tryNext);
+    tryNext();
+    return sprite;
+}
+
+function createCharacterSprites(index = 1) {
+    if (index === 1) {
+        return {
+            idle:  img('assets/sprites/player_idle.png'),
+            walk1: img('assets/sprites/player_walk1.png'),
+            walk2: img('assets/sprites/player_walk2.png'),
+        };
+    }
+
+    const n = String(index);
+    return {
+        idle:  imgWithFallback([`assets/sprites/player${n}_idle.png`,  `assets/sprites/player_idle${n}.png`]),
+        walk1: imgWithFallback([`assets/sprites/player${n}_walk1.png`, `assets/sprites/player_walk1${n}.png`]),
+        walk2: imgWithFallback([`assets/sprites/player${n}_walk2.png`, `assets/sprites/player_walk2${n}.png`]),
+    };
+}
+
+const CHARACTER_LOADOUTS = [
+    { name: 'Kannon Prime', speed: 4.0, maxHp: 100, xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(1) },
+    { name: 'Ghost Runner', speed: 5.2, maxHp: 70,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(2) },
+    { name: 'Gambit',       speed: 4.0, maxHp: 50,  xpGainMult: 1.45, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(3) },
+    { name: 'Chunkster',    speed: 3.1, maxHp: 170, xpGainMult: 1.00, lifestealOnKill: 0.04, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(4) },
+    { name: 'Dasher',       speed: 4.0, maxHp: 60,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 2, dashDistanceMult: 0.72, dashRechargeFrames: 90,  sprites: createCharacterSprites(5) },
+];
+
+const fallbackPlayerSprites = CHARACTER_LOADOUTS[0].sprites;
+
+function getSelectedCharacter() {
+    return CHARACTER_LOADOUTS[selectedCharacter] ?? CHARACTER_LOADOUTS[0];
+}
+
+function getPlayerSprite(frame) {
+    const loadout = getSelectedCharacter();
+    const sprite  = loadout.sprites[frame] ?? loadout.sprites.idle;
+    if (sprite?.complete && sprite.naturalWidth) return sprite;
+    return fallbackPlayerSprites[frame] ?? fallbackPlayerSprites.idle;
+}
 
 const gunSprites = {
     idle:  img('assets/sprites/guns/gun_idle.png'),
@@ -153,6 +199,7 @@ let frameCount     = 0;
 let gameState      = 'menu';
 let menuPage       = 'main';
 let selectedCursor = 0;
+let selectedCharacter = 0;
 let mouseX         = 0;
 let mouseY         = 0;
 let mouseDown      = false;
@@ -186,8 +233,13 @@ let player = {
     dashing: false, dashTime: 0,
     dashDirX: 0, dashDirY: 0,
     dashCooldown: 0, facing: 1,
+    dashCharges: 1, dashMaxCharges: 1,
+    dashDistanceMult: 1,
+    dashRechargeFrames: 120,
     shootCooldown: 0, weaponAngle: 0,
     hp: 100, maxHp: 100, invulnTimer: 0,
+    xpGainMult: 1,
+    lifestealOnKill: 0,
     xp: 0, xpToNextLevel: 100, level: 1,
 };
 
@@ -208,7 +260,7 @@ let playerAnim = {
 window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
 
-    if (e.key === 'Escape' && gameState === 'menu' && menuPage === 'cursors') {
+    if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters')) {
         menuPage = 'main';
     }
 
@@ -229,10 +281,13 @@ window.addEventListener('mousedown', () => {
 
     if (gameState === 'menu') {
         if (menuPage === 'main') {
+            const charBtn = getSelectCharacterButton();
             const btn = getSelectCursorButton();
             const ftb = getFogToggleButton();
             const pb  = getPerfButton();
-            if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
+            if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
+                menuPage = 'characters';
+            } else if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
                 showPerfGuide = !showPerfGuide;
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
                 fogEnabled = !fogEnabled;
@@ -240,6 +295,20 @@ window.addEventListener('mousedown', () => {
                 menuPage = 'cursors';
             } else {
                 startGame();
+            }
+        } else if (menuPage === 'characters') {
+            const back = getCharacterBackButton();
+            if (mouseX >= back.x && mouseX <= back.x + back.w && mouseY >= back.y && mouseY <= back.y + back.h) {
+                menuPage = 'main';
+            } else {
+                const cards = getCharacterCards();
+                for (let i = 0; i < cards.length; i++) {
+                    const c = cards[i];
+                    if (mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h) {
+                        selectedCharacter = i;
+                        break;
+                    }
+                }
             }
         } else if (menuPage === 'cursors') {
             const back = getBackButton();
@@ -404,6 +473,16 @@ function startGame() {
     player.y     = (MAP_H * TILE) / 2;
     player.prevX = player.x;
     player.prevY = player.y;
+    const chosen = getSelectedCharacter();
+    player.speed = chosen.speed;
+    player.maxHp = chosen.maxHp;
+    player.xpGainMult = chosen.xpGainMult ?? 1;
+    player.lifestealOnKill = chosen.lifestealOnKill ?? 0;
+    player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
+    player.dashCharges = player.dashMaxCharges;
+    player.dashDistanceMult = chosen.dashDistanceMult ?? 1;
+    player.dashRechargeFrames = Math.max(1, chosen.dashRechargeFrames ?? 120);
+    player.dashCooldown = 0;
     player.hp    = player.maxHp;
     player.xp    = 0;
     player.level = 1;
@@ -414,7 +493,7 @@ function startGame() {
 }
 
 function playerDash() {
-    if (player.dashing || player.dashCooldown > 0) return;
+    if (player.dashing || player.dashCharges <= 0) return;
 
     let dirX = 0, dirY = 0;
     if (keys['w'] || keys['arrowup'])    dirY = -1;
@@ -428,7 +507,10 @@ function playerDash() {
     player.dashDirY    = dirY / n;
     player.dashing     = true;
     player.dashTime    = DASH_DURATION;
-    player.dashCooldown = 120;
+    player.dashCharges--;
+    if (player.dashCharges < player.dashMaxCharges && player.dashCooldown <= 0) {
+        player.dashCooldown = player.dashRechargeFrames;
+    }
 
     // Seed the trail fresh on each new dash
     dashTrail  = [];
@@ -483,8 +565,9 @@ function updatePlayer() {
         if (player.dashTime <= 0) {
             player.dashing = false;
         } else {
-            const nx = player.x + player.dashDirX * DASH_SPEED;
-            const ny = player.y + player.dashDirY * DASH_SPEED;
+            const dashSpeed = DASH_SPEED * player.dashDistanceMult;
+            const nx = player.x + player.dashDirX * dashSpeed;
+            const ny = player.y + player.dashDirY * dashSpeed;
             if (!wallCollision(nx,      player.y, player.size)) player.x = nx;
             if (!wallCollision(player.x, ny,      player.size)) player.y = ny;
 
@@ -512,7 +595,13 @@ function updatePlayer() {
     player.x = Math.max(TILE * 2, Math.min(MAP_W * TILE - TILE * 2, player.x));
     player.y = Math.max(TILE * 2, Math.min(MAP_H * TILE - TILE * 2, player.y));
 
-    if (player.dashCooldown  > 0) player.dashCooldown--;
+    if (player.dashCharges < player.dashMaxCharges) {
+        if (player.dashCooldown > 0) player.dashCooldown--;
+        if (player.dashCooldown <= 0) {
+            player.dashCharges++;
+            player.dashCooldown = player.dashCharges < player.dashMaxCharges ? player.dashRechargeFrames : 0;
+        }
+    }
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invulnTimer   > 0) player.invulnTimer--;
 
@@ -600,7 +689,7 @@ function drawDashTrail() {
     const total   = dashTrail.length;
     // Use the same display size as the idle sprite in drawPlayer (size * 2)
     const size    = player.size * 2;
-    const ghostSprite = playerSprites.idle;
+    const ghostSprite = getPlayerSprite('idle');
     if (!ghostSprite.complete || !ghostSprite.naturalWidth) return;
 
     for (let i = 0; i < total; i++) {
@@ -749,7 +838,7 @@ function drawPlayer() {
     const size = player.size * 2;
 
     const flickering = player.invulnTimer > 0 && Math.floor(player.invulnTimer / 4) % 2 === 0;
-    const bodySprite = playerSprites[playerAnim.frame] || playerSprites.idle;
+    const bodySprite = getPlayerSprite(playerAnim.frame);
     const flipX      = player.dashing ? playerAnim.dashFlipX : player.facing === -1;
 
     ctx.save();
@@ -963,6 +1052,10 @@ function updateProjectiles() {
                 if (e.hp <= 0) {
                     e.alive = false;
                     score++;
+                    if (player.lifestealOnKill > 0 && player.hp > 0) {
+                        const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
+                        player.hp = Math.min(player.maxHp, player.hp + heal);
+                    }
                     const variant = e.type === 'tank' ? 'blue' : 'green';
                     pickups.push({
                         x: e.x, y: e.y, prevX: e.x, prevY: e.y,
@@ -1032,7 +1125,7 @@ function updatePickups() {
 
         if (dist < player.size + p.size) {
             if (p.type === 'xp') {
-                player.xp += p.value;
+                player.xp += p.value * player.xpGainMult;
                 xpBarFlash  = 12;
                 if (player.xp >= player.xpToNextLevel) {
                     player.xp -= player.xpToNextLevel;
@@ -1125,7 +1218,7 @@ function vialInteriorPath(sc) {
     ctx.lineTo(bX1, bY1 + br); ctx.arcTo(bX1, bY1, bX1 + br, bY1, br); ctx.closePath();
 }
 
-function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
+function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valueText = '') {
     const sc = VIAL_SCALE;
     const W  = VSRC_W * sc, H = VSRC_H * sc;
     const GW = (VSRC_W + 40) * sc, GH = (VSRC_H + 40) * sc;
@@ -1204,6 +1297,13 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label) {
     ctx.shadowBlur  = 5;
     ctx.fillStyle   = 'rgba(220,220,255,0.92)';
     ctx.fillText(label, W / 2, H + 18 * sc);
+
+    if (valueText) {
+        ctx.font       = `bold ${Math.round(12 * sc)}px Arial`;
+        ctx.fillStyle  = 'rgba(245,245,255,0.95)';
+        ctx.fillText(valueText, W / 2, H + 34 * sc);
+    }
+
     ctx.shadowBlur  = 0;
     ctx.restore();
 }
@@ -1222,15 +1322,20 @@ function drawVials() {
         ? { top: '#ffcc44', mid: '#dd7700', bot: '#883300' }
         : { top: '#ff6633', mid: '#cc2200', bot: '#660008' };
 
-    drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, '❤  HP');
+    const hpValue = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+    drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, '❤  HP', hpValue);
 
-    const df = player.dashCooldown > 0 ? 1 - player.dashCooldown / 120 : 1;
-    const dr = player.dashCooldown === 0;
+    const baseCharges = player.dashCharges;
+    const hasPartial = player.dashCharges < player.dashMaxCharges;
+    const partial = hasPartial ? Math.max(0, Math.min(1, 1 - player.dashCooldown / player.dashRechargeFrames)) : 0;
+    const df = Math.max(0, Math.min(1, (baseCharges + partial) / player.dashMaxCharges));
+    const dr = player.dashCharges > 0;
     const dc = dr
         ? { top: '#88ffff', mid: '#22aaff', bot: '#0030bb' }
         : { top: '#44aadd', mid: '#1060cc', bot: '#001888' };
 
-    drawVial(dashX, dashY, df, dc, vialGlowDashSprite, '⚡ DASH');
+    const dashValue = `${player.dashCharges}/${player.dashMaxCharges}`;
+    drawVial(dashX, dashY, df, dc, vialGlowDashSprite, '⚡ DASH', dashValue);
 
     if (dr) {
         const ra = 0.55 + 0.45 * Math.abs(Math.sin(frameCount * 0.07));
@@ -1410,10 +1515,19 @@ function drawVisibilityMask() {
 //  MENU & SCREENS
 // =============================================================================
 
-function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
-function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78, w: 160, h: 36 }; }
-function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30,  w: 160, h: 36 }; }
+function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
+function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
+function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
+function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
 function getBackButton()         { return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 }; }
+
+function getCharacterPanel() {
+    const w = Math.min(1100, canvas.width - 60);
+    const h = Math.min(560, canvas.height - 90);
+    const x = canvas.width / 2 - w / 2;
+    const y = canvas.height / 2 - h / 2 + 14;
+    return { x, y, w, h };
+}
 
 function getCursorBoxes() {
     const bs = 52, gap = 12;
@@ -1421,6 +1535,32 @@ function getCursorBoxes() {
     const sx = canvas.width / 2 - tw / 2;
     const sy = canvas.height / 2 + 50;
     return cursorSprites.map((_, i) => ({ x: sx + i * (bs + gap), y: sy, w: bs, h: bs }));
+}
+
+function getCharacterCards() {
+    const panel = getCharacterPanel();
+    const gap = 14;
+    const innerPad = 24;
+    const usableW = panel.w - innerPad * 2;
+    const cardW = Math.min(168, Math.max(120, Math.floor((usableW - gap * 4) / 5)));
+    const cardH = Math.min(292, Math.max(228, Math.round(cardW * 1.7)));
+    const totalW = cardW * 5 + gap * 4;
+    const startX = canvas.width / 2 - totalW / 2;
+    const y = panel.y + 92;
+    return CHARACTER_LOADOUTS.map((_, i) => ({ x: startX + i * (cardW + gap), y, w: cardW, h: cardH }));
+}
+
+function getCharacterBackButton() {
+    const cards = getCharacterCards();
+    const cardBottom = cards[0].y + cards[0].h;
+    const y = Math.min(canvas.height - 50, cardBottom + 18);
+    return { x: canvas.width / 2 - 70, y, w: 140, h: 38 };
+}
+
+function getCharacterPreviewSprite(loadout) {
+    const idle = loadout.sprites.idle;
+    if (idle?.complete && idle.naturalWidth) return idle;
+    return fallbackPlayerSprites.idle;
 }
 
 function getLevelUpZones() {
@@ -1510,39 +1650,63 @@ function drawPerfGuide() {
 }
 
 function drawMenu() {
-    ctx.fillStyle = 'black';
+    const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bg.addColorStop(0, '#0c1018');
+    bg.addColorStop(0.5, '#101622');
+    bg.addColorStop(1, '#17100d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const halo = ctx.createRadialGradient(canvas.width * 0.5, canvas.height * 0.3, 40, canvas.width * 0.5, canvas.height * 0.35, canvas.height * 0.75);
+    halo.addColorStop(0, 'rgba(90,170,255,0.16)');
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = halo;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (menuPage === 'main') {
-        ctx.fillStyle  = 'white';
+        ctx.fillStyle  = '#f8fcff';
         ctx.font       = 'bold 64px Arial';
         ctx.textAlign  = 'center';
         ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 80);
         ctx.font       = '20px Arial';
-        ctx.fillStyle  = 'silver';
+        ctx.fillStyle  = '#b9c7d8';
         ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font       = '15px Arial';
+        ctx.fillStyle  = '#8fd7ff';
+        ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 + 6);
+
+        const charBtn = getSelectCharacterButton();
+        ctx.fillStyle   = '#1a2231';
+        ctx.fillRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
+        ctx.strokeStyle = '#5b8fb4';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
+        ctx.fillStyle   = '#c8ebff';
+        ctx.font        = '16px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('Select Character  >', charBtn.x + charBtn.w / 2, charBtn.y + charBtn.h / 2 + 6);
 
         const btn = getSelectCursorButton();
-        ctx.fillStyle   = '#1c1c1c';
+        ctx.fillStyle   = '#1a2231';
         ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.strokeStyle = '#555';
+        ctx.strokeStyle = '#5b8fb4';
         ctx.lineWidth   = 1;
         ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.fillStyle   = 'silver';
+        ctx.fillStyle   = '#c8ebff';
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
 
         // Fog toggle button
         const ftb = getFogToggleButton();
-        ctx.fillStyle   = '#1c1c1c';
+        ctx.fillStyle   = '#1a2231';
         ctx.fillRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        ctx.strokeStyle = '#555';
+        ctx.strokeStyle = '#5b8fb4';
         ctx.lineWidth   = 1;
         ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
         const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
         const pillX = ftb.x + 8;
-        ctx.fillStyle = fogEnabled ? '#5a8a5a' : '#444';
+        ctx.fillStyle = fogEnabled ? '#4e8a70' : '#3d4c5c';
         ctx.beginPath();
         ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
         ctx.fill();
@@ -1551,24 +1715,114 @@ function drawMenu() {
         ctx.beginPath();
         ctx.arc(knobX, pillY + pillH / 2, pillH / 2 - 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle   = fogEnabled ? '#ccc' : '#888';
+        ctx.fillStyle   = fogEnabled ? '#d1ecdf' : '#8e9daf';
         ctx.font        = '14px Arial';
         ctx.textAlign   = 'left';
         ctx.fillText('Fog: ' + (fogEnabled ? 'ON' : 'OFF'), ftb.x + pillW + 16, ftb.y + ftb.h / 2 + 5);
 
         // Perf guide button
         const pb = getPerfButton();
-        ctx.fillStyle   = '#1c1c1c';
+        ctx.fillStyle   = '#1a2231';
         ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.strokeStyle = '#555';
+        ctx.strokeStyle = '#5b8fb4';
         ctx.lineWidth   = 1;
         ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.fillStyle   = showPerfGuide ? '#fff' : '#aaa';
+        ctx.fillStyle   = showPerfGuide ? '#ffffff' : '#9eb8ce';
         ctx.font        = '13px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Performance Guide', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
 
         if (showPerfGuide) drawPerfGuide();
+    } else if (menuPage === 'characters') {
+        const panel = getCharacterPanel();
+        const pg = ctx.createLinearGradient(panel.x, panel.y, panel.x, panel.y + panel.h);
+        pg.addColorStop(0, 'rgba(17,25,38,0.88)');
+        pg.addColorStop(1, 'rgba(12,17,27,0.92)');
+        ctx.fillStyle = pg;
+        ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+        ctx.strokeStyle = 'rgba(120,170,205,0.65)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(panel.x, panel.y, panel.w, panel.h);
+
+        ctx.fillStyle = '#f7fbff';
+        ctx.font      = 'bold 38px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Select Character', canvas.width / 2, panel.y + 46);
+        ctx.font      = '16px Arial';
+        ctx.fillStyle = '#a6c5de';
+        ctx.fillText('Chunkster and Dasher are now live with unique passives', canvas.width / 2, panel.y + 74);
+
+        const cards = getCharacterCards();
+        for (let i = 0; i < cards.length; i++) {
+            const c = cards[i];
+            const loadout = CHARACTER_LOADOUTS[i];
+            const isSel = i === selectedCharacter;
+            const isHover = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
+
+            const cardGrad = ctx.createLinearGradient(c.x, c.y, c.x, c.y + c.h);
+            cardGrad.addColorStop(0, isSel ? '#203248' : '#1a2030');
+            cardGrad.addColorStop(1, isSel ? '#182435' : '#121824');
+            ctx.fillStyle = cardGrad;
+            ctx.fillRect(c.x, c.y, c.w, c.h);
+
+            ctx.strokeStyle = isSel ? '#77d8ff' : isHover ? '#4e7ea0' : '#2f4157';
+            ctx.lineWidth = isSel ? 2 : 1;
+            ctx.strokeRect(c.x, c.y, c.w, c.h);
+
+            if (isSel) {
+                ctx.save();
+                ctx.shadowColor = '#5fd4ff';
+                ctx.shadowBlur = 14;
+                ctx.strokeStyle = 'rgba(95,212,255,0.65)';
+                ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+                ctx.restore();
+            }
+
+            const prev = getCharacterPreviewSprite(loadout);
+            const size = Math.min(c.w * 0.72, c.h * 0.45);
+            const px = c.x + c.w / 2 - size / 2;
+            const py = c.y + 20;
+            ctx.drawImage(prev, px, py, size, size);
+
+            const nameY = c.y + c.h - 88;
+            const spdY  = c.y + c.h - 60;
+            const hpY   = c.y + c.h - 44;
+            const xpY   = c.y + c.h - 28;
+            const tagY  = c.y + c.h - 12;
+
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 13px Arial';
+            ctx.fillStyle = isSel ? '#e6f9ff' : '#cad8e6';
+            ctx.fillText(loadout.name, c.x + c.w / 2, nameY);
+
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#9ab4ca';
+            ctx.fillText(`SPD ${loadout.speed.toFixed(1)}`, c.x + c.w / 2, spdY);
+            ctx.fillText(`HP ${loadout.maxHp}`, c.x + c.w / 2, hpY);
+            ctx.fillText(`XP x${loadout.xpGainMult.toFixed(2)}`, c.x + c.w / 2, xpY);
+            if ((loadout.lifestealOnKill ?? 0) > 0) {
+                ctx.fillText(`LS ${Math.round(loadout.lifestealOnKill * 100)}%`, c.x + c.w / 2, tagY);
+            } else {
+                ctx.fillText(`DASH ${loadout.dashCharges ?? 1}x`, c.x + c.w / 2, tagY);
+            }
+
+            if (isSel) {
+                ctx.font = 'bold 11px Arial';
+                ctx.fillStyle = '#7fe3ff';
+                ctx.fillText('ACTIVE', c.x + c.w / 2, c.y + 16);
+            }
+        }
+
+        const back = getCharacterBackButton();
+        ctx.fillStyle   = '#1a2231';
+        ctx.fillRect(back.x, back.y, back.w, back.h);
+        ctx.strokeStyle = '#5b8fb4';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(back.x, back.y, back.w, back.h);
+        ctx.fillStyle   = '#c8ebff';
+        ctx.font        = '16px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('<  Back', back.x + back.w / 2, back.y + back.h / 2 + 6);
     } else {
         ctx.fillStyle = 'white';
         ctx.font      = 'bold 40px Arial';
