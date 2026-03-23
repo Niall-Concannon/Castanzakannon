@@ -36,6 +36,7 @@ const GUN_W         = 48;
 const GUN_H         = 18;
 
 const FIXED_STEP = 1000 / 60;
+const SPLASH_FADE_DURATION_MS = 1500;
 
 const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: 'green',  animSpeed: 10 },
@@ -196,6 +197,9 @@ const vialGlowHpSprite   = img('assets/sprites/ui/ui_vial_glow_hp.png');
 const vialGlowDashSprite = img('assets/sprites/ui/ui_vial_glow_dash.png');
 const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
 
+const splashImage = img('assets/sprites/ui/intro.png');
+const menuBackgroundImage = img('assets/sprites/ui/menu.png');
+
 
 // =============================================================================
 //  GAME STATE
@@ -206,7 +210,7 @@ let keys           = {};
 let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
 let frameCount     = 0;
-let gameState      = 'menu';
+let gameState      = 'splash';
 let menuPage       = 'main';
 let selectedCursor = 0;
 let selectedCharacter = 0;
@@ -228,6 +232,7 @@ let renderAlpha    = 1;
 let fps            = 0;
 let showPerfGuide  = false;
 let showFpsCounter = true;
+let splashFadeTimerMs = 0;
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -263,12 +268,27 @@ let playerAnim = {
     dashFlipX:  false,
 };
 
+function startSplashTransition() {
+    if (gameState !== 'splash') return;
+    gameState = 'splashTransition';
+    splashFadeTimerMs = 0;
+}
+
 
 // =============================================================================
 //  INPUT
 // =============================================================================
 
 window.addEventListener('keydown', e => {
+    if (gameState === 'splash') {
+        startSplashTransition();
+        return;
+    }
+
+    if (gameState === 'splashTransition') {
+        return;
+    }
+
     keys[e.key.toLowerCase()] = true;
 
     if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters')) {
@@ -288,6 +308,15 @@ window.addEventListener('mousemove', e  => { mouseX = e.clientX; mouseY = e.clie
 window.addEventListener('mouseup',   () => { mouseDown = false; });
 
 window.addEventListener('mousedown', () => {
+    if (gameState === 'splash') {
+        startSplashTransition();
+        return;
+    }
+
+    if (gameState === 'splashTransition') {
+        return;
+    }
+
     mouseDown = true;
 
     if (gameState === 'menu') {
@@ -357,6 +386,10 @@ window.addEventListener('mousedown', () => {
         }
     }
 });
+
+window.addEventListener('touchstart', () => {
+    if (gameState === 'splash') startSplashTransition();
+}, { passive: true });
 
 
 // =============================================================================
@@ -1935,8 +1968,63 @@ function drawPerfGuide() {
     ctx.restore();
 }
 
-function drawMenu() {
+function drawSplash() {
     ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (splashImage.complete && splashImage.naturalWidth) {
+        const iw = splashImage.naturalWidth;
+        const ih = splashImage.naturalHeight;
+        const scale = Math.max(canvas.width / iw, canvas.height / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = (canvas.height - dh) / 2;
+        ctx.drawImage(splashImage, dx, dy, dw, dh);
+    }
+
+    const vignette = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    vignette.addColorStop(0, 'rgba(0,0,0,0.08)');
+    vignette.addColorStop(0.6, 'rgba(0,0,0,0.25)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const pulse = 0.55 + 0.45 * Math.sin(performance.now() * 0.004);
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+    ctx.fillText('PRESS ANY BUTTON TO CONTINUE', canvas.width / 2, canvas.height - 72);
+}
+
+function drawBlackFade(alpha) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${Math.min(1, Math.max(0, alpha))})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+
+function drawMenu() {
+    if (menuBackgroundImage.complete && menuBackgroundImage.naturalWidth) {
+        const iw = menuBackgroundImage.naturalWidth;
+        const ih = menuBackgroundImage.naturalHeight;
+        const scale = Math.max(canvas.width / iw, canvas.height / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = (canvas.height - dh) / 2;
+        ctx.drawImage(menuBackgroundImage, dx, dy, dw, dh);
+    } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const menuShade = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    menuShade.addColorStop(0, 'rgba(0,0,0,0.2)');
+    menuShade.addColorStop(0.65, 'rgba(0,0,0,0.35)');
+    menuShade.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = menuShade;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (menuPage === 'main') {
@@ -2300,6 +2388,28 @@ function gameLoop(timestamp) {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    if (gameState === 'splash')   { drawSplash();   requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'splashTransition') {
+        splashFadeTimerMs = Math.min(SPLASH_FADE_DURATION_MS, splashFadeTimerMs + dt);
+        const half = SPLASH_FADE_DURATION_MS / 2;
+        let fadeAlpha;
+        if (splashFadeTimerMs <= half) {
+            drawSplash();
+            fadeAlpha = splashFadeTimerMs / half;
+        } else {
+            drawMenu();
+            fadeAlpha = 1 - (splashFadeTimerMs - half) / half;
+        }
+        drawBlackFade(fadeAlpha);
+
+        if (splashFadeTimerMs >= SPLASH_FADE_DURATION_MS) {
+            gameState = 'menu';
+            splashFadeTimerMs = 0;
+        }
+
+        requestAnimationFrame(gameLoop);
+        return;
+    }
     if (gameState === 'menu')     { drawMenu();     requestAnimationFrame(gameLoop); return; }
     if (gameState === 'gameOver') { drawGameOver(); requestAnimationFrame(gameLoop); return; }
 
