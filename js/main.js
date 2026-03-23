@@ -20,6 +20,14 @@ document.body.style.overflow   = 'hidden';
 const TILE          = 48;
 const MAP_W         = 80;
 const MAP_H         = 60;
+const TILE_FLOOR    = 0;
+const TILE_WALL     = 1;
+const TILE_CORNER_NW = 2;
+const TILE_CORNER_NE = 3;
+const TILE_CORNER_SW = 4;
+const TILE_CORNER_SE = 5;
+const WALL_FACE_HEIGHT = 14;
+const CORNER_RAIL_INSET = 12;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 const MAX_ENEMIES   = 20;
@@ -149,6 +157,8 @@ const gunSprites = {
 };
 
 const wallSprite         = img('assets/sprites/wall_placeholder.png');
+const wallFaceSprite     = img('assets/sprites/wall_face_placeholder.png');
+const cornerFaceSprite   = img('assets/sprites/wall_corner_face_placeholder.png');
 const floorSprite        = img('assets/sprites/floor_placeholder.png');
 const projectileSprite   = img('assets/sprites/projectile_placeholder.png');
 const pickupXpSprite     = img('assets/sprites/pickup_xp_placeholder.png');
@@ -358,7 +368,7 @@ function generateMap() {
     for (let i = 0; i < MAP_H; i++) {
         mapTiles[i] = [];
         for (let j = 0; j < MAP_W; j++) {
-            mapTiles[i][j] = (j < 2 || j >= MAP_W - 2 || i < 2 || i >= MAP_H - 2) ? 1 : 0;
+            mapTiles[i][j] = (j < 2 || j >= MAP_W - 2 || i < 2 || i >= MAP_H - 2) ? TILE_WALL : TILE_FLOOR;
         }
     }
 
@@ -371,10 +381,10 @@ function generateMap() {
         if (Math.random() > 0.5) {
             for (let j = sy; j < sy + sh && j < MAP_H - 2; j++)
                 for (let k = sx; k < sx + sw && k < MAP_W - 2; k++)
-                    mapTiles[j][k] = 1;
+                    mapTiles[j][k] = TILE_WALL;
         } else {
-            for (let j = sy; j < sy + sh && j < MAP_H - 2; j++) mapTiles[j][sx] = 1;
-            for (let k = sx; k < sx + sw && k < MAP_W - 2; k++) mapTiles[sy][k] = 1;
+            for (let j = sy; j < sy + sh && j < MAP_H - 2; j++) mapTiles[j][sx] = TILE_WALL;
+            for (let k = sx; k < sx + sw && k < MAP_W - 2; k++) mapTiles[sy][k] = TILE_WALL;
         }
     }
 
@@ -382,16 +392,64 @@ function generateMap() {
     const cx = Math.floor(MAP_W / 2), cy = Math.floor(MAP_H / 2);
     for (let i = cy - 5; i <= cy + 5; i++)
         for (let j = cx - 5; j <= cx + 5; j++)
-            if (i >= 0 && i < MAP_H && j >= 0 && j < MAP_W) mapTiles[i][j] = 0;
+            if (i >= 0 && i < MAP_H && j >= 0 && j < MAP_W) mapTiles[i][j] = TILE_FLOOR;
+
+    applyCornerTiles();
 
     buildNavGrid();
 }
 
+function isSolidTileType(tileType) {
+    return tileType !== TILE_FLOOR;
+}
+
+function isSolidTileAt(tx, ty) {
+    if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
+    return isSolidTileType(mapTiles[ty]?.[tx] ?? TILE_FLOOR);
+}
+
+function applyCornerTiles() {
+    const next = mapTiles.map(row => row.slice());
+
+    for (let y = 1; y < MAP_H - 1; y++) {
+        for (let x = 1; x < MAP_W - 1; x++) {
+            if (mapTiles[y][x] !== TILE_WALL) continue;
+
+            const n = mapTiles[y - 1][x] === TILE_WALL;
+            const s = mapTiles[y + 1][x] === TILE_WALL;
+            const w = mapTiles[y][x - 1] === TILE_WALL;
+            const e = mapTiles[y][x + 1] === TILE_WALL;
+
+            if (n && w && !s && !e) next[y][x] = TILE_CORNER_NW;
+            else if (n && e && !s && !w) next[y][x] = TILE_CORNER_NE;
+            else if (s && w && !n && !e) next[y][x] = TILE_CORNER_SW;
+            else if (s && e && !n && !w) next[y][x] = TILE_CORNER_SE;
+        }
+    }
+
+    mapTiles = next;
+}
+
 function buildNavGrid() {
     navGrid = new Uint8Array(MAP_W * MAP_H);
-    for (let y = 0; y < MAP_H; y++)
-        for (let x = 0; x < MAP_W; x++)
-            navGrid[y * MAP_W + x] = mapTiles[y][x] === 1 ? 1 : 0;
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            const tileType = mapTiles[y][x];
+            if (tileType === TILE_FLOOR) {
+                navGrid[y * MAP_W + x] = 0;
+                continue;
+            }
+
+            if (tileType === TILE_WALL) {
+                navGrid[y * MAP_W + x] = 1;
+                continue;
+            }
+
+            // Let nav pass through corner cells so enemies route around angled
+            // rails without repeatedly targeting blocked square centers.
+            navGrid[y * MAP_W + x] = 0;
+        }
+    }
 }
 
 function findPath(fromX, fromY, toX, toY) {
@@ -439,10 +497,158 @@ function findPath(fromX, fromY, toX, toY) {
 function wallCollision(x, y, size) {
     const l = Math.floor((x - size) / TILE), t = Math.floor((y - size) / TILE);
     const r = Math.floor((x + size) / TILE), b = Math.floor((y + size) / TILE);
-    for (let ty = t; ty <= b; ty++)
-        for (let tx = l; tx <= r; tx++)
-            if (ty >= 0 && ty < MAP_H && tx >= 0 && tx < MAP_W && mapTiles[ty]?.[tx] === 1) return true;
+
+    const samples = [
+        [0, 0],
+        [ size, 0], [-size, 0], [0,  size], [0, -size],
+        [ size * 0.75,  size * 0.75],
+        [ size * 0.75, -size * 0.75],
+        [-size * 0.75,  size * 0.75],
+        [-size * 0.75, -size * 0.75],
+    ];
+
+    for (let ty = t; ty <= b; ty++) {
+        for (let tx = l; tx <= r; tx++) {
+            if (ty < 0 || ty >= MAP_H || tx < 0 || tx >= MAP_W) continue;
+            const tileType = mapTiles[ty]?.[tx] ?? TILE_FLOOR;
+            if (!isSolidTileType(tileType)) continue;
+
+            const tileX = tx * TILE;
+            const tileY = ty * TILE;
+            for (const [ox, oy] of samples) {
+                if (pointInsideSolidTile(x + ox, y + oy, tileX, tileY, tileType)) return true;
+            }
+        }
+    }
+
     return false;
+}
+
+function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
+    const lx = px - tileX;
+    const ly = py - tileY;
+    if (lx < 0 || lx > TILE || ly < 0 || ly > TILE) return false;
+
+    if (tileType === TILE_WALL) return true;
+    if (tileType === TILE_CORNER_NW) return lx + ly <= TILE - CORNER_RAIL_INSET;
+    if (tileType === TILE_CORNER_NE) return lx >= ly + CORNER_RAIL_INSET;
+    if (tileType === TILE_CORNER_SW) return lx + CORNER_RAIL_INSET <= ly;
+    if (tileType === TILE_CORNER_SE) return lx + ly >= TILE + CORNER_RAIL_INSET;
+
+    return false;
+}
+
+function getTopPolygon(tileType) {
+    if (tileType === TILE_CORNER_NW) return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: 0, y: TILE }];
+    if (tileType === TILE_CORNER_NE) return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: TILE, y: TILE }];
+    if (tileType === TILE_CORNER_SW) return [{ x: 0, y: 0 }, { x: 0, y: TILE }, { x: TILE, y: TILE }];
+    if (tileType === TILE_CORNER_SE) return [{ x: TILE, y: 0 }, { x: TILE, y: TILE }, { x: 0, y: TILE }];
+    return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: TILE, y: TILE }, { x: 0, y: TILE }];
+}
+
+function drawWallFace(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
+    // Quad vertices: top-edge (ax,ay)->(bx,by), extruded straight down by depth.
+    const x0 = sx + ax, y0 = sy + ay;
+    const x1 = sx + bx, y1 = sy + by;
+    const x2 = sx + bx, y2 = sy + by + depth;
+    const x3 = sx + ax, y3 = sy + ay + depth;
+
+    // Texture pass
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(sprite, sx, sy, TILE, TILE + depth);
+    ctx.restore();
+
+    // Shade overlay
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawWallFaceCorner(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
+    // Same as drawWallFace, but kept separate so corner tuning can be isolated.
+    const x0 = sx + ax, y0 = sy + ay;
+    const x1 = sx + bx, y1 = sy + by;
+    const x2 = sx + bx, y2 = sy + by + depth;
+    const x3 = sx + ax, y3 = sy + ay + depth;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(sprite, sx, sy, TILE, TILE + depth);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawWallTileWithFaces(tileX, tileY, tileType) {
+    const s  = toScreen(tileX * TILE, tileY * TILE);
+    const FH = WALL_FACE_HEIGHT;
+    const T  = TILE;
+    const I  = CORNER_RAIL_INSET;
+
+    // Faces (drawn first, underneath top surface)
+    const southOpen = !isSolidTileAt(tileX, tileY + 1);
+
+    switch (tileType) {
+        case TILE_WALL:
+            // Single south face along the bottom edge.
+            if (southOpen)
+                drawWallFace(s.x, s.y, 0, T, T, T, FH, wallFaceSprite, 'rgba(0,0,0,0.32)');
+            break;
+
+        case TILE_CORNER_NW:
+            // Full diagonal face (restored): (T, 0) -> (0, T).
+            drawWallFaceCorner(s.x, s.y, T, 0, 0, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            break;
+
+        case TILE_CORNER_NE:
+            // Full diagonal face (restored): (0, 0) -> (T, T).
+            drawWallFaceCorner(s.x, s.y, 0, 0, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            break;
+
+        case TILE_CORNER_SW:
+            // Full south strip (restored): (0, T) -> (T, T).
+            if (southOpen)
+                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            break;
+
+        case TILE_CORNER_SE:
+            // Full south strip (restored): (0, T) -> (T, T).
+            if (southOpen)
+                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            break;
+    }
+
+    // Top surface (drawn on top)
+    const top = getTopPolygon(tileType);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(s.x + top[0].x, s.y + top[0].y);
+    for (let i = 1; i < top.length; i++) ctx.lineTo(s.x + top[i].x, s.y + top[i].y);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(wallSprite, s.x, s.y, T, T);
+    ctx.restore();
 }
 
 function drawMap() {
@@ -450,7 +656,17 @@ function drawMap() {
         for (let x = 0; x < MAP_W; x++) {
             const s = toScreen(x * TILE, y * TILE);
             if (s.x < -TILE || s.x > canvas.width || s.y < -TILE || s.y > canvas.height) continue;
-            ctx.drawImage(mapTiles[y][x] === 1 ? wallSprite : floorSprite, s.x, s.y, TILE, TILE);
+            ctx.drawImage(floorSprite, s.x, s.y, TILE, TILE);
+        }
+    }
+
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            const s = toScreen(x * TILE, y * TILE);
+            if (s.x < -TILE || s.x > canvas.width || s.y < -(TILE + WALL_FACE_HEIGHT) || s.y > canvas.height) continue;
+            const tileType = mapTiles[y][x];
+            if (!isSolidTileType(tileType)) continue;
+            drawWallTileWithFaces(x, y, tileType);
         }
     }
 }
@@ -591,8 +807,43 @@ function updatePlayer() {
         const n  = Math.hypot(dirX, dirY) || 1;
         const mx = (dirX / n) * player.speed;
         const my = (dirY / n) * player.speed;
-        if (!wallCollision(player.x + mx, player.y,      player.size)) player.x += mx;
-        if (!wallCollision(player.x,      player.y + my, player.size)) player.y += my;
+        const canMoveX = !wallCollision(player.x + mx, player.y,      player.size);
+        const canMoveY = !wallCollision(player.x,      player.y + my, player.size);
+        if (canMoveX) player.x += mx;
+        if (canMoveY) player.y += my;
+
+        // If fully blocked while moving diagonally, slide along obstacle tangent.
+        if (!canMoveX && !canMoveY && (dirX !== 0 || dirY !== 0)) {
+            const angle = Math.atan2(dirY, dirX);
+            const slide = player.speed * 0.95;
+            const px = -Math.sin(angle);
+            const py =  Math.cos(angle);
+
+            const c1x = player.x + px * slide;
+            const c1y = player.y + py * slide;
+            const c2x = player.x - px * slide;
+            const c2y = player.y - py * slide;
+
+            const c1ok = !wallCollision(c1x, c1y, player.size);
+            const c2ok = !wallCollision(c2x, c2y, player.size);
+
+            if (c1ok || c2ok) {
+                if (!c2ok) {
+                    player.x = c1x; player.y = c1y;
+                } else if (!c1ok) {
+                    player.x = c2x; player.y = c2y;
+                } else {
+                    // Prefer whichever side continues the intended move direction best.
+                    const d1 = (c1x - player.x) * mx + (c1y - player.y) * my;
+                    const d2 = (c2x - player.x) * mx + (c2y - player.y) * my;
+                    if (d1 >= d2) {
+                        player.x = c1x; player.y = c1y;
+                    } else {
+                        player.x = c2x; player.y = c2y;
+                    }
+                }
+            }
+        }
     }
 
     player.x = Math.max(TILE * 2, Math.min(MAP_W * TILE - TILE * 2, player.x));
@@ -889,16 +1140,18 @@ function drawPlayer() {
 
 function spawnEnemy(type) {
     const e = ENEMY_TYPES[type];
+    const wallSize = type === 'tank' ? e.size * 0.8 : e.size;
     let ex, ey, tries = 0;
     do {
         ex = (5 + Math.floor(Math.random() * (MAP_W - 10))) * TILE;
         ey = (5 + Math.floor(Math.random() * (MAP_H - 10))) * TILE;
         tries++;
-    } while ((Math.hypot(ex - player.x, ey - player.y) < 300 || wallCollision(ex, ey, 14)) && tries < 60);
+    } while ((Math.hypot(ex - player.x, ey - player.y) < 300 || wallCollision(ex, ey, wallSize)) && tries < 60);
 
     enemies.push({
         x: ex, y: ey, prevX: ex, prevY: ey,
         hp: e.hp, maxHp: e.hp, size: e.size,
+        wallSize,
         speed: e.speed, color: e.color,
         hitFlash: 0, hpBarTimer: 0, alive: true, type,
         animFrame: 0, animTimer: Math.floor(Math.random() * e.animSpeed),
@@ -932,14 +1185,14 @@ function updateEnemies() {
         }
 
         let tx, ty;
-        if (hasLineOfSight(e.x, e.y, player.x, player.y, e.size)) {
+        if (hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize)) {
             tx = player.x; ty = player.y; e.path = [];
         } else if (e.path.length > 0) {
             while (e.path.length > 1 && Math.hypot(e.path[0].x - e.x, e.path[0].y - e.y) < TILE * 0.55) {
                 e.path.shift();
             }
             for (let wi = e.path.length - 1; wi > 0; wi--) {
-                if (hasLineOfSight(e.x, e.y, e.path[wi].x, e.path[wi].y, e.size)) {
+                if (hasLineOfSight(e.x, e.y, e.path[wi].x, e.path[wi].y, e.wallSize)) {
                     e.path.splice(0, wi);
                     break;
                 }
@@ -956,8 +1209,35 @@ function updateEnemies() {
         const angle = Math.atan2(ty - e.y, tx - e.x);
         const mx = Math.cos(angle) * e.speed * speedMult;
         const my = Math.sin(angle) * e.speed * speedMult;
-        if (!wallCollision(e.x + mx, e.y,      e.size)) e.x += mx;
-        if (!wallCollision(e.x,      e.y + my, e.size)) e.y += my;
+        const canMoveX = !wallCollision(e.x + mx, e.y,      e.wallSize);
+        const canMoveY = !wallCollision(e.x,      e.y + my, e.wallSize);
+        if (canMoveX) e.x += mx;
+        if (canMoveY) e.y += my;
+
+        // If fully blocked, slide along obstacle tangent to avoid corner snagging.
+        if (!canMoveX && !canMoveY) {
+            const slide = e.speed * speedMult * 0.95;
+            const px = -Math.sin(angle);
+            const py =  Math.cos(angle);
+
+            const c1x = e.x + px * slide;
+            const c1y = e.y + py * slide;
+            const c2x = e.x - px * slide;
+            const c2y = e.y - py * slide;
+
+            const c1ok = !wallCollision(c1x, c1y, e.wallSize);
+            const c2ok = !wallCollision(c2x, c2y, e.wallSize);
+
+            if (c1ok || c2ok) {
+                const d1 = c1ok ? Math.hypot(tx - c1x, ty - c1y) : Infinity;
+                const d2 = c2ok ? Math.hypot(tx - c2x, ty - c2y) : Infinity;
+                if (d1 <= d2) {
+                    e.x = c1x; e.y = c1y;
+                } else {
+                    e.x = c2x; e.y = c2y;
+                }
+            }
+        }
 
         // Separation
         for (const o of enemies) {
@@ -966,10 +1246,10 @@ function updateEnemies() {
             const dist = Math.hypot(dx, dy), md = e.size + o.size;
             if (dist < md && dist > 0) {
                 const ov = (md - dist) * 0.5, nx = dx / dist, ny = dy / dist;
-                if (!wallCollision(e.x + nx * ov, e.y,           e.size)) e.x += nx * ov;
-                if (!wallCollision(e.x,            e.y + ny * ov, e.size)) e.y += ny * ov;
-                if (!wallCollision(o.x - nx * ov, o.y,           o.size)) o.x -= nx * ov;
-                if (!wallCollision(o.x,            o.y - ny * ov, o.size)) o.y -= ny * ov;
+                if (!wallCollision(e.x + nx * ov, e.y,               e.wallSize)) e.x += nx * ov;
+                if (!wallCollision(e.x,            e.y + ny * ov,     e.wallSize)) e.y += ny * ov;
+                if (!wallCollision(o.x - nx * ov, o.y,               o.wallSize ?? o.size)) o.x -= nx * ov;
+                if (!wallCollision(o.x,            o.y - ny * ov,     o.wallSize ?? o.size)) o.y -= ny * ov;
             }
         }
 
@@ -1964,7 +2244,7 @@ function drawCursor() {
 // =============================================================================
 
 function toScreen(x, y) {
-    return { x: x - camera.x, y: y - camera.y };
+    return { x: Math.round(x - camera.x), y: Math.round(y - camera.y) };
 }
 
 function updateCamera(alpha) {
