@@ -435,21 +435,28 @@ function buildNavGrid() {
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             const tileType = mapTiles[y][x];
-            if (tileType === TILE_FLOOR) {
-                navGrid[y * MAP_W + x] = 0;
-                continue;
-            }
-
             if (tileType === TILE_WALL) {
                 navGrid[y * MAP_W + x] = 1;
                 continue;
             }
 
-            // Let nav pass through corner cells so enemies route around angled
-            // rails without repeatedly targeting blocked square centers.
+            // Corner rail tiles are partially open, so keep them navigable.
             navGrid[y * MAP_W + x] = 0;
         }
     }
+}
+
+function getNavWaypointForTile(tx, ty) {
+    const tileType = mapTiles[ty]?.[tx] ?? TILE_FLOOR;
+    let fx = 0.5, fy = 0.5;
+
+    // Bias waypoints away from solid triangle halves inside corner tiles.
+    if (tileType === TILE_CORNER_NW) { fx = 0.74; fy = 0.74; }
+    else if (tileType === TILE_CORNER_NE) { fx = 0.26; fy = 0.74; }
+    else if (tileType === TILE_CORNER_SW) { fx = 0.74; fy = 0.26; }
+    else if (tileType === TILE_CORNER_SE) { fx = 0.26; fy = 0.26; }
+
+    return { x: tx * TILE + TILE * fx, y: ty * TILE + TILE * fy };
 }
 
 function findPath(fromX, fromY, toX, toY) {
@@ -488,7 +495,9 @@ function findPath(fromX, fromY, toX, toY) {
     const path = [];
     let idx = goalIdx;
     while (prev[idx] !== -1) {
-        path.unshift({ x: (idx % MAP_W) * TILE + TILE / 2, y: Math.floor(idx / MAP_W) * TILE + TILE / 2 });
+        const tx = idx % MAP_W;
+        const ty = Math.floor(idx / MAP_W);
+        path.unshift(getNavWaypointForTile(tx, ty));
         idx = prev[idx];
     }
     return path;
@@ -1170,6 +1179,36 @@ function hasLineOfSight(x1, y1, x2, y2, size) {
     return true;
 }
 
+function moveEnemyToward(e, tx, ty, step) {
+    const baseAngle = Math.atan2(ty - e.y, tx - e.x);
+    const steerOffsets = [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4];
+    let bestMove = null;
+
+    for (const offset of steerOffsets) {
+        const angle = baseAngle + offset;
+        const mx = Math.cos(angle) * step;
+        const my = Math.sin(angle) * step;
+
+        const canMoveX = !wallCollision(e.x + mx, e.y, e.wallSize);
+        const canMoveY = !wallCollision(e.x, e.y + my, e.wallSize);
+        if (!canMoveX && !canMoveY) continue;
+
+        const nx = e.x + (canMoveX ? mx : 0);
+        const ny = e.y + (canMoveY ? my : 0);
+        const score = Math.hypot(tx - nx, ty - ny) + Math.abs(offset) * 4;
+
+        if (!bestMove || score < bestMove.score) {
+            bestMove = { nx, ny, score };
+        }
+    }
+
+    if (!bestMove) return false;
+
+    e.x = bestMove.nx;
+    e.y = bestMove.ny;
+    return true;
+}
+
 function updateEnemies() {
     // Sandevistan: enemies slow during player dash
     const sanSlowMult = player.dashing ? 0.15 : 1.0;
@@ -1206,37 +1245,10 @@ function updateEnemies() {
         const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
         const speedMult = distMult * sanSlowMult;
 
-        const angle = Math.atan2(ty - e.y, tx - e.x);
-        const mx = Math.cos(angle) * e.speed * speedMult;
-        const my = Math.sin(angle) * e.speed * speedMult;
-        const canMoveX = !wallCollision(e.x + mx, e.y,      e.wallSize);
-        const canMoveY = !wallCollision(e.x,      e.y + my, e.wallSize);
-        if (canMoveX) e.x += mx;
-        if (canMoveY) e.y += my;
-
-        // If fully blocked, slide along obstacle tangent to avoid corner snagging.
-        if (!canMoveX && !canMoveY) {
-            const slide = e.speed * speedMult * 0.95;
-            const px = -Math.sin(angle);
-            const py =  Math.cos(angle);
-
-            const c1x = e.x + px * slide;
-            const c1y = e.y + py * slide;
-            const c2x = e.x - px * slide;
-            const c2y = e.y - py * slide;
-
-            const c1ok = !wallCollision(c1x, c1y, e.wallSize);
-            const c2ok = !wallCollision(c2x, c2y, e.wallSize);
-
-            if (c1ok || c2ok) {
-                const d1 = c1ok ? Math.hypot(tx - c1x, ty - c1y) : Infinity;
-                const d2 = c2ok ? Math.hypot(tx - c2x, ty - c2y) : Infinity;
-                if (d1 <= d2) {
-                    e.x = c1x; e.y = c1y;
-                } else {
-                    e.x = c2x; e.y = c2y;
-                }
-            }
+        const moved = moveEnemyToward(e, tx, ty, e.speed * speedMult);
+        if (!moved) {
+            e.path = [];
+            e.pathTimer = 0;
         }
 
         // Separation
