@@ -1762,9 +1762,19 @@ function drawVisibilityMask() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const ps  = toScreen(prx, pry);
-        fogCtx.fillStyle = 'rgba(0,0,0,1)';
+
+        // Smooth projectile lighting in fog: bright core that fades out softly.
+        const lightRadius = Math.max(112, p.size * 26);
+        const bulletLight = fogCtx.createRadialGradient(ps.x, ps.y, 0, ps.x, ps.y, lightRadius);
+        bulletLight.addColorStop(0,    'rgba(0,0,0,0.56)');
+        bulletLight.addColorStop(0.22, 'rgba(0,0,0,0.42)');
+        bulletLight.addColorStop(0.5,  'rgba(0,0,0,0.24)');
+        bulletLight.addColorStop(0.78, 'rgba(0,0,0,0.1)');
+        bulletLight.addColorStop(1,   'rgba(0,0,0,0)');
+
+        fogCtx.fillStyle = bulletLight;
         fogCtx.beginPath();
-        fogCtx.arc(ps.x, ps.y, Math.max(28, p.size * 7), 0, Math.PI * 2);
+        fogCtx.arc(ps.x, ps.y, lightRadius, 0, Math.PI * 2);
         fogCtx.fill();
     }
     fogCtx.globalCompositeOperation = 'source-over';
