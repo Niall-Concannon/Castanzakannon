@@ -30,6 +30,7 @@ const WALL_FACE_HEIGHT = 14;
 const CORNER_RAIL_INSET = 12;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
+const DASH_WALL_STUCK_DAMAGE = 20;
 const MAX_ENEMIES   = 20;
 const RAIL_RADIUS   = 52;
 const GUN_W         = 48;
@@ -132,11 +133,11 @@ function createCharacterSprites(index = 1) {
 }
 
 const CHARACTER_LOADOUTS = [
-    { name: 'Kannon Prime', speed: 4.0, maxHp: 100, xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(1) },
-    { name: 'Ghost Runner', speed: 5.2, maxHp: 70,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(2) },
-    { name: 'Gambit',       speed: 4.0, maxHp: 50,  xpGainMult: 1.45, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(3) },
-    { name: 'Chunkster',    speed: 3.1, maxHp: 170, xpGainMult: 1.00, lifestealOnKill: 0.04, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, sprites: createCharacterSprites(4) },
-    { name: 'Dasher',       speed: 4.0, maxHp: 60,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 2, dashDistanceMult: 0.72, dashRechargeFrames: 90,  sprites: createCharacterSprites(5) },
+    { name: 'Kannon Prime', speed: 4.0, maxHp: 100, xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(1) },
+    { name: 'Ghost Runner', speed: 5.2, maxHp: 70,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(2) },
+    { name: 'Gambit',       speed: 4.0, maxHp: 50,  xpGainMult: 1.45, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(3) },
+    { name: 'Chunkster',    speed: 3.1, maxHp: 170, xpGainMult: 1.00, lifestealOnKill: 0.04, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(4) },
+    { name: 'Dasher',       speed: 4.0, maxHp: 60,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 2, dashDistanceMult: 0.72, dashRechargeFrames: 90,  dashPhasesWalls: true,  sprites: createCharacterSprites(5) },
 ];
 
 const fallbackPlayerSprites = CHARACTER_LOADOUTS[0].sprites;
@@ -251,6 +252,7 @@ let player = {
     dashCooldown: 0, facing: 1,
     dashCharges: 1, dashMaxCharges: 1,
     dashDistanceMult: 1,
+    dashPhasesWalls: false,
     dashRechargeFrames: 120,
     shootCooldown: 0, weaponAngle: 0,
     hp: 100, maxHp: 100, invulnTimer: 0,
@@ -566,6 +568,61 @@ function wallCollision(x, y, size) {
     return false;
 }
 
+function findNearestFreePosition(x, y, size, maxTileRadius = 24) {
+    if (!wallCollision(x, y, size)) return { x, y };
+
+    const startTx = Math.floor(x / TILE);
+    const startTy = Math.floor(y / TILE);
+
+    for (let radius = 1; radius <= maxTileRadius; radius++) {
+        let best = null;
+        let bestDistSq = Infinity;
+
+        for (let ty = startTy - radius; ty <= startTy + radius; ty++) {
+            for (let tx = startTx - radius; tx <= startTx + radius; tx++) {
+                if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+                if (Math.max(Math.abs(tx - startTx), Math.abs(ty - startTy)) !== radius) continue;
+
+                const wp = getNavWaypointForTile(tx, ty);
+                const candidates = [
+                    wp,
+                    { x: tx * TILE + TILE * 0.5, y: ty * TILE + TILE * 0.5 },
+                    { x: tx * TILE + TILE * 0.35, y: ty * TILE + TILE * 0.35 },
+                    { x: tx * TILE + TILE * 0.65, y: ty * TILE + TILE * 0.35 },
+                    { x: tx * TILE + TILE * 0.35, y: ty * TILE + TILE * 0.65 },
+                    { x: tx * TILE + TILE * 0.65, y: ty * TILE + TILE * 0.65 },
+                ];
+
+                for (const c of candidates) {
+                    if (wallCollision(c.x, c.y, size)) continue;
+                    const dx = c.x - x;
+                    const dy = c.y - y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < bestDistSq) {
+                        bestDistSq = distSq;
+                        best = c;
+                    }
+                }
+            }
+        }
+
+        if (best) return best;
+    }
+
+    return null;
+}
+
+function rescuePlayerFromWall() {
+    const safePos = findNearestFreePosition(player.x, player.y, player.size);
+    if (!safePos) return;
+
+    player.x = safePos.x;
+    player.y = safePos.y;
+    player.prevX = safePos.x;
+    player.prevY = safePos.y;
+    player.hp = Math.max(0, player.hp - DASH_WALL_STUCK_DAMAGE);
+}
+
 function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
     const lx = px - tileX;
     const ly = py - tileY;
@@ -743,6 +800,7 @@ function startGame() {
     player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
     player.dashCharges = player.dashMaxCharges;
     player.dashDistanceMult = chosen.dashDistanceMult ?? 1;
+    player.dashPhasesWalls = chosen.dashPhasesWalls ?? false;
     player.dashRechargeFrames = Math.max(1, chosen.dashRechargeFrames ?? 120);
     player.dashCooldown = 0;
     player.hp    = player.maxHp;
@@ -829,8 +887,13 @@ function updatePlayer() {
             const dashSpeed = DASH_SPEED * player.dashDistanceMult;
             const nx = player.x + player.dashDirX * dashSpeed;
             const ny = player.y + player.dashDirY * dashSpeed;
-            if (!wallCollision(nx,      player.y, player.size)) player.x = nx;
-            if (!wallCollision(player.x, ny,      player.size)) player.y = ny;
+            if (player.dashPhasesWalls) {
+                player.x = nx;
+                player.y = ny;
+            } else {
+                if (!wallCollision(nx,      player.y, player.size)) player.x = nx;
+                if (!wallCollision(player.x, ny,      player.size)) player.y = ny;
+            }
 
             // Record a trail ghost every TRAIL_INTERVAL frames
             if (trailTimer <= 0) {
@@ -890,6 +953,10 @@ function updatePlayer() {
 
     player.x = Math.max(TILE * 2, Math.min(MAP_W * TILE - TILE * 2, player.x));
     player.y = Math.max(TILE * 2, Math.min(MAP_H * TILE - TILE * 2, player.y));
+
+    if (player.dashPhasesWalls && !player.dashing && wallCollision(player.x, player.y, player.size)) {
+        rescuePlayerFromWall();
+    }
 
     if (player.dashCharges < player.dashMaxCharges) {
         if (player.dashCooldown > 0) player.dashCooldown--;
