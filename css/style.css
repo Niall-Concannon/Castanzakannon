@@ -15,3 +15,31 @@ canvas {
     background: #000;
     cursor: none;
 }
+
+#devTestWaveControl {
+    position: fixed;
+    z-index: 20;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+#devTestWaveLabel {
+    color: #fff;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    white-space: nowrap;
+}
+
+#devTestWaveSelect {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    padding: 0 6px;
+}

@@ -12,6 +12,22 @@ canvas.style.imageRendering = 'pixelated';
 document.body.style.background = '#000';
 document.body.style.overflow   = 'hidden';
 
+const devTestWaveControl = document.createElement('div');
+devTestWaveControl.id = 'devTestWaveControl';
+
+const devTestWaveLabel = document.createElement('label');
+devTestWaveLabel.id = 'devTestWaveLabel';
+devTestWaveLabel.htmlFor = 'devTestWaveSelect';
+devTestWaveLabel.textContent = 'Dev Waves';
+
+const devTestWaveSelect = document.createElement('select');
+devTestWaveSelect.id = 'devTestWaveSelect';
+devTestWaveSelect.setAttribute('aria-label', 'Dev Test Wave Count');
+
+devTestWaveControl.appendChild(devTestWaveLabel);
+devTestWaveControl.appendChild(devTestWaveSelect);
+document.body.appendChild(devTestWaveControl);
+
 
 // =============================================================================
 //  CONSTANTS
@@ -26,8 +42,16 @@ const TILE_CORNER_NW = 2;
 const TILE_CORNER_NE = 3;
 const TILE_CORNER_SW = 4;
 const TILE_CORNER_SE = 5;
+const TILE_SAUSAGE_WALL = 6;
+const EGG_DECOR_NONE = 0;
+const EGG_DECOR_TILE = 1;
 const WALL_FACE_HEIGHT = 14;
 const CORNER_RAIL_INSET = 12;
+const SAUSAGE_INSET = 16;
+const SAUSAGE_RAIL_INSET = 0;
+const EGG_DECOR_HALF_WIDTH = 10;
+const EGG_DECOR_HALF_HEIGHT = 9;
+const EGG_DECOR_FACE_DEPTH = 7;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 const DASH_WALL_STUCK_DAMAGE = 20;
@@ -300,6 +324,10 @@ const MAP_THEME_SPRITES = {
         wall: imgWithFallback(['assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level5/wall_corner_face_level5.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        sausageWall: imgWithFallback(['assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/sausage.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        sausageFace: imgWithFallback(['assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        eggWall: imgWithFallback(['assets/sprites/levels/level5/egg_wall.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        eggFace: imgWithFallback(['assets/sprites/levels/level5/egg_face.png', 'assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
     },
 };
 
@@ -320,6 +348,7 @@ let fogEnabled     = true;
 let keys           = {};
 let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
+let eggDecorTiles  = [];
 let frameCount     = 0;
 let gameState      = 'splash';
 let menuPage       = 'main';
@@ -345,6 +374,7 @@ let showPerfGuide  = false;
 let showFpsCounter = true;
 let splashFadeTimerMs = 0;
 let devTestMode    = false;
+let devTestWaveLimit = WAVES_PER_LEVEL;
 let currentArenaLevel = 1;
 let currentWave = 1;
 let enemiesRemainingInWave = 0;
@@ -430,7 +460,9 @@ window.addEventListener('keyup',     e  => { keys[e.key.toLowerCase()] = false; 
 window.addEventListener('mousemove', e  => { mouseX = e.clientX; mouseY = e.clientY; });
 window.addEventListener('mouseup',   () => { mouseDown = false; });
 
-window.addEventListener('mousedown', () => {
+window.addEventListener('mousedown', e => {
+    if (devTestWaveControl.contains(e.target)) return;
+
     if (gameState === 'splash') {
         startSplashTransition();
         return;
@@ -534,7 +566,8 @@ function generateMap() {
         }
     }
 
-    for (let i = 0; i < 64; i++) {
+    const normalWallAttempts = currentArenaLevel === 5 ? 50 : 64;
+    for (let i = 0; i < normalWallAttempts; i++) {
         const sx = 6 + Math.floor(Math.random() * (MAP_W - 14));
         const sy = 6 + Math.floor(Math.random() * (MAP_H - 14));
         const sw = 3 + Math.floor(Math.random() * 4);
@@ -556,9 +589,177 @@ function generateMap() {
         for (let j = cx - 5; j <= cx + 5; j++)
             if (i >= 0 && i < MAP_H && j >= 0 && j < MAP_W) mapTiles[i][j] = TILE_FLOOR;
 
+    resetEggDecorTiles();
+
+    if (currentArenaLevel === 5) {
+        placeLevel5SausageWalls();
+        placeLevel5EggDecor();
+    }
+
     applyCornerTiles();
 
     buildNavGrid();
+}
+
+function resetEggDecorTiles() {
+    eggDecorTiles = [];
+    for (let y = 0; y < MAP_H; y++) {
+        eggDecorTiles[y] = new Uint8Array(MAP_W);
+    }
+}
+
+function isInteriorTile(tx, ty) {
+    return tx >= 2 && tx < MAP_W - 2 && ty >= 2 && ty < MAP_H - 2;
+}
+
+function chainCellAt(originX, originY, dx, dy, step) {
+    return { x: originX + dx * step, y: originY + dy * step };
+}
+
+function distanceScoreToNearestSolid(tx, ty, maxRadius = 14) {
+    if (!isInteriorTile(tx, ty)) return 0;
+
+    for (let r = 1; r <= maxRadius; r++) {
+        for (let y = ty - r; y <= ty + r; y++) {
+            for (let x = tx - r; x <= tx + r; x++) {
+                if (!isInteriorTile(x, y)) continue;
+                if (Math.max(Math.abs(x - tx), Math.abs(y - ty)) !== r) continue;
+                if (mapTiles[y][x] !== TILE_FLOOR) return r;
+            }
+        }
+    }
+
+    return maxRadius;
+}
+
+function canPlaceSausageChain(originX, originY, dx, dy, len, minGap) {
+    for (let step = 0; step < len; step++) {
+        const cell = chainCellAt(originX, originY, dx, dy, step);
+        if (!isInteriorTile(cell.x, cell.y)) return false;
+
+        for (let y = cell.y - minGap; y <= cell.y + minGap; y++) {
+            for (let x = cell.x - minGap; x <= cell.x + minGap; x++) {
+                if (!isInteriorTile(x, y)) continue;
+                if (mapTiles[y][x] !== TILE_FLOOR) return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function placeSausageChain(originX, originY, dx, dy, len) {
+    for (let step = 0; step < len; step++) {
+        const cell = chainCellAt(originX, originY, dx, dy, step);
+        mapTiles[cell.y][cell.x] = TILE_SAUSAGE_WALL;
+    }
+}
+
+function placeLevel5SausageWalls() {
+    const directions = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 },
+    ];
+
+    const targetChains = 10;
+    const minGap = 3;
+    const candidateChecks = 140;
+    const maxPlacementRounds = 120;
+    let placed = 0;
+
+    for (let round = 0; round < maxPlacementRounds && placed < targetChains; round++) {
+        let best = null;
+        let bestScore = -1;
+
+        for (let i = 0; i < candidateChecks; i++) {
+            const dir = directions[Math.floor(Math.random() * directions.length)];
+            const len = 5 + Math.floor(Math.random() * 7); // 5..11 tiles long
+            const startX = 4 + Math.floor(Math.random() * (MAP_W - 8));
+            const startY = 4 + Math.floor(Math.random() * (MAP_H - 8));
+            const end = chainCellAt(startX, startY, dir.dx, dir.dy, len - 1);
+            if (!isInteriorTile(end.x, end.y)) continue;
+            if (!canPlaceSausageChain(startX, startY, dir.dx, dir.dy, len, minGap)) continue;
+
+            let score = Infinity;
+            for (let step = 0; step < len; step++) {
+                const cell = chainCellAt(startX, startY, dir.dx, dir.dy, step);
+                score = Math.min(score, distanceScoreToNearestSolid(cell.x, cell.y));
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                best = { startX, startY, dx: dir.dx, dy: dir.dy, len };
+            }
+        }
+
+        if (!best) continue;
+        placeSausageChain(best.startX, best.startY, best.dx, best.dy, best.len);
+        placed++;
+    }
+}
+
+function hasSolidTileWithin(tx, ty, radius) {
+    for (let y = ty - radius; y <= ty + radius; y++) {
+        for (let x = tx - radius; x <= tx + radius; x++) {
+            if (!isInteriorTile(x, y)) continue;
+            if (mapTiles[y][x] !== TILE_FLOOR) return true;
+        }
+    }
+    return false;
+}
+
+function canPlaceEggDecorAt(tx, ty) {
+    if (!isInteriorTile(tx, ty)) return false;
+    if (mapTiles[ty][tx] !== TILE_FLOOR) return false;
+    if ((eggDecorTiles[ty]?.[tx] ?? EGG_DECOR_NONE) !== EGG_DECOR_NONE) return false;
+
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+    if (Math.abs(tx - cx) <= 4 && Math.abs(ty - cy) <= 4) return false;
+
+    return !hasSolidTileWithin(tx, ty, 1);
+}
+
+function placeLevel5EggDecor() {
+    const clusterOffsets = [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 }, { x: -1, y: 0 },
+        { x: 0, y: 1 }, { x: 0, y: -1 },
+        { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 },
+    ];
+
+    const targetClusters = 7;
+    const maxAttempts = 260;
+    let placedClusters = 0;
+
+    for (let attempt = 0; attempt < maxAttempts && placedClusters < targetClusters; attempt++) {
+        const centerX = 4 + Math.floor(Math.random() * (MAP_W - 8));
+        const centerY = 4 + Math.floor(Math.random() * (MAP_H - 8));
+        if (!canPlaceEggDecorAt(centerX, centerY)) continue;
+
+        const clusterSize = 1 + Math.floor(Math.random() * 3);
+        let placedInCluster = 0;
+
+        for (let i = 0; i < clusterOffsets.length && placedInCluster < clusterSize; i++) {
+            const j = i + Math.floor(Math.random() * (clusterOffsets.length - i));
+            const tmp = clusterOffsets[i];
+            clusterOffsets[i] = clusterOffsets[j];
+            clusterOffsets[j] = tmp;
+        }
+
+        for (const off of clusterOffsets) {
+            if (placedInCluster >= clusterSize) break;
+            const tx = centerX + off.x;
+            const ty = centerY + off.y;
+            if (!canPlaceEggDecorAt(tx, ty)) continue;
+            eggDecorTiles[ty][tx] = EGG_DECOR_TILE;
+            placedInCluster++;
+        }
+
+        if (placedInCluster > 0) placedClusters++;
+    }
 }
 
 function isSolidTileType(tileType) {
@@ -568,6 +769,19 @@ function isSolidTileType(tileType) {
 function isSolidTileAt(tx, ty) {
     if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
     return isSolidTileType(mapTiles[ty]?.[tx] ?? TILE_FLOOR);
+}
+
+function isSausageWallTileAt(tx, ty) {
+    if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
+    return mapTiles[ty]?.[tx] === TILE_SAUSAGE_WALL;
+}
+
+function isSausageWallVerticalAt(tx, ty) {
+    const north = isSausageWallTileAt(tx, ty - 1);
+    const south = isSausageWallTileAt(tx, ty + 1);
+    const west = isSausageWallTileAt(tx - 1, ty);
+    const east = isSausageWallTileAt(tx + 1, ty);
+    return (north || south) && !(west || east);
 }
 
 function applyCornerTiles() {
@@ -597,7 +811,8 @@ function buildNavGrid() {
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             const tileType = mapTiles[y][x];
-            if (tileType === TILE_WALL) {
+            if (tileType === TILE_WALL || tileType === TILE_SAUSAGE_WALL) {
+                // Keep sausage tiles blocked in nav so enemies path around them reliably.
                 navGrid[y * MAP_W + x] = 1;
                 continue;
             }
@@ -756,6 +971,16 @@ function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
     if (lx < 0 || lx > TILE || ly < 0 || ly > TILE) return false;
 
     if (tileType === TILE_WALL) return true;
+    if (tileType === TILE_SAUSAGE_WALL) {
+        const tx = Math.floor(tileX / TILE);
+        const ty = Math.floor(tileY / TILE);
+        const vertical = isSausageWallVerticalAt(tx, ty);
+        const cx = TILE / 2;
+        const stripMin = cx - SAUSAGE_INSET + SAUSAGE_RAIL_INSET;
+        const stripMax = cx + SAUSAGE_INSET - SAUSAGE_RAIL_INSET;
+        if (vertical) return lx >= stripMin && lx <= stripMax;
+        return ly >= stripMin && ly <= stripMax;
+    }
     if (tileType === TILE_CORNER_NW) return lx + ly <= TILE - CORNER_RAIL_INSET;
     if (tileType === TILE_CORNER_NE) return lx >= ly + CORNER_RAIL_INSET;
     if (tileType === TILE_CORNER_SW) return lx + CORNER_RAIL_INSET <= ly;
@@ -826,11 +1051,45 @@ function drawWallFaceCorner(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
     ctx.restore();
 }
 
+function drawWallFaceOriented(sx, sy, ax, ay, bx, by, depth, sprite, shade, rotate90 = false) {
+    const x0 = sx + ax, y0 = sy + ay;
+    const x1 = sx + bx, y1 = sy + by;
+    const x2 = sx + bx, y2 = sy + by + depth;
+    const x3 = sx + ax, y3 = sy + ay + depth;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.clip();
+
+    if (rotate90) {
+        ctx.translate(sx + TILE / 2, sy + (TILE + depth) / 2);
+        ctx.rotate(Math.PI / 2);
+        drawMapSprite(sprite, -TILE / 2, -(TILE + depth) / 2, TILE, TILE + depth);
+    } else {
+        drawMapSprite(sprite, sx, sy, TILE, TILE + depth);
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
+    ctx.closePath();
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.restore();
+}
+
 function drawWallTileWithFaces(tileX, tileY, tileType) {
     const s  = toScreen(tileX * TILE, tileY * TILE);
     const FH = WALL_FACE_HEIGHT;
     const T  = TILE;
     const I  = CORNER_RAIL_INSET;
+    const sausageInset = SAUSAGE_INSET;
+    const sausageFaceDepth = Math.max(8, FH - 4);
 
     // Faces (drawn first, underneath top surface)
     const southOpen = !isSolidTileAt(tileX, tileY + 1);
@@ -840,6 +1099,45 @@ function drawWallTileWithFaces(tileX, tileY, tileType) {
             // Single south face along the bottom edge.
             if (southOpen)
                 drawWallFace(s.x, s.y, 0, T, T, T, FH, currentMapTheme.wallFace, 'rgba(0,0,0,0.32)');
+            break;
+
+        case TILE_SAUSAGE_WALL:
+            {
+            const isVertical = isSausageWallVerticalAt(tileX, tileY);
+                const cx = T / 2;
+                const stripMin = cx - sausageInset;
+                const stripMax = cx + sausageInset;
+
+                if (southOpen) {
+                    const sausageFaceSprite = currentMapTheme.sausageFace ?? currentMapTheme.wallFace;
+                    if (isVertical) {
+                        drawWallFaceOriented(
+                            s.x,
+                            s.y,
+                            stripMin,
+                            T,
+                            stripMax,
+                            T,
+                            sausageFaceDepth,
+                            sausageFaceSprite,
+                            'rgba(0,0,0,0.32)',
+                            true
+                        );
+                    } else {
+                        drawWallFaceOriented(
+                            s.x,
+                            s.y,
+                            0,
+                            stripMax,
+                            T,
+                            stripMax,
+                            sausageFaceDepth,
+                            sausageFaceSprite,
+                            'rgba(0,0,0,0.32)'
+                        );
+                    }
+                }
+            }
             break;
 
         case TILE_CORNER_NW:
@@ -867,13 +1165,51 @@ function drawWallTileWithFaces(tileX, tileY, tileType) {
 
     // Top surface (drawn on top)
     const top = getTopPolygon(tileType);
+    if (tileType === TILE_SAUSAGE_WALL) {
+        const isVertical = isSausageWallVerticalAt(tileX, tileY);
+        const cx = T / 2;
+        const stripMin = cx - sausageInset;
+        const stripMax = cx + sausageInset;
+
+        top.length = 0;
+        if (isVertical) {
+            top.push(
+                { x: stripMin, y: 0 },
+                { x: stripMax, y: 0 },
+                { x: stripMax, y: T },
+                { x: stripMin, y: T }
+            );
+        } else {
+            top.push(
+                { x: 0, y: stripMin },
+                { x: T, y: stripMin },
+                { x: T, y: stripMax },
+                { x: 0, y: stripMax }
+            );
+        }
+    }
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(s.x + top[0].x, s.y + top[0].y);
     for (let i = 1; i < top.length; i++) ctx.lineTo(s.x + top[i].x, s.y + top[i].y);
     ctx.closePath();
     ctx.clip();
-    drawMapSprite(currentMapTheme.wall, s.x, s.y, T, T);
+    const topSprite = tileType === TILE_SAUSAGE_WALL
+        ? (currentMapTheme.sausageWall ?? currentMapTheme.wall)
+        : currentMapTheme.wall;
+    if (tileType === TILE_SAUSAGE_WALL) {
+        const isVertical = isSausageWallVerticalAt(tileX, tileY);
+
+        if (isVertical) {
+            ctx.translate(s.x + T / 2, s.y + T / 2);
+            ctx.rotate(Math.PI / 2);
+            drawMapSprite(topSprite, -T / 2, -T / 2, T, T);
+        } else {
+            drawMapSprite(topSprite, s.x, s.y, T, T);
+        }
+    } else {
+        drawMapSprite(topSprite, s.x, s.y, T, T);
+    }
     ctx.restore();
 }
 
@@ -894,6 +1230,8 @@ function drawMap() {
         }
     }
 
+    drawEggDecor();
+
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             const s = toScreen(x * TILE, y * TILE);
@@ -901,6 +1239,56 @@ function drawMap() {
             const tileType = mapTiles[y][x];
             if (!isSolidTileType(tileType)) continue;
             drawWallTileWithFaces(x, y, tileType);
+        }
+    }
+}
+
+function drawEggDecorTile(tileX, tileY) {
+    const s = toScreen(tileX * TILE, tileY * TILE);
+    const T = TILE;
+    const cx = T / 2;
+    const cy = T / 2;
+    const minX = cx - EGG_DECOR_HALF_WIDTH;
+    const maxX = cx + EGG_DECOR_HALF_WIDTH;
+    const minY = cy - EGG_DECOR_HALF_HEIGHT;
+    const maxY = cy + EGG_DECOR_HALF_HEIGHT;
+
+    const eggWallSprite = currentMapTheme.eggWall ?? currentMapTheme.wall;
+    const eggFaceSprite = currentMapTheme.eggFace ?? currentMapTheme.wallFace;
+
+    drawWallFaceOriented(
+        s.x,
+        s.y,
+        minX,
+        maxY,
+        maxX,
+        maxY,
+        EGG_DECOR_FACE_DEPTH,
+        eggFaceSprite,
+        'rgba(0,0,0,0.18)'
+    );
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(s.x + minX, s.y + minY);
+    ctx.lineTo(s.x + maxX, s.y + minY);
+    ctx.lineTo(s.x + maxX, s.y + maxY);
+    ctx.lineTo(s.x + minX, s.y + maxY);
+    ctx.closePath();
+    ctx.clip();
+    drawMapSprite(eggWallSprite, s.x, s.y, T, T);
+    ctx.restore();
+}
+
+function drawEggDecor() {
+    if (currentArenaLevel !== 5) return;
+
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            if ((eggDecorTiles[y]?.[x] ?? EGG_DECOR_NONE) !== EGG_DECOR_TILE) continue;
+            const s = toScreen(x * TILE, y * TILE);
+            if (s.x < -TILE || s.x > canvas.width || s.y < -(TILE + EGG_DECOR_FACE_DEPTH) || s.y > canvas.height) continue;
+            drawEggDecorTile(x, y);
         }
     }
 }
@@ -959,6 +1347,11 @@ function getWaveEnemyTotal(waveNumber) {
     return WAVE_BASE_ENEMIES + (waveNumber - 1) * WAVE_STEP_ENEMIES;
 }
 
+function getConfiguredWavesPerLevel() {
+    if (!devTestMode) return WAVES_PER_LEVEL;
+    return Math.max(1, Math.min(WAVES_PER_LEVEL, devTestWaveLimit));
+}
+
 function startWave(waveNumber) {
     currentWave = waveNumber;
     enemiesRemainingInWave = getWaveEnemyTotal(currentWave);
@@ -1002,7 +1395,7 @@ function updateWaveProgression() {
     if (waveClearTimer < WAVE_CLEAR_DELAY_FRAMES) return;
     waveClearTimer = 0;
 
-    if (currentWave < WAVES_PER_LEVEL) {
+    if (currentWave < getConfiguredWavesPerLevel()) {
         startWave(currentWave + 1);
         return;
     }
@@ -2252,10 +2645,28 @@ function drawVisibilityMask() {
 function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
 function getFpsToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 222, w: 160, h: 36 }; }
 function getDevTestButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 270, w: 160, h: 36 }; }
+function getDevTestWaveControlRect() {
+    const dtb = getDevTestButton();
+    return { x: dtb.x, y: dtb.y + dtb.h + 8, w: dtb.w, h: 28 };
+}
 function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
 function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
 function getBackButton()         { return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 }; }
+
+function syncDevTestWaveControl() {
+    const shouldShow = gameState === 'menu' && menuPage === 'main' && devTestMode;
+    if (!shouldShow) {
+        devTestWaveControl.style.display = 'none';
+        return;
+    }
+
+    const rect = getDevTestWaveControlRect();
+    devTestWaveControl.style.display = 'flex';
+    devTestWaveControl.style.left = `${Math.round(rect.x)}px`;
+    devTestWaveControl.style.top = `${Math.round(rect.y)}px`;
+    devTestWaveControl.style.width = `${Math.round(rect.w)}px`;
+}
 
 function getCharacterPanel() {
     const w = Math.min(1100, canvas.width - 60);
@@ -2830,6 +3241,8 @@ function gameLoop(timestamp) {
     const dt = Math.min(timestamp - lastTimestamp, 100);
     lastTimestamp = timestamp;
 
+    syncDevTestWaveControl();
+
     fps = dt > 0 ? Math.round(1000 / dt) : fps;
 
     ctx.fillStyle = '#1a1a1a';
@@ -2897,4 +3310,20 @@ function gameLoop(timestamp) {
 }
 
 generateMap();
+
+for (let i = 1; i <= WAVES_PER_LEVEL; i++) {
+    const option = document.createElement('option');
+    option.value = String(i);
+    option.textContent = i === 1 ? '1 wave' : `${i} waves`;
+    devTestWaveSelect.appendChild(option);
+}
+
+devTestWaveSelect.value = String(devTestWaveLimit);
+
+devTestWaveSelect.addEventListener('change', () => {
+    const parsed = parseInt(devTestWaveSelect.value, 10);
+    if (Number.isNaN(parsed)) return;
+    devTestWaveLimit = Math.max(1, Math.min(WAVES_PER_LEVEL, parsed));
+});
+
 requestAnimationFrame(gameLoop);
