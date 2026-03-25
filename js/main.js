@@ -138,19 +138,26 @@ function imgWithFallback(sources) {
 }
 
 function createCharacterSprites(index = 1) {
-    if (index === 1) {
-        return {
-            idle:  img('assets/sprites/player_idle.png'),
-            walk1: img('assets/sprites/player_walk1.png'),
-            walk2: img('assets/sprites/player_walk2.png'),
-        };
-    }
-
     const n = String(index);
     return {
-        idle:  imgWithFallback([`assets/sprites/player${n}_idle.png`,  `assets/sprites/player_idle${n}.png`]),
-        walk1: imgWithFallback([`assets/sprites/player${n}_walk1.png`, `assets/sprites/player_walk1${n}.png`]),
-        walk2: imgWithFallback([`assets/sprites/player${n}_walk2.png`, `assets/sprites/player_walk2${n}.png`]),
+        idle:  imgWithFallback([
+            `assets/sprites/players/${n}/idle.png`,
+            `assets/sprites/players/player${n}_idle.png`,
+            `assets/sprites/players/player_idle${n}.png`,
+            'assets/sprites/players/1/idle.png',
+        ]),
+        walk1: imgWithFallback([
+            `assets/sprites/players/${n}/walk1.png`,
+            `assets/sprites/players/player${n}_walk1.png`,
+            `assets/sprites/players/player_walk1${n}.png`,
+            'assets/sprites/players/1/walk1.png',
+        ]),
+        walk2: imgWithFallback([
+            `assets/sprites/players/${n}/walk2.png`,
+            `assets/sprites/players/player${n}_walk2.png`,
+            `assets/sprites/players/player_walk2${n}.png`,
+            'assets/sprites/players/1/walk2.png',
+        ]),
     };
 }
 
@@ -180,18 +187,18 @@ const gunSprites = {
     shoot: img('assets/sprites/guns/gun_shoot.png'),
 };
 
-const wallSprite         = img('assets/sprites/wall_placeholder.png');
-const wallFaceSprite     = img('assets/sprites/wall_face_placeholder.png');
-const cornerFaceSprite   = img('assets/sprites/wall_corner_face_placeholder.png');
-const floorSprite        = img('assets/sprites/floor_placeholder.png');
-const projectileSprite   = img('assets/sprites/projectile_placeholder.png');
-const pickupXpSprite     = img('assets/sprites/pickup_xp_placeholder.png');
-const pickupXpBlueSprite = img('assets/sprites/pickup_xp_blue_placeholder.png');
+const wallSprite         = img('assets/sprites/levels/level1/wall_placeholder.png');
+const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face_placeholder.png');
+const cornerFaceSprite   = img('assets/sprites/levels/level1/wall_corner_face_placeholder.png');
+const floorSprite        = img('assets/sprites/levels/level1/floor_placeholder.png');
+const projectileSprite   = img('assets/sprites/projectiles/projectile_placeholder.png');
+const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp_placeholder.png');
+const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue_placeholder.png');
 
 const ENEMY_SPRITE_PATHS = {
-    basic: ['assets/sprites/enemies/enemy_basic_frame1.png', 'assets/sprites/enemies/enemy_basic_frame2.png', 'assets/sprites/enemies/enemy_basic_frame3.png'],
-    fast:  ['assets/sprites/enemies/enemy_fast_frame1.png',  'assets/sprites/enemies/enemy_fast_frame2.png',  'assets/sprites/enemies/enemy_fast_frame3.png' ],
-    tank:  ['assets/sprites/enemies/enemy_tank_frame1.png',  'assets/sprites/enemies/enemy_tank_frame2.png',  'assets/sprites/enemies/enemy_tank_frame3.png' ],
+    basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
+    fast:  ['assets/sprites/enemies/base/enemy_fast_frame1.png',  'assets/sprites/enemies/base/enemy_fast_frame2.png',  'assets/sprites/enemies/base/enemy_fast_frame3.png' ],
+    tank:  ['assets/sprites/enemies/base/enemy_tank_frame1.png',  'assets/sprites/enemies/base/enemy_tank_frame2.png',  'assets/sprites/enemies/base/enemy_tank_frame3.png' ],
 };
 
 const ENEMY_LEVEL_VARIANTS = {
@@ -271,28 +278,28 @@ const MAP_THEME_SPRITES = {
         cornerFace: cornerFaceSprite,
     },
     2: {
-        floor: imgWithFallback(['assets/sprites/level2/floor_level2.png', 'assets/sprites/floor_placeholder.png']),
-        wall: imgWithFallback(['assets/sprites/level2/wall_level2.png', 'assets/sprites/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/level2/wall_face_level2.png', 'assets/sprites/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/level2/wall_corner_face_level2.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level2/floor_level2.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level2/wall_level2.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level2/wall_face_level2.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level2/wall_corner_face_level2.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
     3: {
-        floor: imgWithFallback(['assets/sprites/level3/floor_level3.png', 'assets/sprites/floor_placeholder.png']),
-        wall: imgWithFallback(['assets/sprites/level3/wall_level3.png', 'assets/sprites/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/level3/wall_face_level3.png', 'assets/sprites/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/level3/wall_corner_face_level3.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level3/floor_level3.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level3/wall_level3.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
     4: {
-        floor: imgWithFallback(['assets/sprites/level4/floor_level4.png', 'assets/sprites/floor_placeholder.png']),
-        wall: imgWithFallback(['assets/sprites/level4/wall_level4.png', 'assets/sprites/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/level4/wall_face_level4.png', 'assets/sprites/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/level4/wall_corner_face_level4.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level4/floor_level4.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level4/wall_level4.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level4/wall_face_level4.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level4/wall_corner_face_level4.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
     5: {
-        floor: imgWithFallback(['assets/sprites/level5/floor_level5.png', 'assets/sprites/floor_placeholder.png']),
-        wall: imgWithFallback(['assets/sprites/level5/wall_level5.png', 'assets/sprites/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/level5/wall_face_level5.png', 'assets/sprites/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/level5/wall_corner_face_level5.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level5/floor_level5.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level5/wall_corner_face_level5.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
 };
 
