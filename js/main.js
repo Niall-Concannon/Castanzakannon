@@ -43,15 +43,21 @@ const TILE_CORNER_NE = 3;
 const TILE_CORNER_SW = 4;
 const TILE_CORNER_SE = 5;
 const TILE_SAUSAGE_WALL = 6;
-const EGG_DECOR_NONE = 0;
-const EGG_DECOR_TILE = 1;
 const WALL_FACE_HEIGHT = 14;
 const CORNER_RAIL_INSET = 12;
 const SAUSAGE_INSET = 16;
 const SAUSAGE_RAIL_INSET = 0;
-const EGG_DECOR_HALF_WIDTH = 10;
-const EGG_DECOR_HALF_HEIGHT = 9;
-const EGG_DECOR_FACE_DEPTH = 7;
+const TUMOR_TURRETS_LEVEL5 = 12;
+const TUMOR_SIZE = 20;
+const TUMOR_HP = 14;
+const TUMOR_RANGE = 760;
+const TUMOR_CHARGE_FRAMES = 80;
+const TUMOR_COOLDOWN_FRAMES = 30;
+const TUMOR_SHOOT_ANIM_FRAMES = 12;
+const TUMOR_PROJECTILE_SPEED = 6;
+const TUMOR_PROJECTILE_SIZE = 16;
+const TUMOR_PROJECTILE_DAMAGE = 12;
+const TUMOR_PROJECTILE_FRAMES = 170;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 const DASH_WALL_STUCK_DAMAGE = 20;
@@ -216,6 +222,19 @@ const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face_placehold
 const cornerFaceSprite   = img('assets/sprites/levels/level1/wall_corner_face_placeholder.png');
 const floorSprite        = img('assets/sprites/levels/level1/floor_placeholder.png');
 const projectileSprite   = img('assets/sprites/projectiles/projectile_placeholder.png');
+const enemyProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/tumor_projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const tumorIdleSprite = imgWithFallback([
+    'assets/sprites/enemies/base/tumor_idle.png',
+    'assets/sprites/levels/level5/egg_wall.png',
+]);
+const tumorShootSprite = imgWithFallback([
+    'assets/sprites/enemies/base/tumor_shoot.png',
+    'assets/sprites/levels/level5/egg_face.png',
+    'assets/sprites/levels/level5/egg_wall.png',
+]);
 const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp_placeholder.png');
 const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue_placeholder.png');
 
@@ -348,7 +367,7 @@ let fogEnabled     = true;
 let keys           = {};
 let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
-let eggDecorTiles  = [];
+let tumorTurrets   = [];
 let frameCount     = 0;
 let gameState      = 'splash';
 let menuPage       = 'main';
@@ -359,6 +378,7 @@ let mouseX         = 0;
 let mouseY         = 0;
 let mouseDown      = false;
 let projectiles    = [];
+let enemyProjectiles = [];
 let enemies        = [];
 let pickups        = [];
 let muzzleFlashes  = [];
@@ -589,11 +609,11 @@ function generateMap() {
         for (let j = cx - 5; j <= cx + 5; j++)
             if (i >= 0 && i < MAP_H && j >= 0 && j < MAP_W) mapTiles[i][j] = TILE_FLOOR;
 
-    resetEggDecorTiles();
+    resetTumorTurrets();
 
     if (currentArenaLevel === 5) {
         placeLevel5SausageWalls();
-        placeLevel5EggDecor();
+        placeLevel5TumorTurrets();
     }
 
     applyCornerTiles();
@@ -601,11 +621,8 @@ function generateMap() {
     buildNavGrid();
 }
 
-function resetEggDecorTiles() {
-    eggDecorTiles = [];
-    for (let y = 0; y < MAP_H; y++) {
-        eggDecorTiles[y] = new Uint8Array(MAP_W);
-    }
+function resetTumorTurrets() {
+    tumorTurrets = [];
 }
 
 function isInteriorTile(tx, ty) {
@@ -710,55 +727,50 @@ function hasSolidTileWithin(tx, ty, radius) {
     return false;
 }
 
-function canPlaceEggDecorAt(tx, ty) {
+function canPlaceTumorTurretAt(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;
     if (mapTiles[ty][tx] !== TILE_FLOOR) return false;
-    if ((eggDecorTiles[ty]?.[tx] ?? EGG_DECOR_NONE) !== EGG_DECOR_NONE) return false;
 
     const cx = Math.floor(MAP_W / 2);
     const cy = Math.floor(MAP_H / 2);
-    if (Math.abs(tx - cx) <= 4 && Math.abs(ty - cy) <= 4) return false;
+    if (Math.abs(tx - cx) <= 5 && Math.abs(ty - cy) <= 5) return false;
+
+    const wx = tx * TILE + TILE * 0.5;
+    const wy = ty * TILE + TILE * 0.5;
+    for (const t of tumorTurrets) {
+        if (Math.hypot(t.x - wx, t.y - wy) < TILE * 2.1) return false;
+    }
 
     return !hasSolidTileWithin(tx, ty, 1);
 }
 
-function placeLevel5EggDecor() {
-    const clusterOffsets = [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 }, { x: -1, y: 0 },
-        { x: 0, y: 1 }, { x: 0, y: -1 },
-        { x: 1, y: 1 }, { x: -1, y: 1 }, { x: 1, y: -1 }, { x: -1, y: -1 },
-    ];
+function placeLevel5TumorTurrets() {
+    const maxAttempts = 800;
 
-    const targetClusters = 7;
-    const maxAttempts = 260;
-    let placedClusters = 0;
+    for (let attempt = 0; attempt < maxAttempts && tumorTurrets.length < TUMOR_TURRETS_LEVEL5; attempt++) {
+        const tx = 4 + Math.floor(Math.random() * (MAP_W - 8));
+        const ty = 4 + Math.floor(Math.random() * (MAP_H - 8));
+        if (!canPlaceTumorTurretAt(tx, ty)) continue;
 
-    for (let attempt = 0; attempt < maxAttempts && placedClusters < targetClusters; attempt++) {
-        const centerX = 4 + Math.floor(Math.random() * (MAP_W - 8));
-        const centerY = 4 + Math.floor(Math.random() * (MAP_H - 8));
-        if (!canPlaceEggDecorAt(centerX, centerY)) continue;
+        const x = tx * TILE + TILE * 0.5;
+        const y = ty * TILE + TILE * 0.5;
+        const preload = Math.floor(Math.random() * TUMOR_CHARGE_FRAMES * 0.55);
 
-        const clusterSize = 1 + Math.floor(Math.random() * 3);
-        let placedInCluster = 0;
-
-        for (let i = 0; i < clusterOffsets.length && placedInCluster < clusterSize; i++) {
-            const j = i + Math.floor(Math.random() * (clusterOffsets.length - i));
-            const tmp = clusterOffsets[i];
-            clusterOffsets[i] = clusterOffsets[j];
-            clusterOffsets[j] = tmp;
-        }
-
-        for (const off of clusterOffsets) {
-            if (placedInCluster >= clusterSize) break;
-            const tx = centerX + off.x;
-            const ty = centerY + off.y;
-            if (!canPlaceEggDecorAt(tx, ty)) continue;
-            eggDecorTiles[ty][tx] = EGG_DECOR_TILE;
-            placedInCluster++;
-        }
-
-        if (placedInCluster > 0) placedClusters++;
+        tumorTurrets.push({
+            x,
+            y,
+            prevX: x,
+            prevY: y,
+            size: TUMOR_SIZE,
+            hp: TUMOR_HP,
+            maxHp: TUMOR_HP,
+            chargeFrames: preload,
+            cooldownFrames: 0,
+            shootAnimFrames: 0,
+            hitFlash: 0,
+            hpBarTimer: 0,
+            alive: true,
+        });
     }
 }
 
@@ -1230,8 +1242,6 @@ function drawMap() {
         }
     }
 
-    drawEggDecor();
-
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             const s = toScreen(x * TILE, y * TILE);
@@ -1239,56 +1249,6 @@ function drawMap() {
             const tileType = mapTiles[y][x];
             if (!isSolidTileType(tileType)) continue;
             drawWallTileWithFaces(x, y, tileType);
-        }
-    }
-}
-
-function drawEggDecorTile(tileX, tileY) {
-    const s = toScreen(tileX * TILE, tileY * TILE);
-    const T = TILE;
-    const cx = T / 2;
-    const cy = T / 2;
-    const minX = cx - EGG_DECOR_HALF_WIDTH;
-    const maxX = cx + EGG_DECOR_HALF_WIDTH;
-    const minY = cy - EGG_DECOR_HALF_HEIGHT;
-    const maxY = cy + EGG_DECOR_HALF_HEIGHT;
-
-    const eggWallSprite = currentMapTheme.eggWall ?? currentMapTheme.wall;
-    const eggFaceSprite = currentMapTheme.eggFace ?? currentMapTheme.wallFace;
-
-    drawWallFaceOriented(
-        s.x,
-        s.y,
-        minX,
-        maxY,
-        maxX,
-        maxY,
-        EGG_DECOR_FACE_DEPTH,
-        eggFaceSprite,
-        'rgba(0,0,0,0.18)'
-    );
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(s.x + minX, s.y + minY);
-    ctx.lineTo(s.x + maxX, s.y + minY);
-    ctx.lineTo(s.x + maxX, s.y + maxY);
-    ctx.lineTo(s.x + minX, s.y + maxY);
-    ctx.closePath();
-    ctx.clip();
-    drawMapSprite(eggWallSprite, s.x, s.y, T, T);
-    ctx.restore();
-}
-
-function drawEggDecor() {
-    if (currentArenaLevel !== 5) return;
-
-    for (let y = 0; y < MAP_H; y++) {
-        for (let x = 0; x < MAP_W; x++) {
-            if ((eggDecorTiles[y]?.[x] ?? EGG_DECOR_NONE) !== EGG_DECOR_TILE) continue;
-            const s = toScreen(x * TILE, y * TILE);
-            if (s.x < -TILE || s.x > canvas.width || s.y < -(TILE + EGG_DECOR_FACE_DEPTH) || s.y > canvas.height) continue;
-            drawEggDecorTile(x, y);
         }
     }
 }
@@ -1309,6 +1269,8 @@ function startGame() {
     generateMap();
     pickups       = [];
     enemies       = [];
+    projectiles   = [];
+    enemyProjectiles = [];
     muzzleFlashes = [];
     dashTrail     = [];
     trailTimer = 0;
@@ -1412,6 +1374,7 @@ function updateWaveProgression() {
     enemies = [];
     pickups = [];
     projectiles = [];
+    enemyProjectiles = [];
     muzzleFlashes = [];
     dashTrail = [];
     trailTimer = 0;
@@ -2089,6 +2052,93 @@ function updateEnemies() {
     }
 }
 
+function getInterceptAimAngle(sourceX, sourceY, targetX, targetY, targetVx, targetVy, projectileSpeed) {
+    const rx = targetX - sourceX;
+    const ry = targetY - sourceY;
+    const vv = targetVx * targetVx + targetVy * targetVy;
+    const rv = rx * targetVx + ry * targetVy;
+    const rr = rx * rx + ry * ry;
+    const a = vv - projectileSpeed * projectileSpeed;
+    const b = 2 * rv;
+    const c = rr;
+
+    let t = -1;
+    if (Math.abs(a) < 0.000001) {
+        if (Math.abs(b) > 0.000001) t = -c / b;
+    } else {
+        const disc = b * b - 4 * a * c;
+        if (disc >= 0) {
+            const sqrtDisc = Math.sqrt(disc);
+            const t1 = (-b - sqrtDisc) / (2 * a);
+            const t2 = (-b + sqrtDisc) / (2 * a);
+            const valid = [t1, t2].filter(v => v > 0);
+            if (valid.length > 0) t = Math.min(...valid);
+        }
+    }
+
+    if (!(t > 0 && Number.isFinite(t))) {
+        return Math.atan2(ry, rx);
+    }
+
+    const aimX = targetX + targetVx * t;
+    const aimY = targetY + targetVy * t;
+    return Math.atan2(aimY - sourceY, aimX - sourceX);
+}
+
+function updateTumorTurrets() {
+    if (tumorTurrets.length === 0) return;
+
+    for (const t of tumorTurrets) {
+        if (!t.alive) continue;
+
+        if (t.hitFlash > 0) t.hitFlash--;
+        if (t.hpBarTimer > 0) t.hpBarTimer--;
+        if (t.shootAnimFrames > 0) t.shootAnimFrames--;
+        if (t.cooldownFrames > 0) t.cooldownFrames--;
+
+        const dx = player.x - t.x;
+        const dy = player.y - t.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > TUMOR_RANGE || !hasLineOfSight(t.x, t.y, player.x, player.y, t.size * 0.5)) {
+            t.chargeFrames = 0;
+            continue;
+        }
+
+        if (t.cooldownFrames > 0) continue;
+        t.chargeFrames++;
+
+        if (t.chargeFrames >= TUMOR_CHARGE_FRAMES) {
+            const playerVx = player.x - (player.prevX ?? player.x);
+            const playerVy = player.y - (player.prevY ?? player.y);
+            const angle = getInterceptAimAngle(
+                t.x,
+                t.y,
+                player.x,
+                player.y,
+                playerVx,
+                playerVy,
+                TUMOR_PROJECTILE_SPEED
+            );
+            const sx = t.x + Math.cos(angle) * (t.size + 8);
+            const sy = t.y + Math.sin(angle) * (t.size + 8);
+            enemyProjectiles.push({
+                x: sx,
+                y: sy,
+                prevX: sx,
+                prevY: sy,
+                velocityX: Math.cos(angle) * TUMOR_PROJECTILE_SPEED,
+                velocityY: Math.sin(angle) * TUMOR_PROJECTILE_SPEED,
+                size: TUMOR_PROJECTILE_SIZE,
+                framesLeft: TUMOR_PROJECTILE_FRAMES,
+            });
+
+            t.chargeFrames = 0;
+            t.cooldownFrames = TUMOR_COOLDOWN_FRAMES;
+            t.shootAnimFrames = TUMOR_SHOOT_ANIM_FRAMES;
+        }
+    }
+}
+
 function drawEnemies() {
     const innerR = 120, outerR = 420;
 
@@ -2134,14 +2184,116 @@ function drawEnemies() {
     }
 }
 
+function drawTumorTurrets() {
+    const innerR = 120, outerR = 420;
+
+    for (const t of tumorTurrets) {
+        if (!t.alive) continue;
+        const dist = Math.hypot(player.x - t.x, player.y - t.y);
+        if (fogEnabled && dist >= outerR) continue;
+
+        const alpha = fogEnabled && dist > innerR ? 1 - (dist - innerR) / (outerR - innerR) : 1;
+        const rx  = (t.prevX ?? t.x) + (t.x - (t.prevX ?? t.x)) * renderAlpha;
+        const ry  = (t.prevY ?? t.y) + (t.y - (t.prevY ?? t.y)) * renderAlpha;
+        const sc  = toScreen(rx, ry);
+        const sprite = t.shootAnimFrames > 0 ? tumorShootSprite : tumorIdleSprite;
+        const sizePx = t.size * 2.2;
+
+        const chargeProgress = t.cooldownFrames > 0
+            ? 0
+            : Math.max(0, Math.min(1, t.chargeFrames / TUMOR_CHARGE_FRAMES));
+
+        if (chargeProgress > 0.04) {
+            const pulse = 0.75 + 0.25 * Math.sin(frameCount * 0.25 + (t.x + t.y) * 0.01);
+            const glowRadius = t.size * (1.1 + chargeProgress * 1.0) * pulse;
+            const glow = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, glowRadius);
+            glow.addColorStop(0, `rgba(255,0,0,${(0.65 + chargeProgress * 0.28).toFixed(3)})`);
+            glow.addColorStop(0.45, `rgba(170,0,0,${(0.48 + chargeProgress * 0.30).toFixed(3)})`);
+            glow.addColorStop(0.8, `rgba(110,0,0,${(0.24 + chargeProgress * 0.18).toFixed(3)})`);
+            glow.addColorStop(1, 'rgba(70,0,0,0)');
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            const ringRadius = t.size * (0.9 + chargeProgress * 0.95);
+            const particleCount = 8;
+            for (let pi = 0; pi < particleCount; pi++) {
+                const baseA = frameCount * 0.09 + pi * (Math.PI * 2 / particleCount) + (t.x - t.y) * 0.002;
+                const wobble = Math.sin(frameCount * 0.16 + pi) * (0.18 + chargeProgress * 0.12);
+                const a = baseA + wobble;
+                const px = sc.x + Math.cos(a) * ringRadius;
+                const py = sc.y + Math.sin(a) * ringRadius;
+                const pr = 2.1 + chargeProgress * 2.3;
+
+                const dot = ctx.createRadialGradient(px, py, 0, px, py, pr * 2.2);
+                dot.addColorStop(0, `rgba(255,40,40,${(0.9 * chargeProgress + 0.1).toFixed(3)})`);
+                dot.addColorStop(0.5, `rgba(200,0,0,${(0.62 * chargeProgress + 0.12).toFixed(3)})`);
+                dot.addColorStop(1, 'rgba(90,0,0,0)');
+                ctx.fillStyle = dot;
+                ctx.beginPath();
+                ctx.arc(px, py, pr * 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        if (t.hitFlash > 0) ctx.filter = 'brightness(10)';
+        ctx.drawImage(sprite, sc.x - sizePx / 2, sc.y - sizePx / 2, sizePx, sizePx);
+        ctx.restore();
+
+        if (alpha > 0.15 && t.hpBarTimer > 0) {
+            const bw = t.size * 2.2;
+            const bh = 4;
+            const hf = t.hp / t.maxHp;
+            const bx = sc.x - bw / 2;
+            const by = sc.y - t.size - 16;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.fillStyle = hf > 0.5 ? 'green' : hf > 0.25 ? 'yellow' : 'red';
+            ctx.fillRect(bx, by, bw * hf, bh);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth   = 1;
+            ctx.strokeRect(bx, by, bw, bh);
+            ctx.restore();
+        }
+    }
+}
+
 
 // =============================================================================
 //  PROJECTILES
 // =============================================================================
 
+function segmentCircleHit(x1, y1, x2, y2, cx, cy, radius) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq <= 0.000001) {
+        return Math.hypot(cx - x1, cy - y1) <= radius;
+    }
+
+    const tRaw = ((cx - x1) * dx + (cy - y1) * dy) / lenSq;
+    const t = Math.max(0, Math.min(1, tRaw));
+    const nx = x1 + dx * t;
+    const ny = y1 + dy * t;
+    return Math.hypot(cx - nx, cy - ny) <= radius;
+}
+
 function updateProjectiles() {
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
+        const oldX = p.x;
+        const oldY = p.y;
         p.x += p.velocityX;
         p.y += p.velocityY;
         p.framesLeft--;
@@ -2151,9 +2303,23 @@ function updateProjectiles() {
             continue;
         }
 
+        for (const t of tumorTurrets) {
+            if (!t.alive) continue;
+            if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
+                t.hp--;
+                t.hitFlash = 8;
+                t.hpBarTimer = 120;
+                if (t.hp <= 0) t.alive = false;
+                projectiles.splice(i, 1);
+                break;
+            }
+        }
+
+        if (!projectiles[i]) continue;
+
         for (const e of enemies) {
             if (!e.alive) continue;
-            if (Math.hypot(p.x - e.x, p.y - e.y) < p.size + e.size) {
+            if (segmentCircleHit(oldX, oldY, p.x, p.y, e.x, e.y, p.size + e.size)) {
                 e.hp--;
                 e.hitFlash   = 8;
                 e.hpBarTimer = 120;
@@ -2191,6 +2357,43 @@ function drawProjectiles() {
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
         ctx.drawImage(projectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.restore();
+    }
+}
+
+function updateEnemyProjectiles() {
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+        const p = enemyProjectiles[i];
+        const oldX = p.x;
+        const oldY = p.y;
+        p.x += p.velocityX;
+        p.y += p.velocityY;
+        p.framesLeft--;
+
+        if (wallCollision(p.x, p.y, p.size) || p.framesLeft <= 0) {
+            enemyProjectiles.splice(i, 1);
+            continue;
+        }
+
+        if (segmentCircleHit(oldX, oldY, p.x, p.y, player.x, player.y, player.size + p.size)) {
+            if (player.invulnTimer <= 0) {
+                player.hp = Math.max(0, player.hp - TUMOR_PROJECTILE_DAMAGE);
+                player.invulnTimer = 60;
+            }
+            enemyProjectiles.splice(i, 1);
+        }
+    }
+}
+
+function drawEnemyProjectiles() {
+    for (const p of enemyProjectiles) {
+        const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
+        const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
+        const sc  = toScreen(prx, pry);
+        ctx.save();
+        ctx.translate(sc.x, sc.y);
+        ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
+        ctx.drawImage(enemyProjectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
         ctx.restore();
     }
 }
@@ -3228,6 +3431,8 @@ function savePrevPositions() {
     player.prevY = player.y;
     for (const e of enemies)     { e.prevX = e.x; e.prevY = e.y; }
     for (const p of projectiles) { p.prevX = p.x; p.prevY = p.y; }
+    for (const p of enemyProjectiles) { p.prevX = p.x; p.prevY = p.y; }
+    for (const t of tumorTurrets) { t.prevX = t.x; t.prevY = t.y; }
     for (const p of pickups)     { p.prevX = p.x; p.prevY = p.y; }
 }
 
@@ -3281,7 +3486,9 @@ function gameLoop(timestamp) {
             updatePlayer();
             updateWaveSpawner();
             updateEnemies();
+            updateTumorTurrets();
             updateProjectiles();
+            updateEnemyProjectiles();
             cleanupDeadEnemies();
             updateWaveProgression();
             updatePickups();
@@ -3300,7 +3507,9 @@ function gameLoop(timestamp) {
     if (fogEnabled) drawVisibilityMask();
     drawPlayer();
     drawEnemies();
+    drawTumorTurrets();
     drawProjectiles();
+    drawEnemyProjectiles();
     drawPickups();
     drawUI();
     if (gameState === 'levelUp') drawLevelUpMenu();
