@@ -31,7 +31,18 @@ const CORNER_RAIL_INSET = 12;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 const DASH_WALL_STUCK_DAMAGE = 20;
-const MAX_ENEMIES   = 20;
+const MAX_ACTIVE_ENEMIES = 50;
+const WAVES_PER_LEVEL = 5;
+const WAVE_BASE_ENEMIES = 50;
+const WAVE_STEP_ENEMIES = 25;
+const WAVE_CLEAR_DELAY_FRAMES = 45;
+const WAVE_START_SPAWN_DELAY_FRAMES = 5;
+const WAVE_BASE_SPAWNS_PER_SECOND = 6;
+const WAVE_SPAWN_RATE_STEP = 1;
+const MAX_ARENA_LEVELS = 5;
+const SPAWN_RING_INSET = 70;
+const ENEMY_OFFSCREEN_DESPAWN_FRAMES = 150;
+const ENEMY_OFFSCREEN_MARGIN = 120;
 const RAIL_RADIUS   = 52;
 const GUN_W         = 48;
 const GUN_H         = 18;
@@ -43,6 +54,17 @@ const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: 'green',  animSpeed: 10 },
     fast:  { hp: 2, size: 12, speed: 3.5, color: 'yellow', animSpeed: 6  },
     tank:  { hp: 8, size: 20, speed: 1.2, color: 'red',    animSpeed: 14 },
+};
+
+// ── ENEMY VARIANT STATS ──────────────────────────────────────────────────────
+// Each variant (a, b, c, d) has unique hp and speed multipliers
+// base = Level 1, a = Level 2, b = Level 3, c = Level 4, d = Level 5
+const ENEMY_VARIANT_STATS = {
+    base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 } },
+    a:    { basic: { hp: 4, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 10, speed: 1.3 } },
+    b:    { basic: { hp: 5, speed: 2.4 },    fast: { hp: 3, speed: 4.1 },   tank: { hp: 12, speed: 1.4 } },
+    c:    { basic: { hp: 6, speed: 2.6 },    fast: { hp: 4, speed: 4.4 },   tank: { hp: 14, speed: 1.5 } },
+    d:    { basic: { hp: 7, speed: 2.8 },    fast: { hp: 4, speed: 4.7 },   tank: { hp: 16, speed: 1.6 } },
 };
 
 // ── MUZZLE FLASH SETTINGS ─────────────────────────────────────────────────────
@@ -171,9 +193,49 @@ const ENEMY_SPRITE_PATHS = {
     fast:  ['assets/sprites/enemies/enemy_fast_frame1.png',  'assets/sprites/enemies/enemy_fast_frame2.png',  'assets/sprites/enemies/enemy_fast_frame3.png' ],
     tank:  ['assets/sprites/enemies/enemy_tank_frame1.png',  'assets/sprites/enemies/enemy_tank_frame2.png',  'assets/sprites/enemies/enemy_tank_frame3.png' ],
 };
-const enemySprites = {};
-for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
-    enemySprites[type] = paths.map(src => img(src));
+
+const ENEMY_LEVEL_VARIANTS = {
+    1: 'base',
+    2: 'a',
+    3: 'b',
+    4: 'c',
+    5: 'd',
+};
+
+function createEnemySpriteSet(variant) {
+    const set = {};
+    for (const [type, paths] of Object.entries(ENEMY_SPRITE_PATHS)) {
+        set[type] = paths.map(src => {
+            if (variant === 'base') return img(src);
+            const filename = src.split('/').pop();
+            // Transform filename: enemy_basic_frame1.png -> enemy_a_basic_frame1.png
+            const variantFilename = filename.replace('enemy_', `enemy_${variant}_`);
+            return imgWithFallback([`assets/sprites/enemies/${variant}/${variantFilename}`, src]);
+        });
+    }
+    return set;
+}
+
+const enemySpriteSets = {
+    base: createEnemySpriteSet('base'),
+    a: createEnemySpriteSet('a'),
+    b: createEnemySpriteSet('b'),
+    c: createEnemySpriteSet('c'),
+    d: createEnemySpriteSet('d'),
+};
+
+function getEnemyVariantForLevel(level) {
+    return ENEMY_LEVEL_VARIANTS[level] ?? 'base';
+}
+
+function getEnemySpritesForCurrentLevel() {
+    const variant = getEnemyVariantForLevel(currentArenaLevel);
+    return enemySpriteSets[variant] ?? enemySpriteSets.base;
+}
+
+function getEnemySpriteFrames(type) {
+    const activeSet = getEnemySpritesForCurrentLevel();
+    return activeSet[type] ?? enemySpriteSets.base[type];
 }
 
 const cursorSprites = [
@@ -200,6 +262,47 @@ const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
 
 const splashImage = img('assets/sprites/ui/intro.png');
 const menuBackgroundImage = img('assets/sprites/ui/menu.png');
+
+const MAP_THEME_SPRITES = {
+    1: {
+        floor: floorSprite,
+        wall: wallSprite,
+        wallFace: wallFaceSprite,
+        cornerFace: cornerFaceSprite,
+    },
+    2: {
+        floor: imgWithFallback(['assets/sprites/level2/floor_level2.png', 'assets/sprites/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/level2/wall_level2.png', 'assets/sprites/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/level2/wall_face_level2.png', 'assets/sprites/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/level2/wall_corner_face_level2.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+    },
+    3: {
+        floor: imgWithFallback(['assets/sprites/level3/floor_level3.png', 'assets/sprites/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/level3/wall_level3.png', 'assets/sprites/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/level3/wall_face_level3.png', 'assets/sprites/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/level3/wall_corner_face_level3.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+    },
+    4: {
+        floor: imgWithFallback(['assets/sprites/level4/floor_level4.png', 'assets/sprites/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/level4/wall_level4.png', 'assets/sprites/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/level4/wall_face_level4.png', 'assets/sprites/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/level4/wall_corner_face_level4.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+    },
+    5: {
+        floor: imgWithFallback(['assets/sprites/level5/floor_level5.png', 'assets/sprites/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/level5/wall_level5.png', 'assets/sprites/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/level5/wall_face_level5.png', 'assets/sprites/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/level5/wall_corner_face_level5.png', 'assets/sprites/wall_corner_face_placeholder.png']),
+    },
+};
+
+const MAP_THEME_TINT = {
+    1: null,
+    2: null,
+    3: null,
+    4: null,
+    5: null,
+};
 
 
 // =============================================================================
@@ -234,6 +337,16 @@ let fps            = 0;
 let showPerfGuide  = false;
 let showFpsCounter = true;
 let splashFadeTimerMs = 0;
+let devTestMode    = false;
+let currentArenaLevel = 1;
+let currentWave = 1;
+let enemiesRemainingInWave = 0;
+let enemiesToSpawn = 0;
+let waveClearTimer = 0;
+let waveSpawnDelayFrames = 0;
+let enemySpawnBudget = 0;
+let currentMapThemeId = 1;
+let currentMapTheme = MAP_THEME_SPRITES[1];
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -300,6 +413,7 @@ window.addEventListener('keydown', e => {
     if (e.key === ' ' || e.key === 'Enter') {
         if      (gameState === 'menu'    && menuPage === 'main') startGame();
         else if (gameState === 'gameOver') { gameState = 'menu'; menuPage = 'main'; }
+        else if (gameState === 'win')      { gameState = 'menu'; menuPage = 'main'; }
         else if (gameState === 'levelUp')  gameState = 'playing';
         else if (gameState === 'playing')  playerDash();
     }
@@ -328,12 +442,15 @@ window.addEventListener('mousedown', () => {
             const ftb = getFogToggleButton();
             const pb  = getPerfButton();
             const fpb = getFpsToggleButton();
+            const dtb = getDevTestButton();
             if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
                 menuPage = 'characters';
             } else if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
                 showPerfGuide = !showPerfGuide;
             } else if (mouseX >= fpb.x && mouseX <= fpb.x + fpb.w && mouseY >= fpb.y && mouseY <= fpb.y + fpb.h) {
                 showFpsCounter = !showFpsCounter;
+            } else if (mouseX >= dtb.x && mouseX <= dtb.x + dtb.w && mouseY >= dtb.y && mouseY <= dtb.y + dtb.h) {
+                devTestMode = !devTestMode;
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
                 fogEnabled = !fogEnabled;
             } else if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
@@ -371,6 +488,9 @@ window.addEventListener('mousedown', () => {
             }
         }
     } else if (gameState === 'gameOver') {
+        gameState = 'menu';
+        menuPage  = 'main';
+    } else if (gameState === 'win') {
         gameState = 'menu';
         menuPage  = 'main';
     } else if (gameState === 'levelUp') {
@@ -659,7 +779,7 @@ function drawWallFace(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
     ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
     ctx.closePath();
     ctx.clip();
-    ctx.drawImage(sprite, sx, sy, TILE, TILE + depth);
+    drawMapSprite(sprite, sx, sy, TILE, TILE + depth);
     ctx.restore();
 
     // Shade overlay
@@ -686,7 +806,7 @@ function drawWallFaceCorner(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
     ctx.lineTo(x2, y2); ctx.lineTo(x3, y3);
     ctx.closePath();
     ctx.clip();
-    ctx.drawImage(sprite, sx, sy, TILE, TILE + depth);
+    drawMapSprite(sprite, sx, sy, TILE, TILE + depth);
     ctx.restore();
 
     ctx.save();
@@ -712,29 +832,29 @@ function drawWallTileWithFaces(tileX, tileY, tileType) {
         case TILE_WALL:
             // Single south face along the bottom edge.
             if (southOpen)
-                drawWallFace(s.x, s.y, 0, T, T, T, FH, wallFaceSprite, 'rgba(0,0,0,0.32)');
+                drawWallFace(s.x, s.y, 0, T, T, T, FH, currentMapTheme.wallFace, 'rgba(0,0,0,0.32)');
             break;
 
         case TILE_CORNER_NW:
             // Full diagonal face (restored): (T, 0) -> (0, T).
-            drawWallFaceCorner(s.x, s.y, T, 0, 0, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            drawWallFaceCorner(s.x, s.y, T, 0, 0, T, FH, currentMapTheme.cornerFace, 'rgba(0,0,0,0.2)');
             break;
 
         case TILE_CORNER_NE:
             // Full diagonal face (restored): (0, 0) -> (T, T).
-            drawWallFaceCorner(s.x, s.y, 0, 0, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+            drawWallFaceCorner(s.x, s.y, 0, 0, T, T, FH, currentMapTheme.cornerFace, 'rgba(0,0,0,0.2)');
             break;
 
         case TILE_CORNER_SW:
             // Full south strip (restored): (0, T) -> (T, T).
             if (southOpen)
-                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, currentMapTheme.cornerFace, 'rgba(0,0,0,0.2)');
             break;
 
         case TILE_CORNER_SE:
             // Full south strip (restored): (0, T) -> (T, T).
             if (southOpen)
-                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, cornerFaceSprite, 'rgba(0,0,0,0.2)');
+                drawWallFaceCorner(s.x, s.y, 0, T, T, T, FH, currentMapTheme.cornerFace, 'rgba(0,0,0,0.2)');
             break;
     }
 
@@ -746,8 +866,16 @@ function drawWallTileWithFaces(tileX, tileY, tileType) {
     for (let i = 1; i < top.length; i++) ctx.lineTo(s.x + top[i].x, s.y + top[i].y);
     ctx.closePath();
     ctx.clip();
-    ctx.drawImage(wallSprite, s.x, s.y, T, T);
+    drawMapSprite(currentMapTheme.wall, s.x, s.y, T, T);
     ctx.restore();
+}
+
+function drawMapSprite(sprite, x, y, w, h) {
+    ctx.drawImage(sprite, x, y, w, h);
+    const tint = MAP_THEME_TINT[currentMapThemeId];
+    if (!tint) return;
+    ctx.fillStyle = tint;
+    ctx.fillRect(x, y, w, h);
 }
 
 function drawMap() {
@@ -755,7 +883,7 @@ function drawMap() {
         for (let x = 0; x < MAP_W; x++) {
             const s = toScreen(x * TILE, y * TILE);
             if (s.x < -TILE || s.x > canvas.width || s.y < -TILE || s.y > canvas.height) continue;
-            ctx.drawImage(floorSprite, s.x, s.y, TILE, TILE);
+            drawMapSprite(currentMapTheme.floor, s.x, s.y, TILE, TILE);
         }
     }
 
@@ -777,16 +905,18 @@ function drawMap() {
 
 function startGame() {
     showPerfGuide = false;
+    currentArenaLevel = 1;
+    currentWave = 1;
+    enemiesRemainingInWave = 0;
+    enemiesToSpawn = 0;
+    waveClearTimer = 0;
+    setMapThemeForCurrentLevel();
     generateMap();
     pickups       = [];
     enemies       = [];
     muzzleFlashes = [];
     dashTrail     = [];
     trailTimer = 0;
-
-    for (let i = 0; i < MAX_ENEMIES; i++) {
-        spawnEnemy(['basic', 'fast', 'tank'][Math.floor(Math.random() * 3)]);
-    }
 
     player.x     = (MAP_W * TILE) / 2;
     player.y     = (MAP_H * TILE) / 2;
@@ -809,6 +939,93 @@ function startGame() {
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
+    startWave(1);
+}
+
+function setMapThemeForCurrentLevel() {
+    currentMapThemeId = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
+    currentMapTheme = MAP_THEME_SPRITES[currentMapThemeId] ?? MAP_THEME_SPRITES[1];
+}
+
+function getWaveEnemyTotal(waveNumber) {
+    if (devTestMode) return 1;
+    return WAVE_BASE_ENEMIES + (waveNumber - 1) * WAVE_STEP_ENEMIES;
+}
+
+function startWave(waveNumber) {
+    currentWave = waveNumber;
+    enemiesRemainingInWave = getWaveEnemyTotal(currentWave);
+    enemiesToSpawn = enemiesRemainingInWave;
+    waveClearTimer = 0;
+    waveSpawnDelayFrames = WAVE_START_SPAWN_DELAY_FRAMES;
+    enemySpawnBudget = 0;
+}
+
+function getAliveEnemyCount() {
+    let alive = 0;
+    for (const e of enemies) if (e.alive) alive++;
+    return alive;
+}
+
+function updateWaveSpawner() {
+    if (waveSpawnDelayFrames > 0) {
+        waveSpawnDelayFrames--;
+        return;
+    }
+
+    const spawnsPerSecond = WAVE_BASE_SPAWNS_PER_SECOND + (currentWave - 1) * WAVE_SPAWN_RATE_STEP;
+    enemySpawnBudget += spawnsPerSecond * (FIXED_STEP / 1000);
+    let alive = getAliveEnemyCount();
+    while (enemySpawnBudget >= 1 && enemiesToSpawn > 0 && alive < MAX_ACTIVE_ENEMIES) {
+        spawnEnemy(pickRandomEnemyType());
+        enemiesToSpawn--;
+        enemySpawnBudget--;
+        alive++;
+    }
+}
+
+function updateWaveProgression() {
+    const alive = getAliveEnemyCount();
+    if (enemiesRemainingInWave > 0 || enemiesToSpawn > 0 || alive > 0) {
+        waveClearTimer = 0;
+        return;
+    }
+
+    waveClearTimer++;
+    if (waveClearTimer < WAVE_CLEAR_DELAY_FRAMES) return;
+    waveClearTimer = 0;
+
+    if (currentWave < WAVES_PER_LEVEL) {
+        startWave(currentWave + 1);
+        return;
+    }
+
+    if (currentArenaLevel >= MAX_ARENA_LEVELS) {
+        gameState = 'win';
+        return;
+    }
+
+    currentArenaLevel++;
+    setMapThemeForCurrentLevel();
+    generateMap();
+
+    enemies = [];
+    pickups = [];
+    projectiles = [];
+    muzzleFlashes = [];
+    dashTrail = [];
+    trailTimer = 0;
+
+    player.x = (MAP_W * TILE) / 2;
+    player.y = (MAP_H * TILE) / 2;
+    player.prevX = player.x;
+    player.prevY = player.y;
+
+    startWave(1);
+}
+
+function cleanupDeadEnemies() {
+    enemies = enemies.filter(e => e.alive);
 }
 
 function playerDash() {
@@ -1248,24 +1465,79 @@ function drawPlayer() {
 // =============================================================================
 
 function spawnEnemy(type) {
-    const e = ENEMY_TYPES[type];
-    const wallSize = type === 'tank' ? e.size * 0.8 : e.size;
-    let ex, ey, tries = 0;
-    do {
-        ex = (5 + Math.floor(Math.random() * (MAP_W - 10))) * TILE;
-        ey = (5 + Math.floor(Math.random() * (MAP_H - 10))) * TILE;
-        tries++;
-    } while ((Math.hypot(ex - player.x, ey - player.y) < 300 || wallCollision(ex, ey, wallSize)) && tries < 60);
+    const enemy = { alive: true };
+    recycleEnemy(enemy, type);
+    enemies.push(enemy);
+}
 
-    enemies.push({
-        x: ex, y: ey, prevX: ex, prevY: ey,
-        hp: e.hp, maxHp: e.hp, size: e.size,
-        wallSize,
-        speed: e.speed, color: e.color,
-        hitFlash: 0, hpBarTimer: 0, alive: true, type,
-        animFrame: 0, animTimer: Math.floor(Math.random() * e.animSpeed),
-        path: [], pathTimer: Math.floor(Math.random() * 60),
-    });
+function pickRandomEnemyType() {
+    const types = ['basic', 'fast', 'tank'];
+    return types[Math.floor(Math.random() * types.length)];
+}
+
+function getEnemySpawnPosition(wallSize) {
+    const minRadius = Math.min(canvas.width, canvas.height) * 0.5 + SPAWN_RING_INSET;
+    const maxRadius = Math.max(canvas.width, canvas.height) * 0.7 + SPAWN_RING_INSET;
+
+    for (let tries = 0; tries < 90; tries++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = minRadius + Math.random() * (maxRadius - minRadius);
+        const ex = player.x + Math.cos(angle) * radius;
+        const ey = player.y + Math.sin(angle) * radius;
+
+        if (ex < TILE * 2 || ex > MAP_W * TILE - TILE * 2 || ey < TILE * 2 || ey > MAP_H * TILE - TILE * 2) continue;
+        if (wallCollision(ex, ey, wallSize)) continue;
+        if (Math.hypot(ex - player.x, ey - player.y) < Math.min(canvas.width, canvas.height) * 0.42) continue;
+
+        return { x: ex, y: ey };
+    }
+
+    const fallback = findNearestFreePosition(player.x + TILE * 6, player.y, wallSize, 30);
+    if (fallback) return fallback;
+
+    return { x: player.x + TILE * 4, y: player.y + TILE * 4 };
+}
+
+function recycleEnemy(e, type = pickRandomEnemyType()) {
+    const spec = ENEMY_TYPES[type];
+    const variant = getEnemyVariantForLevel(currentArenaLevel);
+    const variantStats = ENEMY_VARIANT_STATS[variant]?.[type] || spec;
+    const hp = variantStats.hp ?? spec.hp;
+    const speed = variantStats.speed ?? spec.speed;
+    const wallSize = type === 'tank' ? spec.size * 0.8 : spec.size;
+    const spawnPos = getEnemySpawnPosition(wallSize);
+
+    e.x = spawnPos.x;
+    e.y = spawnPos.y;
+    e.prevX = spawnPos.x;
+    e.prevY = spawnPos.y;
+    e.hp = hp;
+    e.maxHp = hp;
+    e.size = spec.size;
+    e.wallSize = wallSize;
+    e.speed = speed;
+    e.color = spec.color;
+    e.hitFlash = 0;
+    e.hpBarTimer = 0;
+    e.alive = true;
+    e.type = type;
+    e.animFrame = 0;
+    e.animTimer = Math.floor(Math.random() * spec.animSpeed);
+    e.path = [];
+    e.pathTimer = Math.floor(Math.random() * 30);
+    e.offscreenFrames = 0;
+}
+
+function getEnemyRecycleDistance() {
+    return Math.hypot(canvas.width, canvas.height) * 1.1;
+}
+
+function isEnemyOffscreenFromPlayer(e) {
+    const dx = Math.abs(e.x - player.x);
+    const dy = Math.abs(e.y - player.y);
+    const maxDx = canvas.width / 2 + ENEMY_OFFSCREEN_MARGIN;
+    const maxDy = canvas.height / 2 + ENEMY_OFFSCREEN_MARGIN;
+    return dx > maxDx || dy > maxDy;
 }
 
 function hasLineOfSight(x1, y1, x2, y2, size) {
@@ -1281,7 +1553,15 @@ function hasLineOfSight(x1, y1, x2, y2, size) {
 
 function moveEnemyToward(e, tx, ty, step) {
     const baseAngle = Math.atan2(ty - e.y, tx - e.x);
-    const steerOffsets = [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4];
+    // ── CORNER RAIL STEERING ─────────────────────────────────────────────────
+    // Expanded steering offsets to navigate around corners smoothly
+    const steerOffsets = [
+        0,                              // straight
+        0.2, -0.2, 0.4, -0.4,          // fine-grained diagonals
+        0.6, -0.6, 0.8, -0.8,          // medium angles
+        1.0, -1.0, 1.2, -1.2,          // wide angles
+        1.4, -1.4, 1.57, -1.57         // extreme/perpendicular (helps round corners)
+    ];
     let bestMove = null;
 
     for (const offset of steerOffsets) {
@@ -1289,13 +1569,28 @@ function moveEnemyToward(e, tx, ty, step) {
         const mx = Math.cos(angle) * step;
         const my = Math.sin(angle) * step;
 
+        // ── RAIL LOGIC: Try diagonal movement first, then fallback to axis-aligned ─
+        const canMoveDiagonally = !wallCollision(e.x + mx, e.y + my, e.wallSize);
         const canMoveX = !wallCollision(e.x + mx, e.y, e.wallSize);
         const canMoveY = !wallCollision(e.x, e.y + my, e.wallSize);
-        if (!canMoveX && !canMoveY) continue;
+        
+        if (!canMoveDiagonally && !canMoveX && !canMoveY) continue;
 
-        const nx = e.x + (canMoveX ? mx : 0);
-        const ny = e.y + (canMoveY ? my : 0);
-        const score = Math.hypot(tx - nx, ty - ny) + Math.abs(offset) * 4;
+        // Prefer diagonal movement, fall back to single axes for corner rounding
+        let nx, ny, moveQuality;
+        if (canMoveDiagonally) {
+            nx = e.x + mx;
+            ny = e.y + my;
+            moveQuality = 1.0;  // Full movement is best
+        } else {
+            nx = e.x + (canMoveX ? mx : 0);
+            ny = e.y + (canMoveY ? my : 0);
+            moveQuality = 0.7;  // Partial movement is valid but penalized
+        }
+
+        const dist = Math.hypot(tx - nx, ty - ny);
+        const anglePenalty = Math.abs(offset) * 3;
+        const score = dist + anglePenalty - moveQuality * 5;  // Bonus for full diagonal moves
 
         if (!bestMove || score < bestMove.score) {
             bestMove = { nx, ny, score };
@@ -1315,6 +1610,22 @@ function updateEnemies() {
 
     for (const e of enemies) {
         if (!e.alive) continue;
+
+        if (isEnemyOffscreenFromPlayer(e)) {
+            e.offscreenFrames = (e.offscreenFrames ?? 0) + 1;
+        } else {
+            e.offscreenFrames = 0;
+        }
+
+        if (e.offscreenFrames >= ENEMY_OFFSCREEN_DESPAWN_FRAMES) {
+            recycleEnemy(e);
+            continue;
+        }
+
+        if (Math.hypot(player.x - e.x, player.y - e.y) > getEnemyRecycleDistance() * 1.35) {
+            recycleEnemy(e);
+            continue;
+        }
 
         if (e.pathTimer > 0) {
             e.pathTimer--;
@@ -1370,7 +1681,9 @@ function updateEnemies() {
 
         e.animTimer--;
         if (e.animTimer <= 0) {
-            e.animFrame = (e.animFrame + 1) % enemySprites[e.type].length;
+            const frames = getEnemySpriteFrames(e.type);
+            const frameCount = Math.max(1, frames.length);
+            e.animFrame = (e.animFrame + 1) % frameCount;
             e.animTimer = ENEMY_TYPES[e.type].animSpeed;
         }
     }
@@ -1389,7 +1702,8 @@ function drawEnemies() {
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
         const sz  = e.size * 2;
-        const sprite = enemySprites[e.type][e.animFrame];
+        const frames = getEnemySpriteFrames(e.type);
+        const sprite = frames[e.animFrame % Math.max(1, frames.length)] ?? frames[0];
 
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -1446,6 +1760,7 @@ function updateProjectiles() {
 
                 if (e.hp <= 0) {
                     e.alive = false;
+                    enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
                     if (player.lifestealOnKill > 0 && player.hp > 0) {
                         const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
                         player.hp = Math.min(player.maxHp, player.hp + heal);
@@ -1458,7 +1773,6 @@ function updateProjectiles() {
                         type: 'xp', variant,
                         value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
                     });
-                    spawnEnemy(['basic', 'fast', 'tank'][Math.floor(Math.random() * 3)]);
                 }
 
                 projectiles.splice(i, 1);
@@ -1837,12 +2151,40 @@ function drawUI() {
         ctx.restore();
     }
 
+    if (devTestMode) {
+        ctx.save();
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 13px Arial';
+        ctx.fillStyle = '#9df4ff';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.fillText('DEV TEST MODE: 1 ENEMY PER WAVE', 20, 22);
+        ctx.restore();
+    }
+
     // Coords
     ctx.save();
     ctx.font      = '10px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.textAlign = 'left';
     ctx.fillText('X: ' + Math.floor(player.x) + '  Y: ' + Math.floor(player.y), 20, canvas.height - 20);
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 6;
+    const waveLabel = `Level ${currentArenaLevel}  Wave ${currentWave}/${WAVES_PER_LEVEL}`;
+    const alive = getAliveEnemyCount();
+    const remainingNow = Math.max(0, enemiesRemainingInWave - alive);
+    ctx.fillText(waveLabel, canvas.width - 22, 26);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#ffd26a';
+    ctx.fillText(`Enemies Remaining: ${enemiesRemainingInWave}`, canvas.width - 22, 48);
+    ctx.fillStyle = 'rgba(220,220,220,0.9)';
+    ctx.fillText(`To Spawn: ${remainingNow > 0 ? remainingNow : 0}`, canvas.width - 22, 68);
     ctx.restore();
 
     drawVials();
@@ -1902,6 +2244,7 @@ function drawVisibilityMask() {
 
 function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
 function getFpsToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 222, w: 160, h: 36 }; }
+function getDevTestButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 270, w: 160, h: 36 }; }
 function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
 function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
@@ -2175,6 +2518,18 @@ function drawMenu() {
         ctx.textAlign   = 'center';
         ctx.fillText('FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), fpb.x + fpb.w / 2, fpb.y + fpb.h / 2 + 5);
 
+        // Dev test mode button
+        const dtb = getDevTestButton();
+        ctx.fillStyle   = '#000000';
+        ctx.fillRect(dtb.x, dtb.y, dtb.w, dtb.h);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(dtb.x, dtb.y, dtb.w, dtb.h);
+        ctx.fillStyle   = '#ffffff';
+        ctx.font        = '13px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), dtb.x + dtb.w / 2, dtb.y + dtb.h / 2 + 5);
+
         if (showPerfGuide) drawPerfGuide();
     } else if (menuPage === 'characters') {
         const panel = getCharacterPanel();
@@ -2409,6 +2764,24 @@ function drawGameOver() {
     ctx.fillText('Press ENTER or Click to return to Menu', canvas.width / 2, canvas.height / 2 + 40);
 }
 
+function drawWinScreen() {
+    ctx.fillStyle = '#08120a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#98ff98';
+    ctx.font      = 'bold 64px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU WIN', canvas.width / 2, canvas.height / 2 - 60);
+
+    ctx.font      = '26px Arial';
+    ctx.fillStyle = '#d8ffd8';
+    ctx.fillText('All 5 levels cleared', canvas.width / 2, canvas.height / 2 - 12);
+
+    ctx.font      = '20px Arial';
+    ctx.fillStyle = 'silver';
+    ctx.fillText('Press ENTER or Click to return to Menu', canvas.width / 2, canvas.height / 2 + 38);
+}
+
 function drawCursor() {
     const sp = cursorSprites[selectedCursor].img;
     if (!sp.complete || !sp.naturalWidth) return;
@@ -2479,14 +2852,18 @@ function gameLoop(timestamp) {
     }
     if (gameState === 'menu')     { drawMenu();     requestAnimationFrame(gameLoop); return; }
     if (gameState === 'gameOver') { drawGameOver(); requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'win')      { drawWinScreen(); requestAnimationFrame(gameLoop); return; }
 
     if (gameState === 'playing') {
         accumulator += dt;
         while (accumulator >= FIXED_STEP) {
             savePrevPositions();
             updatePlayer();
+            updateWaveSpawner();
             updateEnemies();
             updateProjectiles();
+            cleanupDeadEnemies();
+            updateWaveProgression();
             updatePickups();
             frameCount++;
             accumulator -= FIXED_STEP;
