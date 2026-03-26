@@ -4,6 +4,7 @@
 
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 canvas.width  = window.innerWidth;
 canvas.height = window.innerHeight;
 canvas.style.willChange     = 'transform';
@@ -74,6 +75,10 @@ const SPAWN_CLEAR_RADIUS = 4;
 const SPAWN_RING_INSET = 70;
 const ENEMY_OFFSCREEN_DESPAWN_FRAMES = 150;
 const ENEMY_OFFSCREEN_MARGIN = 120;
+const LEVEL4_MUSHROOM_CLUSTER_COUNT = 20;
+const LEVEL4_MUSHROOM_SINGLE_COUNT = 45;
+const LEVEL4_MUSHROOM_MIN_GAP_TILES = 1;
+const LEVEL4_MUSHROOM_SPAWN_BUFFER = SPAWN_CLEAR_RADIUS + 2;
 const RAIL_RADIUS   = 52;
 const GUN_W         = 48;
 const GUN_H         = 18;
@@ -338,6 +343,12 @@ const MAP_THEME_SPRITES = {
         wall: imgWithFallback(['assets/sprites/levels/level4/wall_level4.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level4/wall_face_level4.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level4/wall_corner_face_level4.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        mushroomTrees: [
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2a.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2b.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3a.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3b.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        ],
     },
     5: {
         floor: imgWithFallback(['assets/sprites/levels/level5/floor_level5.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
@@ -383,6 +394,7 @@ let enemyProjectiles = [];
 let enemies        = [];
 let pickups        = [];
 let muzzleFlashes  = [];
+let levelDecorations = [];
 let navGrid        = [];
 let lastLevelDied  = 1;
 let levelUpMenuHover = -1;
@@ -579,6 +591,7 @@ window.addEventListener('touchstart', () => {
 // =============================================================================
 
 function generateMap() {
+    levelDecorations = [];
     mapTiles = [];
     for (let i = 0; i < MAP_H; i++) {
         mapTiles[i] = [];
@@ -616,7 +629,86 @@ function generateMap() {
     applyCornerTiles();
     clearSpawnArea();
 
+    if (currentArenaLevel === 4) {
+        placeLevel4MushroomTrees();
+    }
+
     buildNavGrid();
+}
+
+function isLevel4DecorationTileValid(tx, ty) {
+    if (!isInteriorTile(tx, ty)) return false;
+    if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
+
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+    if (Math.abs(tx - cx) <= LEVEL4_MUSHROOM_SPAWN_BUFFER && Math.abs(ty - cy) <= LEVEL4_MUSHROOM_SPAWN_BUFFER) {
+        return false;
+    }
+
+    for (const deco of levelDecorations) {
+        const dx = deco.tx - tx;
+        const dy = deco.ty - ty;
+        if (Math.abs(dx) <= LEVEL4_MUSHROOM_MIN_GAP_TILES && Math.abs(dy) <= LEVEL4_MUSHROOM_MIN_GAP_TILES) return false;
+    }
+
+    return true;
+}
+
+function tryPlaceLevel4MushroomTree(tx, ty) {
+    if (!isLevel4DecorationTileValid(tx, ty)) return false;
+
+    const variantIndex = Math.floor(Math.random() * 4);
+    const wallTall = variantIndex >= 2 ? 3 : 2;
+    const drawHeight = wallTall * TILE;
+    const drawWidth = wallTall === 3 ? 90 : 72;
+    const jitterX = Math.round((Math.random() - 0.5) * 14);
+    const jitterY = Math.round((Math.random() - 0.5) * 10);
+
+    levelDecorations.push({
+        type: 'mushroomTree',
+        variantIndex,
+        wallTall,
+        drawWidth,
+        drawHeight,
+        tx,
+        ty,
+        x: tx * TILE + TILE * 0.5 + jitterX,
+        y: ty * TILE + TILE * 0.5 + jitterY,
+    });
+
+    return true;
+}
+
+function placeLevel4MushroomTrees() {
+    const clusterAttempts = LEVEL4_MUSHROOM_CLUSTER_COUNT * 8;
+    let clustersPlaced = 0;
+
+    for (let i = 0; i < clusterAttempts && clustersPlaced < LEVEL4_MUSHROOM_CLUSTER_COUNT; i++) {
+        const cx = 4 + Math.floor(Math.random() * (MAP_W - 8));
+        const cy = 4 + Math.floor(Math.random() * (MAP_H - 8));
+        if (!isLevel4DecorationTileValid(cx, cy)) continue;
+
+        let plantedInCluster = 0;
+        const clusterSize = 5 + Math.floor(Math.random() * 6);
+        for (let j = 0; j < clusterSize; j++) {
+            const tx = cx + Math.floor(Math.random() * 7) - 3;
+            const ty = cy + Math.floor(Math.random() * 7) - 3;
+            if (tryPlaceLevel4MushroomTree(tx, ty)) plantedInCluster++;
+        }
+
+        if (plantedInCluster > 0) clustersPlaced++;
+    }
+
+    const singleAttempts = LEVEL4_MUSHROOM_SINGLE_COUNT * 6;
+    let singlesPlaced = 0;
+    for (let i = 0; i < singleAttempts && singlesPlaced < LEVEL4_MUSHROOM_SINGLE_COUNT; i++) {
+        const tx = 4 + Math.floor(Math.random() * (MAP_W - 8));
+        const ty = 4 + Math.floor(Math.random() * (MAP_H - 8));
+        if (tryPlaceLevel4MushroomTree(tx, ty)) singlesPlaced++;
+    }
+
+    levelDecorations.sort((a, b) => a.y - b.y);
 }
 
 function clearSpawnArea(radius = SPAWN_CLEAR_RADIUS) {
@@ -1251,6 +1343,30 @@ function drawMapSprite(sprite, x, y, w, h) {
     ctx.fillRect(x, y, w, h);
 }
 
+function drawLevelDecorations() {
+    if (!levelDecorations.length) return;
+
+    const mushrooms = currentMapTheme.mushroomTrees;
+    if (!mushrooms || !mushrooms.length) return;
+
+    for (const deco of levelDecorations) {
+        if (deco.type !== 'mushroomTree') continue;
+        const sprite = mushrooms[deco.variantIndex % mushrooms.length];
+        if (!sprite) continue;
+
+        const width = deco.drawWidth ?? (deco.wallTall === 3 ? 90 : 72);
+        const height = deco.drawHeight ?? (deco.wallTall * TILE);
+        const worldX = deco.x - width * 0.5;
+        const worldY = deco.y - height + TILE * 0.5;
+        const s = toScreen(worldX, worldY);
+        const sx = Math.round(s.x);
+        const sy = Math.round(s.y);
+
+        if (sx > canvas.width + width || sx < -width || sy > canvas.height + height || sy < -height) continue;
+        drawMapSprite(sprite, sx, sy, width, height);
+    }
+}
+
 function drawMap() {
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
@@ -1269,6 +1385,9 @@ function drawMap() {
             drawWallTileWithFaces(x, y, tileType);
         }
     }
+
+    // Decorations render above walls so tall sprites do not appear embedded.
+    drawLevelDecorations();
 }
 
 
