@@ -2204,41 +2204,35 @@ function drawTumorTurrets() {
             : Math.max(0, Math.min(1, t.chargeFrames / TUMOR_CHARGE_FRAMES));
 
         if (chargeProgress > 0.04) {
-            const pulse = 0.75 + 0.25 * Math.sin(frameCount * 0.25 + (t.x + t.y) * 0.01);
-            const glowRadius = t.size * (1.1 + chargeProgress * 1.0) * pulse;
-            const glow = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, glowRadius);
-            glow.addColorStop(0, `rgba(255,0,0,${(0.65 + chargeProgress * 0.28).toFixed(3)})`);
-            glow.addColorStop(0.45, `rgba(170,0,0,${(0.48 + chargeProgress * 0.30).toFixed(3)})`);
-            glow.addColorStop(0.8, `rgba(110,0,0,${(0.24 + chargeProgress * 0.18).toFixed(3)})`);
-            glow.addColorStop(1, 'rgba(70,0,0,0)');
+            // Central aura that charges up
+            const auraIntensity = 0.6 + chargeProgress * 0.35;
+            const innerAuraRadius = t.size * 0.8;
+            const outerAuraRadius = t.size * (1.2 + chargeProgress * 0.8);
+            
+            const auraGradient = ctx.createRadialGradient(sc.x, sc.y, innerAuraRadius, sc.x, sc.y, outerAuraRadius);
+            auraGradient.addColorStop(0, `rgba(255,100,100,${auraIntensity.toFixed(3)})`);
+            auraGradient.addColorStop(0.4, `rgba(220,50,50,${(auraIntensity * 0.7).toFixed(3)})`);
+            auraGradient.addColorStop(0.7, `rgba(150,0,0,${(auraIntensity * 0.3).toFixed(3)})`);
+            auraGradient.addColorStop(1, 'rgba(80,0,0,0)');
 
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = glow;
+            ctx.fillStyle = auraGradient;
             ctx.beginPath();
-            ctx.arc(sc.x, sc.y, glowRadius, 0, Math.PI * 2);
+            ctx.arc(sc.x, sc.y, outerAuraRadius, 0, Math.PI * 2);
             ctx.fill();
-
-            const ringRadius = t.size * (0.9 + chargeProgress * 0.95);
-            const particleCount = 8;
-            for (let pi = 0; pi < particleCount; pi++) {
-                const baseA = frameCount * 0.09 + pi * (Math.PI * 2 / particleCount) + (t.x - t.y) * 0.002;
-                const wobble = Math.sin(frameCount * 0.16 + pi) * (0.18 + chargeProgress * 0.12);
-                const a = baseA + wobble;
-                const px = sc.x + Math.cos(a) * ringRadius;
-                const py = sc.y + Math.sin(a) * ringRadius;
-                const pr = 2.1 + chargeProgress * 2.3;
-
-                const dot = ctx.createRadialGradient(px, py, 0, px, py, pr * 2.2);
-                dot.addColorStop(0, `rgba(255,40,40,${(0.9 * chargeProgress + 0.1).toFixed(3)})`);
-                dot.addColorStop(0.5, `rgba(200,0,0,${(0.62 * chargeProgress + 0.12).toFixed(3)})`);
-                dot.addColorStop(1, 'rgba(90,0,0,0)');
-                ctx.fillStyle = dot;
-                ctx.beginPath();
-                ctx.arc(px, py, pr * 2.2, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            
+            // Pulsing core glow
+            const corePulse = 0.8 + 0.2 * Math.sin(frameCount * 0.15 + (t.x + t.y) * 0.01);
+            const coreGlowRadius = t.size * 0.5 * corePulse;
+            const coreGlow = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, coreGlowRadius);
+            coreGlow.addColorStop(0, `rgba(255,150,100,${(chargeProgress * 0.8).toFixed(3)})`);
+            coreGlow.addColorStop(1, 'rgba(255,80,80,0)');
+            ctx.fillStyle = coreGlow;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, coreGlowRadius, 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.restore();
         }
@@ -2246,6 +2240,10 @@ function drawTumorTurrets() {
         ctx.save();
         ctx.globalAlpha = alpha;
         if (t.hitFlash > 0) ctx.filter = 'brightness(10)';
+        // Clip to circular shape
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, sizePx / 2, 0, Math.PI * 2);
+        ctx.clip();
         ctx.drawImage(sprite, sc.x - sizePx / 2, sc.y - sizePx / 2, sizePx, sizePx);
         ctx.restore();
 
