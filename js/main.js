@@ -70,6 +70,7 @@ const WAVE_START_SPAWN_DELAY_FRAMES = 5;
 const WAVE_BASE_SPAWNS_PER_SECOND = 6;
 const WAVE_SPAWN_RATE_STEP = 1;
 const MAX_ARENA_LEVELS = 5;
+const SPAWN_CLEAR_RADIUS = 4;
 const SPAWN_RING_INSET = 70;
 const ENEMY_OFFSCREEN_DESPAWN_FRAMES = 150;
 const ENEMY_OFFSCREEN_MARGIN = 120;
@@ -603,11 +604,7 @@ function generateMap() {
         }
     }
 
-    // Clear spawn area
-    const cx = Math.floor(MAP_W / 2), cy = Math.floor(MAP_H / 2);
-    for (let i = cy - 5; i <= cy + 5; i++)
-        for (let j = cx - 5; j <= cx + 5; j++)
-            if (i >= 0 && i < MAP_H && j >= 0 && j < MAP_W) mapTiles[i][j] = TILE_FLOOR;
+    clearSpawnArea();
 
     resetTumorTurrets();
 
@@ -617,8 +614,29 @@ function generateMap() {
     }
 
     applyCornerTiles();
+    clearSpawnArea();
 
     buildNavGrid();
+}
+
+function clearSpawnArea(radius = SPAWN_CLEAR_RADIUS) {
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+
+    for (let y = cy - radius; y <= cy + radius; y++) {
+        for (let x = cx - radius; x <= cx + radius; x++) {
+            if (y < 0 || y >= MAP_H || x < 0 || x >= MAP_W) continue;
+            mapTiles[y][x] = TILE_FLOOR;
+        }
+    }
+
+    if (!tumorTurrets.length) return;
+
+    tumorTurrets = tumorTurrets.filter(t => {
+        const tx = Math.floor(t.x / TILE);
+        const ty = Math.floor(t.y / TILE);
+        return Math.abs(tx - cx) > radius || Math.abs(ty - cy) > radius;
+    });
 }
 
 function resetTumorTurrets() {
