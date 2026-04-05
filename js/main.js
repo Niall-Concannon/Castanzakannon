@@ -29,6 +29,39 @@ devTestWaveControl.appendChild(devTestWaveLabel);
 devTestWaveControl.appendChild(devTestWaveSelect);
 document.body.appendChild(devTestWaveControl);
 
+const audioControlPanel = document.createElement('div');
+audioControlPanel.id = 'audioControlPanel';
+
+const musicVolumeLabel = document.createElement('label');
+musicVolumeLabel.id = 'musicVolumeLabel';
+musicVolumeLabel.htmlFor = 'musicVolumeSlider';
+
+const musicVolumeSlider = document.createElement('input');
+musicVolumeSlider.type = 'range';
+musicVolumeSlider.id = 'musicVolumeSlider';
+musicVolumeSlider.min = '0';
+musicVolumeSlider.max = '100';
+musicVolumeSlider.step = '1';
+musicVolumeSlider.setAttribute('aria-label', 'Music Volume');
+
+const sfxVolumeLabel = document.createElement('label');
+sfxVolumeLabel.id = 'sfxVolumeLabel';
+sfxVolumeLabel.htmlFor = 'sfxVolumeSlider';
+
+const sfxVolumeSlider = document.createElement('input');
+sfxVolumeSlider.type = 'range';
+sfxVolumeSlider.id = 'sfxVolumeSlider';
+sfxVolumeSlider.min = '0';
+sfxVolumeSlider.max = '100';
+sfxVolumeSlider.step = '1';
+sfxVolumeSlider.setAttribute('aria-label', 'Game Audio Volume');
+
+audioControlPanel.appendChild(musicVolumeLabel);
+audioControlPanel.appendChild(musicVolumeSlider);
+audioControlPanel.appendChild(sfxVolumeLabel);
+audioControlPanel.appendChild(sfxVolumeSlider);
+document.body.appendChild(audioControlPanel);
+
 
 // =============================================================================
 //  CONSTANTS
@@ -85,6 +118,36 @@ const GUN_H         = 18;
 
 const FIXED_STEP = 1000 / 60;
 const SPLASH_FADE_DURATION_MS = 1500;
+const AUDIO_STORAGE_KEYS = {
+    music: 'castanza_music_volume',
+    sfx: 'castanza_sfx_volume',
+};
+const MUSIC_TRACK_PATHS = [
+    'assets/audio/music/Axis+Mundi.mp3',
+    'assets/audio/music/Black+Light.mp3',
+    'assets/audio/music/Semantic+Satiation.mp3',
+];
+const LASER_SHOT_PATHS = [
+    'assets/audio/sfx/laser_ak.mp3',
+    'laser_ak.mp3',
+];
+const LASER_POOL_SIZE = 8;
+const DASH_PATHS = [
+    'assets/audio/sfx/dash_glass3.mp3',
+    'dash_glass3.mp3',
+];
+const DASH_POOL_SIZE = 4;
+const DASH_PLAY_LAYERS = 2;
+const UI_CLICK_PATHS = [
+    'assets/audio/sfx/ui_click.mp3',
+    'ui_click.mp3',
+];
+const EXP_ORB_PATHS = [
+    'assets/audio/sfx/exp_orb.mp3',
+    'exp_orb.mp3',
+];
+const UI_CLICK_POOL_SIZE = 4;
+const EXP_ORB_POOL_SIZE = 4;
 
 const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: 'green',  animSpeed: 10 },
@@ -417,6 +480,20 @@ let waveSpawnDelayFrames = 0;
 let enemySpawnBudget = 0;
 let currentMapThemeId = 1;
 let currentMapTheme = MAP_THEME_SPRITES[1];
+let audioUnlocked = false;
+let musicVolume = 0.9;
+let sfxVolume = 1;
+let pendingMusicStart = false;
+let currentMusicTrack = null;
+let lastMusicTrackIndex = -1;
+let laserShotPool = [];
+let laserShotPoolIndex = 0;
+let dashPool = [];
+let dashPoolIndex = 0;
+let uiClickPool = [];
+let uiClickPoolIndex = 0;
+let expOrbPool = [];
+let expOrbPoolIndex = 0;
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -459,12 +536,253 @@ function startSplashTransition() {
     splashFadeTimerMs = 0;
 }
 
+function clamp01(value) {
+    return Math.max(0, Math.min(1, value));
+}
+
+function readStoredVolume(storageKey, fallback) {
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw == null) return fallback;
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed)) return fallback;
+        return clamp01(parsed);
+    } catch (_) {
+        return fallback;
+    }
+}
+
+function saveVolume(storageKey, value) {
+    try {
+        localStorage.setItem(storageKey, String(clamp01(value)));
+    } catch (_) {
+        // Ignore storage write issues in restricted/private contexts.
+    }
+}
+
+function styleAudioControls() {
+    audioControlPanel.style.position = 'fixed';
+    audioControlPanel.style.right = '16px';
+    audioControlPanel.style.bottom = '16px';
+    audioControlPanel.style.zIndex = '25';
+    audioControlPanel.style.display = 'none';
+    audioControlPanel.style.flexDirection = 'column';
+    audioControlPanel.style.gap = '6px';
+    audioControlPanel.style.width = '220px';
+    audioControlPanel.style.padding = '10px 12px';
+    audioControlPanel.style.border = '1px solid #ffffff';
+    audioControlPanel.style.background = 'rgba(0,0,0,0.78)';
+    audioControlPanel.style.color = '#ffffff';
+    audioControlPanel.style.font = '12px Arial, sans-serif';
+    audioControlPanel.style.pointerEvents = 'auto';
+
+    const sliders = [musicVolumeSlider, sfxVolumeSlider];
+    for (const slider of sliders) {
+        slider.style.width = '100%';
+        slider.style.cursor = 'pointer';
+    }
+}
+
+function createAudioWithFallback(sources, { loop = false } = {}) {
+    const audio = new Audio();
+    let srcIndex = 0;
+
+    const tryNextSource = () => {
+        if (srcIndex >= sources.length) return;
+        audio.src = sources[srcIndex++];
+    };
+
+    audio.loop = loop;
+    audio.preload = 'auto';
+    audio.addEventListener('error', tryNextSource);
+    tryNextSource();
+    return audio;
+}
+
+function updateAudioLabelText() {
+    musicVolumeLabel.textContent = `Music Volume: ${Math.round(musicVolume * 100)}%`;
+    sfxVolumeLabel.textContent = `Game Audio Volume: ${Math.round(sfxVolume * 100)}%`;
+}
+
+function applyMusicVolume() {
+    if (currentMusicTrack) currentMusicTrack.volume = musicVolume;
+}
+
+function applySfxVolume() {
+    for (const channel of laserShotPool) channel.volume = sfxVolume;
+    for (const channel of dashPool) channel.volume = sfxVolume;
+    for (const channel of uiClickPool) channel.volume = sfxVolume;
+    for (const channel of expOrbPool) channel.volume = sfxVolume;
+}
+
+function setMusicVolume(value, { persist = true } = {}) {
+    musicVolume = clamp01(value);
+    musicVolumeSlider.value = String(Math.round(musicVolume * 100));
+    applyMusicVolume();
+    if (persist) saveVolume(AUDIO_STORAGE_KEYS.music, musicVolume);
+    updateAudioLabelText();
+}
+
+function setSfxVolume(value, { persist = true } = {}) {
+    sfxVolume = clamp01(value);
+    sfxVolumeSlider.value = String(Math.round(sfxVolume * 100));
+    applySfxVolume();
+    if (persist) saveVolume(AUDIO_STORAGE_KEYS.sfx, sfxVolume);
+    updateAudioLabelText();
+}
+
+function pickRandomMusicTrackIndex() {
+    if (!MUSIC_TRACK_PATHS.length) return -1;
+    if (MUSIC_TRACK_PATHS.length === 1) return 0;
+
+    let idx = Math.floor(Math.random() * MUSIC_TRACK_PATHS.length);
+    if (idx === lastMusicTrackIndex) idx = (idx + 1 + Math.floor(Math.random() * (MUSIC_TRACK_PATHS.length - 1))) % MUSIC_TRACK_PATHS.length;
+    return idx;
+}
+
+function stopCurrentMusic() {
+    if (!currentMusicTrack) return;
+    currentMusicTrack.pause();
+    currentMusicTrack.currentTime = 0;
+}
+
+function playCurrentMusicTrack() {
+    if (!currentMusicTrack) return;
+    currentMusicTrack.currentTime = 0;
+    currentMusicTrack.play().catch(() => {
+        pendingMusicStart = true;
+    });
+}
+
+function playRandomMusicTrack() {
+    const idx = pickRandomMusicTrackIndex();
+    if (idx < 0) return;
+
+    stopCurrentMusic();
+
+    const nextTrack = createAudioWithFallback([MUSIC_TRACK_PATHS[idx]], { loop: false });
+    nextTrack.volume = musicVolume;
+    nextTrack.addEventListener('ended', playRandomMusicTrack);
+
+    currentMusicTrack = nextTrack;
+    lastMusicTrackIndex = idx;
+
+    if (audioUnlocked) {
+        playCurrentMusicTrack();
+    } else {
+        pendingMusicStart = true;
+    }
+}
+
+function initializeLaserShotPool() {
+    laserShotPool = [];
+    for (let i = 0; i < LASER_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(LASER_SHOT_PATHS);
+        channel.volume = sfxVolume;
+        laserShotPool.push(channel);
+    }
+    laserShotPoolIndex = 0;
+}
+
+function initializeDashPool() {
+    dashPool = [];
+    for (let i = 0; i < DASH_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(DASH_PATHS);
+        channel.volume = sfxVolume;
+        dashPool.push(channel);
+    }
+    dashPoolIndex = 0;
+}
+
+function initializeUiClickPool() {
+    uiClickPool = [];
+    for (let i = 0; i < UI_CLICK_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(UI_CLICK_PATHS);
+        channel.volume = sfxVolume;
+        uiClickPool.push(channel);
+    }
+    uiClickPoolIndex = 0;
+}
+
+function initializeExpOrbPool() {
+    expOrbPool = [];
+    for (let i = 0; i < EXP_ORB_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(EXP_ORB_PATHS);
+        channel.volume = sfxVolume;
+        expOrbPool.push(channel);
+    }
+    expOrbPoolIndex = 0;
+}
+
+function playLaserShot() {
+    if (!audioUnlocked || !laserShotPool.length) return;
+
+    const channel = laserShotPool[laserShotPoolIndex];
+    laserShotPoolIndex = (laserShotPoolIndex + 1) % laserShotPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
+}
+
+function playDashSound() {
+    if (!audioUnlocked || !dashPool.length) return;
+
+    for (let i = 0; i < DASH_PLAY_LAYERS; i++) {
+        const channel = dashPool[dashPoolIndex];
+        dashPoolIndex = (dashPoolIndex + 1) % dashPool.length;
+        channel.currentTime = 0;
+        channel.play().catch(() => {
+            // Ignore rejected play when browser blocks or source failed.
+        });
+    }
+}
+
+function playUiClick() {
+    if (!audioUnlocked || !uiClickPool.length) return;
+
+    const channel = uiClickPool[uiClickPoolIndex];
+    uiClickPoolIndex = (uiClickPoolIndex + 1) % uiClickPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
+}
+
+function playExpOrbPickup() {
+    if (!audioUnlocked || !expOrbPool.length) return;
+
+    const channel = expOrbPool[expOrbPoolIndex];
+    expOrbPoolIndex = (expOrbPoolIndex + 1) % expOrbPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
+}
+
+function unlockAudioIfNeeded() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+
+    if (pendingMusicStart && currentMusicTrack) {
+        pendingMusicStart = false;
+        playCurrentMusicTrack();
+    }
+}
+
+function syncAudioControlPanel() {
+    const visible = gameState === 'menu' || gameState === 'playing' || gameState === 'levelUp';
+    audioControlPanel.style.display = visible ? 'flex' : 'none';
+}
+
 
 // =============================================================================
 //  INPUT
 // =============================================================================
 
 window.addEventListener('keydown', e => {
+    unlockAudioIfNeeded();
+
     if (gameState === 'splash') {
         startSplashTransition();
         return;
@@ -478,13 +796,14 @@ window.addEventListener('keydown', e => {
 
     if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters')) {
         menuPage = 'main';
+        playUiClick();
     }
 
     if (e.key === ' ' || e.key === 'Enter') {
-        if      (gameState === 'menu'    && menuPage === 'main') startGame();
-        else if (gameState === 'gameOver') { gameState = 'menu'; menuPage = 'main'; }
-        else if (gameState === 'win')      { gameState = 'menu'; menuPage = 'main'; }
-        else if (gameState === 'levelUp')  gameState = 'playing';
+        if      (gameState === 'menu'    && menuPage === 'main') { playUiClick(); startGame(); }
+        else if (gameState === 'gameOver') { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
+        else if (gameState === 'win')      { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
+        else if (gameState === 'levelUp')  { playUiClick(); gameState = 'playing'; }
         else if (gameState === 'playing')  playerDash();
     }
 });
@@ -495,6 +814,12 @@ window.addEventListener('mouseup',   () => { mouseDown = false; });
 
 window.addEventListener('mousedown', e => {
     if (devTestWaveControl.contains(e.target)) return;
+    if (audioControlPanel.contains(e.target)) {
+        unlockAudioIfNeeded();
+        return;
+    }
+
+    unlockAudioIfNeeded();
 
     if (gameState === 'splash') {
         startSplashTransition();
@@ -516,29 +841,38 @@ window.addEventListener('mousedown', e => {
             const fpb = getFpsToggleButton();
             const dtb = getDevTestButton();
             if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
+                playUiClick();
                 menuPage = 'characters';
             } else if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
+                playUiClick();
                 showPerfGuide = !showPerfGuide;
             } else if (mouseX >= fpb.x && mouseX <= fpb.x + fpb.w && mouseY >= fpb.y && mouseY <= fpb.y + fpb.h) {
+                playUiClick();
                 showFpsCounter = !showFpsCounter;
             } else if (mouseX >= dtb.x && mouseX <= dtb.x + dtb.w && mouseY >= dtb.y && mouseY <= dtb.y + dtb.h) {
+                playUiClick();
                 devTestMode = !devTestMode;
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
+                playUiClick();
                 fogEnabled = !fogEnabled;
             } else if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+                playUiClick();
                 menuPage = 'cursors';
             } else {
+                playUiClick();
                 startGame();
             }
         } else if (menuPage === 'characters') {
             const back = getCharacterBackButton();
             if (mouseX >= back.x && mouseX <= back.x + back.w && mouseY >= back.y && mouseY <= back.y + back.h) {
+                playUiClick();
                 menuPage = 'main';
             } else {
                 const cards = getCharacterCards();
                 for (let i = 0; i < cards.length; i++) {
                     const c = cards[i];
                     if (mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h) {
+                        playUiClick();
                         selectedCharacter = i;
                         break;
                     }
@@ -547,12 +881,14 @@ window.addEventListener('mousedown', e => {
         } else if (menuPage === 'cursors') {
             const back = getBackButton();
             if (mouseX >= back.x && mouseX <= back.x + back.w && mouseY >= back.y && mouseY <= back.y + back.h) {
+                playUiClick();
                 menuPage = 'main';
             } else {
                 const boxes = getCursorBoxes();
                 for (let i = 0; i < boxes.length; i++) {
                     const b = boxes[i];
                     if (mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h) {
+                        playUiClick();
                         selectedCursor = i;
                         break;
                     }
@@ -560,9 +896,11 @@ window.addEventListener('mousedown', e => {
             }
         }
     } else if (gameState === 'gameOver') {
+        playUiClick();
         gameState = 'menu';
         menuPage  = 'main';
     } else if (gameState === 'win') {
+        playUiClick();
         gameState = 'menu';
         menuPage  = 'main';
     } else if (gameState === 'levelUp') {
@@ -570,18 +908,21 @@ window.addEventListener('mousedown', e => {
         for (let i = 0; i < 3; i++) {
             const z = zones.cards[i];
             if (mouseX >= z.x && mouseX <= z.x + z.w && mouseY >= z.y && mouseY <= z.y + z.h) {
+                playUiClick();
                 gameState = 'playing';
                 return;
             }
         }
         const s = zones.skip;
         if (mouseX >= s.x && mouseX <= s.x + s.w && mouseY >= s.y && mouseY <= s.y + s.h) {
+            playUiClick();
             gameState = 'playing';
         }
     }
 });
 
 window.addEventListener('touchstart', () => {
+    unlockAudioIfNeeded();
     if (gameState === 'splash') startSplashTransition();
 }, { passive: true });
 
@@ -1433,6 +1774,7 @@ function startGame() {
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
+    playRandomMusicTrack();
     startWave(1);
 }
 
@@ -1507,6 +1849,7 @@ function updateWaveProgression() {
     currentArenaLevel++;
     setMapThemeForCurrentLevel();
     generateMap();
+    playRandomMusicTrack();
 
     enemies = [];
     pickups = [];
@@ -1544,6 +1887,7 @@ function playerDash() {
     player.dashing     = true;
     player.dashTime    = DASH_DURATION;
     player.dashCharges--;
+    playDashSound();
     if (player.dashCharges < player.dashMaxCharges && player.dashCooldown <= 0) {
         player.dashCooldown = player.dashRechargeFrames;
     }
@@ -1556,6 +1900,7 @@ function playerDash() {
 function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
     player.shootCooldown = SHOOT_COOLDOWN;
+    playLaserShot();
 
     // Bloom: small random angle offset per shot
     const spread = (Math.random() - 0.5) * BULLET_SPREAD;
@@ -2571,6 +2916,7 @@ function updatePickups() {
 
         if (dist < player.size + p.size) {
             if (p.type === 'xp') {
+                playExpOrbPickup();
                 player.xp += p.value * player.xpGainMult;
                 xpBarFlash  = 12;
                 if (player.xp >= player.xpToNextLevel) {
@@ -3582,6 +3928,7 @@ function gameLoop(timestamp) {
     lastTimestamp = timestamp;
 
     syncDevTestWaveControl();
+    syncAudioControlPanel();
 
     fps = dt > 0 ? Math.round(1000 / dt) : fps;
 
@@ -3654,6 +4001,26 @@ function gameLoop(timestamp) {
 }
 
 generateMap();
+styleAudioControls();
+
+musicVolume = readStoredVolume(AUDIO_STORAGE_KEYS.music, musicVolume);
+sfxVolume = readStoredVolume(AUDIO_STORAGE_KEYS.sfx, sfxVolume);
+
+musicVolumeSlider.addEventListener('input', () => {
+    setMusicVolume(Number(musicVolumeSlider.value) / 100);
+});
+
+sfxVolumeSlider.addEventListener('input', () => {
+    setSfxVolume(Number(sfxVolumeSlider.value) / 100);
+});
+
+setMusicVolume(musicVolume, { persist: false });
+setSfxVolume(sfxVolume, { persist: false });
+initializeLaserShotPool();
+initializeDashPool();
+initializeUiClickPool();
+initializeExpOrbPool();
+playRandomMusicTrack();
 
 for (let i = 1; i <= WAVES_PER_LEVEL; i++) {
     const option = document.createElement('option');
