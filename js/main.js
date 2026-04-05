@@ -132,12 +132,47 @@ const LASER_SHOT_PATHS = [
     'laser_ak.mp3',
 ];
 const LASER_POOL_SIZE = 8;
+const LASER_VOLUME_MULT = 0.35;
 const DASH_PATHS = [
     'assets/audio/sfx/dash_glass3.mp3',
     'dash_glass3.mp3',
 ];
 const DASH_POOL_SIZE = 4;
 const DASH_PLAY_LAYERS = 2;
+const AMMO_PICKUP_PATHS = [
+    'assets/audio/sfx/demonic_announcer_max_ammo_bo.mp3',
+    'demonic_announcer_max_ammo_bo.mp3',
+    'assets/audio/sfx/ammo_pickup.mp3',
+    'ammo_pickup.mp3',
+    'assets/audio/sfx/exp_orb.mp3',
+    'exp_orb.mp3',
+];
+const AMMO_PICKUP_POOL_SIZE = 4;
+const AMMO_PICKUP_VOLUME_MULT = 1.9;
+const HEAL_PICKUP_PATHS = [
+    'assets/audio/sfx/health-potion.mp3',
+    'assets/audio/sfx/health_potion.mp3',
+    'health-potion.mp3',
+    'health_potion.mp3',
+    'assets/audio/sfx/exp_orb.mp3',
+    'exp_orb.mp3',
+];
+const HEAL_PICKUP_POOL_SIZE = 4;
+const HEAL_PICKUP_VOLUME_MULT = 1.35;
+const INSTAKILL_PICKUP_PATHS = [
+    'assets/audio/sfx/Voicy_InstaKill Sound Effect.mp3',
+    'Voicy_InstaKill Sound Effect.mp3',
+    'assets/audio/sfx/instakill.mp3',
+    'assets/audio/sfx/insta_kill.mp3',
+    'assets/audio/sfx/insta-kill.mp3',
+    'instakill.mp3',
+    'insta_kill.mp3',
+    'insta-kill.mp3',
+    'assets/audio/sfx/exp_orb.mp3',
+    'exp_orb.mp3',
+];
+const INSTAKILL_PICKUP_POOL_SIZE = 4;
+const INSTAKILL_PICKUP_VOLUME_MULT = 1.3;
 const UI_CLICK_PATHS = [
     'assets/audio/sfx/ui_click.mp3',
     'ui_click.mp3',
@@ -148,6 +183,27 @@ const EXP_ORB_PATHS = [
 ];
 const UI_CLICK_POOL_SIZE = 4;
 const EXP_ORB_POOL_SIZE = 4;
+const AMMO_MAX = 120;
+const AMMO_REGEN_STOP = 60;
+const AMMO_REGEN_INTERVAL_FRAMES = 12;
+const AMMO_REGEN_MIN_INTERVAL_FRAMES = 2;
+const AMMO_REGEN_ACCEL_PER_SEC = 0.55;
+const AMMO_SHOT_COST = 1;
+const AMMO_POWERUP_DURATION_FRAMES = Math.round(10000 / FIXED_STEP);
+const AMMO_DROP_CHANCE = 0.01;
+const AMMO_PICKUP_VALUE_MIN = 10;
+const AMMO_PICKUP_VALUE_MAX = 18;
+const AMMO_PICKUP_WORLD_SIZE = 13;
+const AMMO_PICKUP_DRAW_SCALE = 1.35;
+const HEAL_DROP_CHANCE = 0.01;
+const HEAL_PICKUP_WORLD_SIZE = 12;
+const HEAL_PICKUP_DRAW_SCALE = 1.28;
+const HEAL_OVER_TIME_DURATION_FRAMES = Math.round(2500 / FIXED_STEP);
+const HEAL_OVER_TIME_MIN_PER_FRAME = 0.35;
+const INSTAKILL_DROP_CHANCE = 0.01;
+const INSTAKILL_PICKUP_WORLD_SIZE = 12;
+const INSTAKILL_PICKUP_DRAW_SCALE = 1.28;
+const INSTAKILL_DURATION_FRAMES = Math.round(5000 / FIXED_STEP);
 
 const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: 'green',  animSpeed: 10 },
@@ -306,6 +362,18 @@ const tumorShootSprite = imgWithFallback([
 ]);
 const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp_placeholder.png');
 const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue_placeholder.png');
+const pickupAmmoSprite = imgWithFallback([
+    'assets/sprites/pickups/pickup_ammo_placeholder.png',
+    'assets/sprites/pickups/pickup_xp_placeholder.png',
+]);
+const pickupHealSprite = imgWithFallback([
+    'assets/sprites/pickups/pickup_heal_placeholder.png',
+    'assets/sprites/pickups/pickup_xp_placeholder.png',
+]);
+const pickupInstaKillSprite = imgWithFallback([
+    'assets/sprites/pickups/pickup_instakill_placeholder.png',
+    'assets/sprites/pickups/pickup_xp_placeholder.png',
+]);
 
 const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
@@ -378,6 +446,22 @@ const vialBgSprite       = img('assets/sprites/ui/ui_vial_bg.png');
 const vialGlowHpSprite   = img('assets/sprites/ui/ui_vial_glow_hp.png');
 const vialGlowDashSprite = img('assets/sprites/ui/ui_vial_glow_dash.png');
 const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
+const ammoBarBgSprite = imgWithFallback([
+    'assets/sprites/ui/ui_ammobar_bg_placeholder.png',
+    'assets/sprites/ui/ui_xpbar_bg.png',
+]);
+const ammoBarFillSprite = imgWithFallback([
+    'assets/sprites/ui/ui_ammobar_fill_placeholder.png',
+    'assets/sprites/ui/ui_xpbar_fill.png',
+]);
+const ammoBarFrameSprite = imgWithFallback([
+    'assets/sprites/ui/ui_ammobar_frame_placeholder.png',
+    'assets/sprites/ui/ui_xpbar_frame.png',
+]);
+const ammoBarGlowSprite = imgWithFallback([
+    'assets/sprites/ui/ui_ammobar_glow_placeholder.png',
+    'assets/sprites/ui/ui_xpbar_glow.png',
+]);
 
 const splashImage = img('assets/sprites/ui/intro.png');
 const menuBackgroundImage = img('assets/sprites/ui/menu.png');
@@ -490,6 +574,12 @@ let laserShotPool = [];
 let laserShotPoolIndex = 0;
 let dashPool = [];
 let dashPoolIndex = 0;
+let ammoPickupPool = [];
+let ammoPickupPoolIndex = 0;
+let healPickupPool = [];
+let healPickupPoolIndex = 0;
+let instakillPickupPool = [];
+let instakillPickupPoolIndex = 0;
 let uiClickPool = [];
 let uiClickPoolIndex = 0;
 let expOrbPool = [];
@@ -516,6 +606,9 @@ let player = {
     dashRechargeFrames: 120,
     shootCooldown: 0, weaponAngle: 0,
     hp: 100, maxHp: 100, invulnTimer: 0,
+    ammo: AMMO_MAX, ammoRegenTimer: 0, ammoNoShootFrames: 0, infiniteAmmoTimer: 0,
+    healOverTimeTimer: 0,
+    instakillTimer: 0,
     xpGainMult: 1,
     lifestealOnKill: 0,
     xp: 0, xpToNextLevel: 100, level: 1,
@@ -608,9 +701,16 @@ function applyMusicVolume() {
     if (currentMusicTrack) currentMusicTrack.volume = musicVolume;
 }
 
+function scaledSfxVolume(multiplier = 1) {
+    return clamp01(sfxVolume * multiplier);
+}
+
 function applySfxVolume() {
-    for (const channel of laserShotPool) channel.volume = sfxVolume;
+    for (const channel of laserShotPool) channel.volume = scaledSfxVolume(LASER_VOLUME_MULT);
     for (const channel of dashPool) channel.volume = sfxVolume;
+    for (const channel of ammoPickupPool) channel.volume = scaledSfxVolume(AMMO_PICKUP_VOLUME_MULT);
+    for (const channel of healPickupPool) channel.volume = scaledSfxVolume(HEAL_PICKUP_VOLUME_MULT);
+    for (const channel of instakillPickupPool) channel.volume = scaledSfxVolume(INSTAKILL_PICKUP_VOLUME_MULT);
     for (const channel of uiClickPool) channel.volume = sfxVolume;
     for (const channel of expOrbPool) channel.volume = sfxVolume;
 }
@@ -678,7 +778,7 @@ function initializeLaserShotPool() {
     laserShotPool = [];
     for (let i = 0; i < LASER_POOL_SIZE; i++) {
         const channel = createAudioWithFallback(LASER_SHOT_PATHS);
-        channel.volume = sfxVolume;
+        channel.volume = scaledSfxVolume(LASER_VOLUME_MULT);
         laserShotPool.push(channel);
     }
     laserShotPoolIndex = 0;
@@ -692,6 +792,36 @@ function initializeDashPool() {
         dashPool.push(channel);
     }
     dashPoolIndex = 0;
+}
+
+function initializeAmmoPickupPool() {
+    ammoPickupPool = [];
+    for (let i = 0; i < AMMO_PICKUP_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(AMMO_PICKUP_PATHS);
+        channel.volume = scaledSfxVolume(AMMO_PICKUP_VOLUME_MULT);
+        ammoPickupPool.push(channel);
+    }
+    ammoPickupPoolIndex = 0;
+}
+
+function initializeHealPickupPool() {
+    healPickupPool = [];
+    for (let i = 0; i < HEAL_PICKUP_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(HEAL_PICKUP_PATHS);
+        channel.volume = scaledSfxVolume(HEAL_PICKUP_VOLUME_MULT);
+        healPickupPool.push(channel);
+    }
+    healPickupPoolIndex = 0;
+}
+
+function initializeInstakillPickupPool() {
+    instakillPickupPool = [];
+    for (let i = 0; i < INSTAKILL_PICKUP_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(INSTAKILL_PICKUP_PATHS);
+        channel.volume = scaledSfxVolume(INSTAKILL_PICKUP_VOLUME_MULT);
+        instakillPickupPool.push(channel);
+    }
+    instakillPickupPoolIndex = 0;
 }
 
 function initializeUiClickPool() {
@@ -736,6 +866,39 @@ function playDashSound() {
             // Ignore rejected play when browser blocks or source failed.
         });
     }
+}
+
+function playAmmoPickupSound() {
+    if (!audioUnlocked || !ammoPickupPool.length) return;
+
+    const channel = ammoPickupPool[ammoPickupPoolIndex];
+    ammoPickupPoolIndex = (ammoPickupPoolIndex + 1) % ammoPickupPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
+}
+
+function playHealPickupSound() {
+    if (!audioUnlocked || !healPickupPool.length) return;
+
+    const channel = healPickupPool[healPickupPoolIndex];
+    healPickupPoolIndex = (healPickupPoolIndex + 1) % healPickupPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
+}
+
+function playInstakillPickupSound() {
+    if (!audioUnlocked || !instakillPickupPool.length) return;
+
+    const channel = instakillPickupPool[instakillPickupPoolIndex];
+    instakillPickupPoolIndex = (instakillPickupPoolIndex + 1) % instakillPickupPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+        // Ignore rejected play when browser blocks or source failed.
+    });
 }
 
 function playUiClick() {
@@ -1769,11 +1932,18 @@ function startGame() {
     player.dashRechargeFrames = Math.max(1, chosen.dashRechargeFrames ?? 120);
     player.dashCooldown = 0;
     player.hp    = player.maxHp;
+    player.ammo  = AMMO_MAX;
+    player.ammoRegenTimer = 0;
+    player.ammoNoShootFrames = 0;
+    player.infiniteAmmoTimer = 0;
+    player.healOverTimeTimer = 0;
+    player.instakillTimer = 0;
     player.xp    = 0;
     player.level = 1;
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
+    spawnDevModePowerupLine();
     playRandomMusicTrack();
     startWave(1);
 }
@@ -1864,6 +2034,8 @@ function updateWaveProgression() {
     player.prevX = player.x;
     player.prevY = player.y;
 
+    spawnDevModePowerupLine();
+
     startWave(1);
 }
 
@@ -1899,6 +2071,14 @@ function playerDash() {
 
 function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
+    const hasInfiniteAmmo = player.infiniteAmmoTimer > 0;
+    if (!hasInfiniteAmmo && player.ammo < AMMO_SHOT_COST) return;
+
+    if (!hasInfiniteAmmo) {
+        player.ammo = Math.max(0, player.ammo - AMMO_SHOT_COST);
+    }
+    player.ammoRegenTimer = 0;
+    player.ammoNoShootFrames = 0;
     player.shootCooldown = SHOOT_COOLDOWN;
     playLaserShot();
 
@@ -2029,6 +2209,26 @@ function updatePlayer() {
     }
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invulnTimer   > 0) player.invulnTimer--;
+    if (player.infiniteAmmoTimer > 0) {
+        player.infiniteAmmoTimer--;
+        player.ammoRegenTimer = 0;
+        player.ammoNoShootFrames = 0;
+    } else if (player.ammo < AMMO_REGEN_STOP) {
+        player.ammoNoShootFrames++;
+        player.ammoRegenTimer++;
+        const idleSeconds = (player.ammoNoShootFrames * FIXED_STEP) / 1000;
+        const regenInterval = Math.max(
+            AMMO_REGEN_MIN_INTERVAL_FRAMES,
+            Math.floor(AMMO_REGEN_INTERVAL_FRAMES * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)),
+        );
+        if (player.ammoRegenTimer >= regenInterval) {
+            player.ammo = Math.min(AMMO_REGEN_STOP, player.ammo + 1);
+            player.ammoRegenTimer = 0;
+        }
+    } else {
+        player.ammoRegenTimer = 0;
+        player.ammoNoShootFrames++;
+    }
 
     // Age-out trail ghosts when not dashing
     if (!player.dashing) {
@@ -2043,6 +2243,18 @@ function updatePlayer() {
             player.invulnTimer = 60;
         }
     }
+
+    if (player.healOverTimeTimer > 0 && player.hp > 0 && player.hp < player.maxHp) {
+        const framesLeft = Math.max(1, player.healOverTimeTimer);
+        const missingHp = player.maxHp - player.hp;
+        const healAmount = Math.max(HEAL_OVER_TIME_MIN_PER_FRAME, missingHp / framesLeft);
+        player.hp = Math.min(player.maxHp, player.hp + healAmount);
+        player.healOverTimeTimer--;
+    } else if (player.healOverTimeTimer > 0) {
+        player.healOverTimeTimer--;
+    }
+
+    if (player.instakillTimer > 0) player.instakillTimer--;
 
     if (player.hp <= 0) { lastLevelDied = player.level; gameState = 'gameOver'; }
 
@@ -2769,6 +2981,57 @@ function segmentCircleHit(x1, y1, x2, y2, cx, cy, radius) {
     return Math.hypot(cx - nx, cy - ny) <= radius;
 }
 
+function hasActiveAmmoPickup() {
+    for (const p of pickups) {
+        if (p.type === 'ammo') return true;
+    }
+    return false;
+}
+
+function hasActiveHealPickup() {
+    for (const p of pickups) {
+        if (p.type === 'heal') return true;
+    }
+    return false;
+}
+
+function hasActiveInstakillPickup() {
+    for (const p of pickups) {
+        if (p.type === 'instakill') return true;
+    }
+    return false;
+}
+
+function spawnDevModePowerupLine() {
+    if (!devTestMode) return;
+
+    const centerX = player.x;
+    const y = player.y - 72;
+    const spacing = 44;
+
+    pickups.push({
+        x: centerX - spacing, y, prevX: centerX - spacing, prevY: y,
+        vx: 0, vy: 0,
+        size: HEAL_PICKUP_WORLD_SIZE,
+        type: 'heal',
+    });
+
+    pickups.push({
+        x: centerX, y, prevX: centerX, prevY: y,
+        vx: 0, vy: 0,
+        size: AMMO_PICKUP_WORLD_SIZE,
+        type: 'ammo',
+        value: AMMO_PICKUP_VALUE_MIN,
+    });
+
+    pickups.push({
+        x: centerX + spacing, y, prevX: centerX + spacing, prevY: y,
+        vx: 0, vy: 0,
+        size: INSTAKILL_PICKUP_WORLD_SIZE,
+        type: 'instakill',
+    });
+}
+
 function updateProjectiles() {
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
@@ -2786,7 +3049,8 @@ function updateProjectiles() {
         for (const t of tumorTurrets) {
             if (!t.alive) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
-                t.hp--;
+                const turretDamage = player.instakillTimer > 0 ? t.hp : 1;
+                t.hp -= turretDamage;
                 t.hitFlash = 8;
                 t.hpBarTimer = 120;
                 if (t.hp <= 0) t.alive = false;
@@ -2800,7 +3064,8 @@ function updateProjectiles() {
         for (const e of enemies) {
             if (!e.alive) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, e.x, e.y, p.size + e.size)) {
-                e.hp--;
+                const enemyDamage = player.instakillTimer > 0 ? e.hp : 1;
+                e.hp -= enemyDamage;
                 e.hitFlash   = 8;
                 e.hpBarTimer = 120;
 
@@ -2811,6 +3076,7 @@ function updateProjectiles() {
                         const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
                         player.hp = Math.min(player.maxHp, player.hp + heal);
                     }
+                    const ammoDropChance = AMMO_DROP_CHANCE;
                     const variant = e.type === 'tank' ? 'blue' : 'green';
                     pickups.push({
                         x: e.x, y: e.y, prevX: e.x, prevY: e.y,
@@ -2819,6 +3085,37 @@ function updateProjectiles() {
                         type: 'xp', variant,
                         value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
                     });
+                    const canSpawnAmmoPickup = !hasActiveAmmoPickup() && player.infiniteAmmoTimer <= 0;
+                    if (canSpawnAmmoPickup && Math.random() < ammoDropChance) {
+                        const ammoValue = AMMO_PICKUP_VALUE_MIN + Math.floor(Math.random() * (AMMO_PICKUP_VALUE_MAX - AMMO_PICKUP_VALUE_MIN + 1));
+                        pickups.push({
+                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+                            vx: 0, vy: 0,
+                            size: AMMO_PICKUP_WORLD_SIZE,
+                            type: 'ammo',
+                            value: ammoValue,
+                        });
+                    }
+
+                    const canSpawnHealPickup = !hasActiveHealPickup() && player.healOverTimeTimer <= 0;
+                    if (canSpawnHealPickup && Math.random() < HEAL_DROP_CHANCE) {
+                        pickups.push({
+                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+                            vx: 0, vy: 0,
+                            size: HEAL_PICKUP_WORLD_SIZE,
+                            type: 'heal',
+                        });
+                    }
+
+                    const canSpawnInstakillPickup = !hasActiveInstakillPickup() && player.instakillTimer <= 0;
+                    if (canSpawnInstakillPickup && Math.random() < INSTAKILL_DROP_CHANCE) {
+                        pickups.push({
+                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+                            vx: 0, vy: 0,
+                            size: INSTAKILL_PICKUP_WORLD_SIZE,
+                            type: 'instakill',
+                        });
+                    }
                 }
 
                 projectiles.splice(i, 1);
@@ -2889,21 +3186,36 @@ function updatePickups() {
         if (!p.vx)    p.vx    = 0;
         if (!p.vy)    p.vy    = 0;
         if (!p.trail) p.trail = [];
-        if (!p.variant) p.variant = 'green';
-        if (!p.value)   p.value   = XP_PICKUP_BASE_VALUE * (p.variant === 'blue' ? TANK_XP_MULTIPLIER : 1);
+        if (!p.type) p.type = 'xp';
+        if (p.type === 'xp') {
+            if (!p.variant) p.variant = 'green';
+            if (!p.value) p.value = XP_PICKUP_BASE_VALUE * (p.variant === 'blue' ? TANK_XP_MULTIPLIER : 1);
+        } else if (p.type === 'ammo' && !p.value) {
+            p.value = AMMO_PICKUP_VALUE_MIN;
+        } else if (p.type === 'heal') {
+            p.value = 0;
+        } else if (p.type === 'instakill') {
+            p.value = 0;
+        }
 
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
 
-        if (dist < XP_ATTRACT_RADIUS && dist > 0) {
-            const pull = XP_ATTRACT_SPEED * (1 - dist / XP_ATTRACT_RADIUS) + 0.5;
-            p.vx += (player.x - p.x) / dist * pull * 0.15;
-            p.vy += (player.y - p.y) / dist * pull * 0.15;
-            const sp = Math.hypot(p.vx, p.vy);
-            if (sp > XP_ATTRACT_SPEED) { p.vx = (p.vx / sp) * XP_ATTRACT_SPEED; p.vy = (p.vy / sp) * XP_ATTRACT_SPEED; }
-            if (p.type === 'xp' && frameCount % 2 === 0) p.trail.push({ x: p.x, y: p.y, age: 0 });
+        if (p.type === 'xp') {
+            if (dist < XP_ATTRACT_RADIUS && dist > 0) {
+                const pull = XP_ATTRACT_SPEED * (1 - dist / XP_ATTRACT_RADIUS) + 0.5;
+                p.vx += (player.x - p.x) / dist * pull * 0.15;
+                p.vy += (player.y - p.y) / dist * pull * 0.15;
+                const sp = Math.hypot(p.vx, p.vy);
+                if (sp > XP_ATTRACT_SPEED) { p.vx = (p.vx / sp) * XP_ATTRACT_SPEED; p.vy = (p.vy / sp) * XP_ATTRACT_SPEED; }
+                if (frameCount % 2 === 0) p.trail.push({ x: p.x, y: p.y, age: 0 });
+            } else {
+                p.vx *= 0.85;
+                p.vy *= 0.85;
+            }
         } else {
-            p.vx *= 0.85;
-            p.vy *= 0.85;
+            // Ammo powerups stay fixed in place until the player walks over them.
+            p.vx = 0;
+            p.vy = 0;
         }
 
         for (let t = p.trail.length - 1; t >= 0; t--) {
@@ -2911,8 +3223,10 @@ function updatePickups() {
             if (p.trail[t].age > 12) p.trail.splice(t, 1);
         }
 
-        p.x += p.vx;
-        p.y += p.vy;
+        if (p.type === 'xp') {
+            p.x += p.vx;
+            p.y += p.vy;
+        }
 
         if (dist < player.size + p.size) {
             if (p.type === 'xp') {
@@ -2924,6 +3238,18 @@ function updatePickups() {
                     player.level++;
                     gameState = 'levelUp';
                 }
+            } else if (p.type === 'ammo') {
+                playAmmoPickupSound();
+                player.ammo = AMMO_MAX;
+                player.ammoRegenTimer = 0;
+                player.ammoNoShootFrames = 0;
+                player.infiniteAmmoTimer = AMMO_POWERUP_DURATION_FRAMES;
+            } else if (p.type === 'heal') {
+                playHealPickupSound();
+                player.healOverTimeTimer = HEAL_OVER_TIME_DURATION_FRAMES;
+            } else if (p.type === 'instakill') {
+                playInstakillPickupSound();
+                player.instakillTimer = INSTAKILL_DURATION_FRAMES;
             }
             pickups.splice(i, 1);
         }
@@ -2931,11 +3257,35 @@ function updatePickups() {
 }
 
 function drawPickups() {
+    const drawList = [];
     for (const p of pickups) {
+        if (p.type === 'ammo' || p.type === 'heal' || p.type === 'instakill') continue;
+        drawList.push(p);
+    }
+    for (const p of pickups) {
+        if (p.type !== 'heal') continue;
+        drawList.push(p);
+    }
+    for (const p of pickups) {
+        if (p.type !== 'instakill') continue;
+        drawList.push(p);
+    }
+    for (const p of pickups) {
+        if (p.type !== 'ammo') continue;
+        drawList.push(p);
+    }
+
+    for (const p of drawList) {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
-        const variant = XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
+        const variant = p.type === 'ammo'
+            ? { shadow: '#ffee66', rgb: '255,238,102' }
+            : p.type === 'heal'
+                ? { shadow: '#75ff90', rgb: '117,255,144' }
+            : p.type === 'instakill'
+                ? { shadow: '#ff5e5e', rgb: '255,94,94' }
+            : XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
 
         // Trail dots
         if (p.type === 'xp' && p.trail?.length) {
@@ -2979,6 +3329,84 @@ function drawPickups() {
                 ctx.fillStyle = variant.shadow;
                 ctx.beginPath();
                 ctx.arc(sc.x, sc.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else if (p.type === 'ammo') {
+            const pulse = 0.72 + 0.28 * Math.sin(frameCount * 0.05);
+            const drawRadius = p.size * AMMO_PICKUP_DRAW_SCALE;
+            ctx.save();
+
+            const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.2 * pulse);
+            halo.addColorStop(0,   `rgba(${variant.rgb},0.38)`);
+            halo.addColorStop(0.5, `rgba(${variant.rgb},0.12)`);
+            halo.addColorStop(1,   'rgba(255,238,102,0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, drawRadius * 3.2 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowColor = variant.shadow;
+            ctx.shadowBlur  = 18 * pulse;
+            if (pickupAmmoSprite.complete && pickupAmmoSprite.naturalWidth) {
+                ctx.drawImage(pickupAmmoSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+            } else {
+                ctx.fillStyle = variant.shadow;
+                ctx.beginPath();
+                ctx.arc(sc.x, sc.y, drawRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else if (p.type === 'heal') {
+            const pulse = 0.75 + 0.25 * Math.sin(frameCount * 0.06);
+            const drawRadius = p.size * HEAL_PICKUP_DRAW_SCALE;
+            ctx.save();
+
+            const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.4 * pulse);
+            halo.addColorStop(0,   `rgba(${variant.rgb},0.36)`);
+            halo.addColorStop(0.5, `rgba(${variant.rgb},0.12)`);
+            halo.addColorStop(1,   'rgba(117,255,144,0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, drawRadius * 3.4 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowColor = variant.shadow;
+            ctx.shadowBlur  = 18 * pulse;
+            if (pickupHealSprite.complete && pickupHealSprite.naturalWidth) {
+                ctx.drawImage(pickupHealSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+            } else {
+                ctx.fillStyle = variant.shadow;
+                ctx.beginPath();
+                ctx.arc(sc.x, sc.y, drawRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        } else if (p.type === 'instakill') {
+            const pulse = 0.76 + 0.24 * Math.sin(frameCount * 0.08);
+            const drawRadius = p.size * INSTAKILL_PICKUP_DRAW_SCALE;
+            ctx.save();
+
+            const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.5 * pulse);
+            halo.addColorStop(0,   `rgba(${variant.rgb},0.4)`);
+            halo.addColorStop(0.5, `rgba(${variant.rgb},0.14)`);
+            halo.addColorStop(1,   'rgba(255,94,94,0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, drawRadius * 3.5 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowColor = variant.shadow;
+            ctx.shadowBlur  = 20 * pulse;
+            if (pickupInstaKillSprite.complete && pickupInstaKillSprite.naturalWidth) {
+                ctx.drawImage(pickupInstaKillSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+            } else {
+                ctx.fillStyle = variant.shadow;
+                ctx.beginPath();
+                ctx.arc(sc.x, sc.y, drawRadius, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -3218,6 +3646,303 @@ function drawXpBar() {
     ctx.restore();
 }
 
+function drawAmmoBar() {
+    const DW  = 360;
+    const DH  = Math.round(DW * 28 / 620);
+    const RAD = Math.round(7 * DW / 620);
+    const bx  = 22;
+    const by  = canvas.height - DH - 58;
+    const ammoPowerupActive = player.infiniteAmmoTimer > 0;
+    const displayedAmmo = ammoPowerupActive ? AMMO_MAX : player.ammo;
+    const xf  = Math.min(displayedAmmo / AMMO_MAX, 1);
+    const fw  = Math.floor(xf * DW);
+    const capX = Math.floor((AMMO_REGEN_STOP / AMMO_MAX) * DW);
+    const t   = frameCount * 0.04;
+    const flash = ammoPowerupActive || player.ammo <= AMMO_REGEN_STOP;
+    const pulse = flash ? 1.0 : 0.6 + 0.4 * Math.sin(t * 1.15);
+    const shimmer = Math.sin(t * 1.7) * 0.5 + 0.5;
+
+    function clipRounded(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(ammoBarGlowSprite, bx - 16, by - 16, DW + 32, DH + 32);
+    ctx.restore();
+
+    ctx.drawImage(ammoBarBgSprite, bx, by, DW, DH);
+
+    if (fw > 1) {
+        ctx.save();
+        clipRounded(bx, by, fw, DH, RAD);
+        ctx.clip();
+        ctx.filter = `brightness(${flash ? 1 + xpBarFlash * 0.05 : 1})`;
+        ctx.drawImage(ammoBarFillSprite, bx, by, DW, DH);
+        ctx.filter = 'none';
+
+        const ig = ctx.createRadialGradient(bx + fw, by + DH / 2, 0, bx + fw, by + DH / 2, DH * (1.3 + pulse * 0.6));
+        ig.addColorStop(0,   `rgba(255,220,80,${0.55 * pulse})`);
+        ig.addColorStop(0.4, `rgba(255,180,30,${0.28 * pulse})`);
+        ig.addColorStop(1,   'rgba(255,140,0,0)');
+        ctx.fillStyle = ig;
+        ctx.fillRect(bx, by, fw, DH);
+
+        const sg = ctx.createLinearGradient(bx + shimmer * fw - DW * 0.06, 0, bx + shimmer * fw + DW * 0.06, 0);
+        sg.addColorStop(0,   'rgba(255,255,200,0)');
+        sg.addColorStop(0.5, `rgba(255,255,220,${0.18 * pulse})`);
+        sg.addColorStop(1,   'rgba(255,255,200,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(bx, by, fw, DH);
+        ctx.restore();
+    }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx + capX, by + 2);
+    ctx.lineTo(bx + capX, by + DH - 2);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.drawImage(ammoBarFrameSprite, bx, by, DW, DH);
+
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 14px Arial';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#ffe866';
+    ctx.fillText(ammoPowerupActive ? 'AMMO POWER' : 'AMMO', bx, by - 6);
+    ctx.font = 'bold 12px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    if (ammoPowerupActive) {
+        const secsLeft = Math.ceil((player.infiniteAmmoTimer * FIXED_STEP) / 1000);
+        ctx.fillText(`INF ${secsLeft}s`, bx + DW - 88, by + DH / 2 + 4);
+    } else {
+        ctx.fillText(`${player.ammo} / ${AMMO_MAX}`, bx + DW - 88, by + DH / 2 + 4);
+    }
+    ctx.restore();
+}
+
+function drawAmmoPowerupOverlay() {
+    if (player.infiniteAmmoTimer <= 0) return;
+
+    const secsLeft = Math.ceil((player.infiniteAmmoTimer * FIXED_STEP) / 1000);
+    const pulse = 0.9 + 0.25 * Math.sin(frameCount * 0.25);
+    const flashAlpha = (Math.floor(frameCount / 4) % 2 === 0) ? 0.95 : 0.45;
+    const size = 78 * pulse;
+    const cx = canvas.width * 0.5;
+    const cy = 86;
+
+    ctx.save();
+    ctx.globalAlpha = flashAlpha;
+    ctx.shadowColor = '#ffee66';
+    ctx.shadowBlur = 26;
+    if (pickupAmmoSprite.complete && pickupAmmoSprite.naturalWidth) {
+        ctx.drawImage(pickupAmmoSprite, cx - size * 0.5, cy - size * 0.5, size, size);
+    } else {
+        ctx.fillStyle = '#ffee66';
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#ffe866';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(`INFINITE AMMO ${secsLeft}s`, cx, cy + 56);
+    ctx.restore();
+}
+
+function drawInstakillPowerupOverlay() {
+    if (player.instakillTimer <= 0) return;
+
+    const secsLeft = Math.ceil((player.instakillTimer * FIXED_STEP) / 1000);
+    const pulse = 0.9 + 0.25 * Math.sin(frameCount * 0.29);
+    const flashAlpha = (Math.floor(frameCount / 4) % 2 === 0) ? 0.95 : 0.4;
+    const size = 74 * pulse;
+    const cx = canvas.width * 0.5;
+    const cy = 168;
+
+    ctx.save();
+    ctx.globalAlpha = flashAlpha;
+    ctx.shadowColor = '#ff5e5e';
+    ctx.shadowBlur = 26;
+    if (pickupInstaKillSprite.complete && pickupInstaKillSprite.naturalWidth) {
+        ctx.drawImage(pickupInstaKillSprite, cx - size * 0.5, cy - size * 0.5, size, size);
+    } else {
+        ctx.fillStyle = '#ff5e5e';
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#ff9898';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(`INSTA KILL ${secsLeft}s`, cx, cy + 54);
+    ctx.restore();
+}
+
+function getLastAliveEnemy() {
+    for (const e of enemies) {
+        if (e.alive) return e;
+    }
+    return null;
+}
+
+function drawLastEnemyArrow() {
+    if (enemiesRemainingInWave !== 1 || enemiesToSpawn > 0) return;
+
+    const enemy = getLastAliveEnemy();
+    if (!enemy) return;
+
+    const playerX = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
+    const playerY = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
+    const enemyX = (enemy.prevX ?? enemy.x) + (enemy.x - (enemy.prevX ?? enemy.x)) * renderAlpha;
+    const enemyY = (enemy.prevY ?? enemy.y) + (enemy.y - (enemy.prevY ?? enemy.y)) * renderAlpha;
+
+    const playerScreen = toScreen(playerX, playerY);
+    const enemyScreen = toScreen(enemyX, enemyY);
+    const dx = enemyScreen.x - playerScreen.x;
+    const dy = enemyScreen.y - playerScreen.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.001) return;
+
+    const ux = dx / dist;
+    const uy = dy / dist;
+    const angle = Math.atan2(uy, ux);
+    const edgeRadius = Math.min(canvas.width, canvas.height) * 0.42;
+    const margin = 36;
+
+    let ax = playerScreen.x + ux * edgeRadius;
+    let ay = playerScreen.y + uy * edgeRadius;
+    ax = Math.max(margin, Math.min(canvas.width - margin, ax));
+    ay = Math.max(margin, Math.min(canvas.height - margin, ay));
+
+    const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.22);
+
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(angle);
+
+    ctx.globalAlpha = 0.95;
+    ctx.shadowColor = '#ff4d4d';
+    ctx.shadowBlur = 14 * pulse;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 19, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ff625d';
+    ctx.beginPath();
+    ctx.moveTo(18, 0);
+    ctx.lineTo(-10, -9);
+    ctx.lineTo(-10, 9);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#ffd4d4';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('LAST ENEMY', ax, ay - 24);
+    ctx.restore();
+}
+
+function getActiveAmmoPickup() {
+    for (const p of pickups) {
+        if (p.type === 'ammo') return p;
+    }
+    return null;
+}
+
+function drawAmmoPickupArrow() {
+    const ammoPickup = getActiveAmmoPickup();
+    if (!ammoPickup) return;
+
+    const playerX = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
+    const playerY = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
+    const pickupX = (ammoPickup.prevX ?? ammoPickup.x) + (ammoPickup.x - (ammoPickup.prevX ?? ammoPickup.x)) * renderAlpha;
+    const pickupY = (ammoPickup.prevY ?? ammoPickup.y) + (ammoPickup.y - (ammoPickup.prevY ?? ammoPickup.y)) * renderAlpha;
+
+    const playerScreen = toScreen(playerX, playerY);
+    const pickupScreen = toScreen(pickupX, pickupY);
+    const dx = pickupScreen.x - playerScreen.x;
+    const dy = pickupScreen.y - playerScreen.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.001) return;
+
+    const ux = dx / dist;
+    const uy = dy / dist;
+    const angle = Math.atan2(uy, ux);
+    const edgeRadius = Math.min(canvas.width, canvas.height) * 0.38;
+    const margin = 42;
+
+    let ax = playerScreen.x + ux * edgeRadius;
+    let ay = playerScreen.y + uy * edgeRadius;
+    ax = Math.max(margin, Math.min(canvas.width - margin, ax));
+    ay = Math.max(margin, Math.min(canvas.height - margin, ay));
+
+    const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.2);
+
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.96;
+    ctx.shadowColor = '#ffe866';
+    ctx.shadowBlur = 16 * pulse;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.56)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffe866';
+    ctx.beginPath();
+    ctx.moveTo(19, 0);
+    ctx.lineTo(-11, -10);
+    ctx.lineTo(-11, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#fff0a0';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('MAX AMMO PICKUP', ax, ay - 24);
+    ctx.restore();
+}
+
 
 // =============================================================================
 //  UI — HUD OVERLAY
@@ -3273,6 +3998,11 @@ function drawUI() {
 
     drawVials();
     drawXpBar();
+    drawAmmoBar();
+    drawAmmoPowerupOverlay();
+    drawInstakillPowerupOverlay();
+    drawAmmoPickupArrow();
+    drawLastEnemyArrow();
 }
 
 function drawVisibilityMask() {
@@ -4018,6 +4748,9 @@ setMusicVolume(musicVolume, { persist: false });
 setSfxVolume(sfxVolume, { persist: false });
 initializeLaserShotPool();
 initializeDashPool();
+initializeAmmoPickupPool();
+initializeHealPickupPool();
+initializeInstakillPickupPool();
 initializeUiClickPool();
 initializeExpOrbPool();
 playRandomMusicTrack();
