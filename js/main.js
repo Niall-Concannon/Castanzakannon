@@ -529,6 +529,7 @@ let mapTiles       = [];
 let tumorTurrets   = [];
 let frameCount     = 0;
 let gameState      = 'splash';
+let gamePaused     = false;
 let menuPage       = 'main';
 let selectedCursor = 0;
 let selectedCharacter = 0;
@@ -959,6 +960,11 @@ window.addEventListener('keydown', e => {
 
     if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters')) {
         menuPage = 'main';
+        playUiClick();
+    }
+
+    if (e.key === 'Escape' && gameState === 'playing') {
+        gamePaused = !gamePaused;
         playUiClick();
     }
 
@@ -1940,6 +1946,7 @@ function startGame() {
     player.instakillTimer = 0;
     player.xp    = 0;
     player.level = 1;
+    gamePaused   = false;
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
@@ -4005,6 +4012,22 @@ function drawUI() {
     drawLastEnemyArrow();
 }
 
+function drawPauseOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 16);
+    ctx.font = '16px Arial';
+    ctx.fillText('Press Escape to resume', canvas.width / 2, canvas.height / 2 + 20);
+    ctx.restore();
+}
+
 function drawVisibilityMask() {
     if (fogCanvas.width !== canvas.width || fogCanvas.height !== canvas.height) {
         fogCanvas.width  = canvas.width;
@@ -4691,7 +4714,7 @@ function gameLoop(timestamp) {
     if (gameState === 'gameOver') { drawGameOver(); requestAnimationFrame(gameLoop); return; }
     if (gameState === 'win')      { drawWinScreen(); requestAnimationFrame(gameLoop); return; }
 
-    if (gameState === 'playing') {
+    if (gameState === 'playing' && !gamePaused) {
         accumulator += dt;
         while (accumulator >= FIXED_STEP) {
             savePrevPositions();
@@ -4709,7 +4732,7 @@ function gameLoop(timestamp) {
         }
         renderAlpha = accumulator / FIXED_STEP;
     } else {
-        // levelUp — logic frozen, animations still run
+        // playing paused or levelUp — logic frozen, animations still run
         frameCount++;
         renderAlpha = 1;
     }
@@ -4724,6 +4747,7 @@ function gameLoop(timestamp) {
     drawEnemyProjectiles();
     drawPickups();
     drawUI();
+    if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
     drawCursor();
 
