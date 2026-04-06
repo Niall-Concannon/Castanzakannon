@@ -1,28 +1,42 @@
 # Castanzakannon
 
-## Introduction
-Castanzakannon is a fast-paced, top-down dungeon-style browser game where players explore procedurally generated levels filled with enemies, obstacles, and environmental hazards. Each level presents new challenges, and players must strategically navigate the dungeon, using movement, dashing, and shooting mechanics to survive. The game gradually ramps up difficulty with tougher enemies and larger waves, culminating in challenging boss encounters that test the player’s skills and reflexes.
-
-## Objective
-Players aim to survive and progress through multiple dungeon levels. Progression is achieved by defeating a required number of enemies or surviving for a set period, unlocking the next level. Along the way, players collect opportunities to improve their performance, face increasingly complex enemy patterns, and ultimately confront boss fights at the end of each dungeon stage. The goal is to survive, score high, and conquer all levels of the dungeon.
+Castanzakannon is a thrilling top-down dungeon rougelike that you can play right in your browser. Built with HTML, CSS, and JavaScript, it lets you navigate procedurally generated levels, battle enemies, and survive challenging boss encounters in an action-packed adventure.
 
 ## Features
 
+- **Procedural Level Generation**: Every playthrough feels fresh with unique dungeon layouts, obstacles, and hazards.
+- **Dynamic Gameplay Mechanics**: Use movement, dashing, and shooting to dodge enemies and environmental threats.
+- **Progressive Difficulty**: As you advance, you'll face tougher enemies, bigger waves, and more complex patterns.
+- **Boss Battles**: Put your skills to the test against tough bosses at the end of each level.
+- **Power-Ups and Upgrades**: Grab items to boost your performance and stay alive longer.
+- **Survival Focus**: Survive enemy waves or timed challenges to unlock the next level.
+
+## How to Play
+
+1. Just open `index.html` in your web browser to jump right in.
+2. Use the controls to move, dash, and shoot through the dungeon.
+3. Take down enemies, dodge hazards, and pick up power-ups to keep going.
+4. Try to beat all the levels and rack up a high score!
+
+### Controls
+- **Movement**: Arrow keys or WASD
+- **Dash**: Spacebar
+- **Shoot**: Left mouse button
+
 ## Technologies Used
+
 ### Core Technologies
-- **HTML** – Markup language for structuring web content  
-- **CSS** – Styling and layout of web pages  
-- **JavaScript** – Interactive and dynamic functionality  
+- **HTML**: For structuring the web content
+- **CSS**: For styling and layout
+- **JavaScript**: For all the interactive fun
 
 ### Development Tools
-- **VS Code** – Integrated development environment for coding and debugging  
-- **Git** – Version control system for tracking changes  
-- **GitHub** – Remote repository hosting for collaboration and code management  
-
-### Optional / Future Technology
-- **MySQL** – Optional database for future features like high scores or persistent player data (may be revised depending on scope)
+- **VS Code**: Our go-to editor for coding and debugging
+- **Git**: Keeps track of all our changes
+- **GitHub**: Where we host the code and collaborate
 
 ## Team Members
+
 - **Niall Concannon** – [GitHub Profile](https://github.com/Niall-Concannon)
 - **Daniel Balcerzak** – [GitHub Profile](https://github.com/BALCER1)
 - **Giuseppe Castagna** – [GitHub Profile](https://github.com/GiuseppeCiroCastagna)
