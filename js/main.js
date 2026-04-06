@@ -528,6 +528,7 @@ let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
 let tumorTurrets   = [];
 let frameCount     = 0;
+let elapsedGameMs  = 0;
 let gameState      = 'splash';
 let gamePaused     = false;
 let menuPage       = 'main';
@@ -1946,6 +1947,7 @@ function startGame() {
     player.instakillTimer = 0;
     player.xp    = 0;
     player.level = 1;
+    elapsedGameMs = 0;
     gamePaused   = false;
     gameState    = 'playing';
     lastTimestamp = 0;
@@ -4001,6 +4003,10 @@ function drawUI() {
     ctx.fillText(`Enemies Remaining: ${enemiesRemainingInWave}`, canvas.width - 22, 48);
     ctx.fillStyle = 'rgba(220,220,220,0.9)';
     ctx.fillText(`To Spawn: ${remainingNow > 0 ? remainingNow : 0}`, canvas.width - 22, 68);
+    const elapsedSeconds = Math.floor(elapsedGameMs / 1000);
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = String(elapsedSeconds % 60).padStart(2, '0');
+    ctx.fillText(`Time: ${minutes}:${seconds}`, canvas.width - 22, 88);
     ctx.restore();
 
     drawVials();
@@ -4715,6 +4721,7 @@ function gameLoop(timestamp) {
     if (gameState === 'win')      { drawWinScreen(); requestAnimationFrame(gameLoop); return; }
 
     if (gameState === 'playing' && !gamePaused) {
+        elapsedGameMs += dt;
         accumulator += dt;
         while (accumulator >= FIXED_STEP) {
             savePrevPositions();
