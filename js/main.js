@@ -234,10 +234,10 @@ const RAILGUN_BEAM_LIFE_FRAMES = 9;
 
 const UPGRADE_RARITY_WEIGHTS = {  //default rarity weights for testing
     common: 56, //56
-    rare: 1, //28
+    rare: 28, //28
     epic: 12, //12
     legendary: 4, //4
-    mythical: 28, //1
+    mythical: 1, //1
 };
 
 const LEVEL_UPGRADES = [
@@ -698,6 +698,8 @@ let showPerfGuide  = false;
 let showFpsCounter = true;
 let splashFadeTimerMs = 0;
 let devTestMode    = false;
+let devCheatMenuEnabled = false;
+let showCheatMenu = false;
 let devTestWaveLimit = WAVES_PER_LEVEL;
 let currentArenaLevel = 1;
 let currentWave = 1;
@@ -833,12 +835,19 @@ function beginLevelUp() {
     gameState = 'levelUp';
 }
 
+function applyUpgradeById(upgradeId) {
+    const upgrade = LEVEL_UPGRADES.find(u => u.id === upgradeId);
+    if (!upgrade) return false;
+    upgrade.apply();
+    player.upgradeLevels[upgrade.id] = getUpgradeLevel(upgrade.id) + 1;
+    return true;
+}
+
 function applyUpgradeChoice(choiceIndex) {
     const upgrade = currentLevelUpChoices[choiceIndex];
     if (!upgrade) return;
 
-    upgrade.apply();
-    player.upgradeLevels[upgrade.id] = getUpgradeLevel(upgrade.id) + 1;
+    applyUpgradeById(upgrade.id);
     currentLevelUpChoices = [];
     gameState = 'playing';
 }
@@ -850,6 +859,34 @@ function applyPlayerDamage(baseDamage) {
 
 function getPlayerXpAttractRadius() {
     return XP_ATTRACT_RADIUS * player.xpAttractMult;
+}
+
+function getCheatMenuZones() {
+    const panelW = 390;
+    const rowH = 24;
+    const panelH = Math.min(canvas.height - 120, 64 + LEVEL_UPGRADES.length * rowH + 12);
+    const panelX = canvas.width - panelW - 20;
+    const panelY = 112;
+    const close = { x: panelX + panelW - 34, y: panelY + 8, w: 24, h: 20 };
+
+    const rows = [];
+    for (let i = 0; i < LEVEL_UPGRADES.length; i++) {
+        const y = panelY + 40 + i * rowH;
+        if (y + rowH > panelY + panelH - 8) break;
+        rows.push({
+            x: panelX + 10,
+            y,
+            w: panelW - 20,
+            h: rowH - 2,
+            upgrade: LEVEL_UPGRADES[i],
+        });
+    }
+
+    return {
+        panel: { x: panelX, y: panelY, w: panelW, h: panelH },
+        close,
+        rows,
+    };
 }
 
 function handleEnemyDefeat(e) {
@@ -1329,6 +1366,11 @@ window.addEventListener('keydown', e => {
     }
 
     if (e.key === 'Escape' && gameState === 'playing') {
+        if (showCheatMenu) {
+            showCheatMenu = false;
+            playUiClick();
+            return;
+        }
         gamePaused = !gamePaused;
         playUiClick();
     }
@@ -1343,6 +1385,14 @@ window.addEventListener('keydown', e => {
 
     if (gameState === 'playing' && !gamePaused && e.key.toLowerCase() === 'q') {
         activateRailgunUlt();
+    }
+
+    if (gameState === 'playing' && devCheatMenuEnabled) {
+        const lower = e.key.toLowerCase();
+        if (lower === 'k' || e.key === 'F2') {
+            showCheatMenu = !showCheatMenu;
+            playUiClick();
+        }
     }
 
     if (gameState === 'levelUp') {
@@ -1374,6 +1424,26 @@ window.addEventListener('mousedown', e => {
         return;
     }
 
+    if (gameState === 'playing' && showCheatMenu) {
+        const zones = getCheatMenuZones();
+        const inPanel = mouseX >= zones.panel.x && mouseX <= zones.panel.x + zones.panel.w && mouseY >= zones.panel.y && mouseY <= zones.panel.y + zones.panel.h;
+
+        if (mouseX >= zones.close.x && mouseX <= zones.close.x + zones.close.w && mouseY >= zones.close.y && mouseY <= zones.close.y + zones.close.h) {
+            playUiClick();
+            showCheatMenu = false;
+            return;
+        }
+
+        for (const row of zones.rows) {
+            if (mouseX >= row.x && mouseX <= row.x + row.w && mouseY >= row.y && mouseY <= row.y + row.h) {
+                if (applyUpgradeById(row.upgrade.id)) playUiClick();
+                return;
+            }
+        }
+
+        if (inPanel) return;
+    }
+
     mouseDown = true;
 
     if (gameState === 'menu') {
@@ -1384,6 +1454,7 @@ window.addEventListener('mousedown', e => {
             const pb  = getPerfButton();
             const fpb = getFpsToggleButton();
             const dtb = getDevTestButton();
+            const dcb = getDevCheatButton();
             if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
                 playUiClick();
                 menuPage = 'characters';
@@ -1396,6 +1467,10 @@ window.addEventListener('mousedown', e => {
             } else if (mouseX >= dtb.x && mouseX <= dtb.x + dtb.w && mouseY >= dtb.y && mouseY <= dtb.y + dtb.h) {
                 playUiClick();
                 devTestMode = !devTestMode;
+            } else if (mouseX >= dcb.x && mouseX <= dcb.x + dcb.w && mouseY >= dcb.y && mouseY <= dcb.y + dcb.h) {
+                playUiClick();
+                devCheatMenuEnabled = !devCheatMenuEnabled;
+                if (!devCheatMenuEnabled) showCheatMenu = false;
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
                 playUiClick();
                 fogEnabled = !fogEnabled;
@@ -2282,6 +2357,7 @@ function drawMap() {
 
 function startGame() {
     showPerfGuide = false;
+    showCheatMenu = false;
     currentArenaLevel = 1;
     currentWave = 1;
     enemiesRemainingInWave = 0;
@@ -2346,6 +2422,57 @@ function startGame() {
     spawnDevModePowerupLine();
     playRandomMusicTrack();
     startWave(1);
+}
+
+function drawCheatMenu() {
+    if (!showCheatMenu || gameState !== 'playing') return;
+
+    const zones = getCheatMenuZones();
+    const { panel, close, rows } = zones;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panel.x, panel.y, panel.w, panel.h);
+
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#ffe59f';
+    ctx.textAlign = 'left';
+    ctx.fillText('DEV CHEAT MENU (K/F2)', panel.x + 10, panel.y + 22);
+
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    const closeHover = mouseX >= close.x && mouseX <= close.x + close.w && mouseY >= close.y && mouseY <= close.y + close.h;
+    ctx.fillStyle = closeHover ? '#ff9d9d' : '#ffd4d4';
+    ctx.fillText('X', close.x + close.w / 2, close.y + 15);
+
+    for (const row of rows) {
+        const hover = mouseX >= row.x && mouseX <= row.x + row.w && mouseY >= row.y && mouseY <= row.y + row.h;
+        const level = getUpgradeLevel(row.upgrade.id);
+        const rarityColor = getRarityUiColor(row.upgrade.rarity);
+
+        if (hover) {
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillRect(row.x, row.y, row.w, row.h);
+        }
+
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = rarityColor;
+        ctx.fillText(`[${row.upgrade.rarity[0].toUpperCase()}] ${row.upgrade.title}`, row.x + 6, row.y + 15);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#d5e7ff';
+        ctx.fillText(`Lv ${level}`, row.x + row.w - 8, row.y + 15);
+    }
+
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(220,230,255,0.85)';
+    ctx.fillText('Click an upgrade to apply it instantly', panel.x + 10, panel.y + panel.h - 8);
+    ctx.restore();
 }
 
 function setMapThemeForCurrentLevel() {
@@ -4479,6 +4606,7 @@ function drawUI() {
     drawUpgradeHud();
     drawAmmoPickupArrow();
     drawLastEnemyArrow();
+    drawCheatMenu();
 }
 
 function drawPauseOverlay() {
@@ -4551,9 +4679,10 @@ function drawVisibilityMask() {
 function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
 function getFpsToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 222, w: 160, h: 36 }; }
 function getDevTestButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 270, w: 160, h: 36 }; }
+function getDevCheatButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 318, w: 160, h: 36 }; }
 function getDevTestWaveControlRect() {
-    const dtb = getDevTestButton();
-    return { x: dtb.x, y: dtb.y + dtb.h + 8, w: dtb.w, h: 28 };
+    const anchor = getDevCheatButton();
+    return { x: anchor.x, y: anchor.y + anchor.h + 8, w: anchor.w, h: 28 };
 }
 function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
@@ -4853,6 +4982,18 @@ function drawMenu() {
         ctx.font        = '13px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), dtb.x + dtb.w / 2, dtb.y + dtb.h / 2 + 5);
+
+        // Dev cheat menu enable button
+        const dcb = getDevCheatButton();
+        ctx.fillStyle   = '#000000';
+        ctx.fillRect(dcb.x, dcb.y, dcb.w, dcb.h);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(dcb.x, dcb.y, dcb.w, dcb.h);
+        ctx.fillStyle   = '#ffffff';
+        ctx.font        = '13px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('Dev Cheats: ' + (devCheatMenuEnabled ? 'ON' : 'OFF'), dcb.x + dcb.w / 2, dcb.y + dcb.h / 2 + 5);
 
         if (showPerfGuide) drawPerfGuide();
     } else if (menuPage === 'characters') {
