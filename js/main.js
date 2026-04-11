@@ -4021,6 +4021,50 @@ function drawAmmoPickupArrow() {
     ctx.restore();
 }
 
+function drawUpgradeHud() {
+    const rapid = getUpgradeSlotInfo(0);
+    const rounds = getUpgradeSlotInfo(1);
+    const juggernaut = getUpgradeSlotInfo(2);
+
+    const panelX = 20;
+    const panelY = 252;
+    const panelW = 260;
+    const panelH = 94;
+
+    const fireRateBonus = Math.round((player.fireRateMult - 1) * 100);
+    const damageReduction = Math.round((1 - player.damageTakenMult) * 100);
+    const bulletDamage = Number.isInteger(player.bulletDamage)
+        ? String(player.bulletDamage)
+        : player.bulletDamage.toFixed(2);
+    const baseHp = getSelectedCharacter().maxHp ?? 100;
+    const maxHpBonus = Math.max(0, Math.round(player.maxHp - baseHp));
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.56)';
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 4;
+
+    ctx.font = 'bold 11px Arial';
+    ctx.fillStyle = '#d5e7ff';
+    ctx.fillText('UPGRADES', panelX + 8, panelY + 14);
+
+    ctx.font = '10px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`1 ${rapid?.title ?? 'Rapid Fire'} L${rapid?.level ?? 0}   FR +${fireRateBonus}%`, panelX + 8, panelY + 33);
+    ctx.fillText(`2 ${rounds?.title ?? 'High-Cal Rounds'} L${rounds?.level ?? 0}   DMG ${bulletDamage}`, panelX + 8, panelY + 49);
+    ctx.fillText(`3 ${juggernaut?.title ?? 'Juggernaut Frame'} L${juggernaut?.level ?? 0}   DR ${damageReduction}%`, panelX + 8, panelY + 65);
+
+    ctx.fillStyle = 'rgba(220,230,255,0.88)';
+    ctx.fillText(`CD ${getPlayerShootCooldownFrames().toFixed(2)}f   HP+ ${maxHpBonus}`, panelX + 8, panelY + 82);
+    ctx.restore();
+}
+
 
 // =============================================================================
 //  UI — HUD OVERLAY
@@ -4083,6 +4127,7 @@ function drawUI() {
     drawAmmoBar();
     drawAmmoPowerupOverlay();
     drawInstakillPowerupOverlay();
+    drawUpgradeHud();
     drawAmmoPickupArrow();
     drawLastEnemyArrow();
 }
@@ -4680,6 +4725,8 @@ function drawLevelUpMenu() {
     ctx.fillStyle   = sh ? '#ffffff' : 'rgba(200,200,200,0.85)';
     ctx.fillText('Skip  ›', skip.x + skip.w / 2, skip.y + skip.h / 2 + 6);
     ctx.restore();
+
+    drawUpgradeHud();
 }
 
 function drawGameOver() {
