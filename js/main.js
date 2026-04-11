@@ -227,6 +227,33 @@ const MUZZLE_LIFE      = 6;    // frames the flash lives
 const MUZZLE_SPARKS    = 5;    // number of sparks per shot
 const SHOOT_COOLDOWN   = 5;    // frames between shots (was 10)
 const BULLET_SPREAD    = 0.10; // max random angle offset in radians (~±6°)
+const MIN_SHOOT_COOLDOWN = 1;
+
+const LEVEL_UPGRADE_SLOTS = [
+    {
+        title: 'Rapid Fire',
+        detail: '+30% fire rate',
+        apply: () => {
+            player.fireRateMult = Math.min(4.5, player.fireRateMult * 1.3);
+        },
+    },
+    {
+        title: 'High-Cal Rounds',
+        detail: '+1 bullet damage',
+        apply: () => {
+            player.bulletDamage = Math.min(25, player.bulletDamage + 1);
+        },
+    },
+    {
+        title: 'Juggernaut Frame',
+        detail: '-10% damage taken, +12 max HP',
+        apply: () => {
+            player.damageTakenMult = Math.max(0.35, player.damageTakenMult * 0.9);
+            player.maxHp += 12;
+            player.hp = Math.min(player.maxHp, player.hp + 12);
+        },
+    },
+];
 
 const XP_PICKUP_BASE_VALUE = 5;
 const XP_ATTRACT_RADIUS    = 150;
@@ -613,8 +640,40 @@ let player = {
     instakillTimer: 0,
     xpGainMult: 1,
     lifestealOnKill: 0,
+    bulletDamage: 1,
+    fireRateMult: 1,
+    damageTakenMult: 1,
+    upgradeLevels: [0, 0, 0],
     xp: 0, xpToNextLevel: 100, level: 1,
 };
+
+function getPlayerShootCooldownFrames() {
+    return Math.max(MIN_SHOOT_COOLDOWN, SHOOT_COOLDOWN / player.fireRateMult);
+}
+
+function getUpgradeSlotInfo(slotIndex) {
+    const slot = LEVEL_UPGRADE_SLOTS[slotIndex];
+    if (!slot) return null;
+    const level = player.upgradeLevels?.[slotIndex] ?? 0;
+    return {
+        ...slot,
+        level,
+        label: `Upgrade Slot ${slotIndex + 1}`,
+    };
+}
+
+function applyUpgradeSlot(slotIndex) {
+    const slot = LEVEL_UPGRADE_SLOTS[slotIndex];
+    if (!slot) return;
+    slot.apply();
+    player.upgradeLevels[slotIndex] = (player.upgradeLevels[slotIndex] ?? 0) + 1;
+    gameState = 'playing';
+}
+
+function applyPlayerDamage(baseDamage) {
+    const scaledDamage = Math.max(1, Math.round(baseDamage * player.damageTakenMult));
+    player.hp = Math.max(0, player.hp - scaledDamage);
+}
 
 let playerAnim = {
     frame:      'idle',
@@ -976,6 +1035,12 @@ window.addEventListener('keydown', e => {
         else if (gameState === 'levelUp')  { playUiClick(); gameState = 'playing'; }
         else if (gameState === 'playing')  playerDash();
     }
+
+    if (gameState === 'levelUp') {
+        if (e.key === '1') { playUiClick(); applyUpgradeSlot(0); }
+        if (e.key === '2') { playUiClick(); applyUpgradeSlot(1); }
+        if (e.key === '3') { playUiClick(); applyUpgradeSlot(2); }
+    }
 });
 
 window.addEventListener('keyup',     e  => { keys[e.key.toLowerCase()] = false; });
@@ -1079,7 +1144,7 @@ window.addEventListener('mousedown', e => {
             const z = zones.cards[i];
             if (mouseX >= z.x && mouseX <= z.x + z.w && mouseY >= z.y && mouseY <= z.y + z.h) {
                 playUiClick();
-                gameState = 'playing';
+                applyUpgradeSlot(i);
                 return;
             }
         }
@@ -1595,7 +1660,7 @@ function rescuePlayerFromWall() {
     player.y = safePos.y;
     player.prevX = safePos.x;
     player.prevY = safePos.y;
-    player.hp = Math.max(0, player.hp - DASH_WALL_STUCK_DAMAGE);
+    applyPlayerDamage(DASH_WALL_STUCK_DAMAGE);
 }
 
 function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
@@ -1932,6 +1997,10 @@ function startGame() {
     player.maxHp = chosen.maxHp;
     player.xpGainMult = chosen.xpGainMult ?? 1;
     player.lifestealOnKill = chosen.lifestealOnKill ?? 0;
+    player.bulletDamage = 1;
+    player.fireRateMult = 1;
+    player.damageTakenMult = 1;
+    player.upgradeLevels = [0, 0, 0];
     player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
     player.dashCharges = player.dashMaxCharges;
     player.dashDistanceMult = chosen.dashDistanceMult ?? 1;
@@ -2088,7 +2157,7 @@ function playerShoot() {
     }
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
-    player.shootCooldown = SHOOT_COOLDOWN;
+    player.shootCooldown = getPlayerShootCooldownFrames();
     playLaserShot();
 
     // Bloom: small random angle offset per shot
@@ -2216,7 +2285,7 @@ function updatePlayer() {
             player.dashCooldown = player.dashCharges < player.dashMaxCharges ? player.dashRechargeFrames : 0;
         }
     }
-    if (player.shootCooldown > 0) player.shootCooldown--;
+    if (player.shootCooldown > 0) player.shootCooldown = Math.max(0, player.shootCooldown - 1);
     if (player.invulnTimer   > 0) player.invulnTimer--;
     if (player.infiniteAmmoTimer > 0) {
         player.infiniteAmmoTimer--;
@@ -2248,7 +2317,7 @@ function updatePlayer() {
     for (const e of enemies) {
         if (!e.alive) continue;
         if (player.invulnTimer <= 0 && Math.hypot(player.x - e.x, player.y - e.y) < player.size + e.size) {
-            player.hp = Math.max(0, player.hp - 10);
+            applyPlayerDamage(10);
             player.invulnTimer = 60;
         }
     }
@@ -2511,7 +2580,7 @@ function drawPlayer() {
     const angle      = player.weaponAngle;
     const gunScreenX = s.x + Math.cos(angle) * RAIL_RADIUS;
     const gunScreenY = s.y + Math.sin(angle) * RAIL_RADIUS;
-    const isFiring   = mouseDown && player.shootCooldown > 2;
+    const isFiring   = mouseDown && player.shootCooldown > 0;
     const gunSprite  = isFiring ? gunSprites.shoot : gunSprites.idle;
 
     ctx.save();
@@ -3058,7 +3127,7 @@ function updateProjectiles() {
         for (const t of tumorTurrets) {
             if (!t.alive) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
-                const turretDamage = player.instakillTimer > 0 ? t.hp : 1;
+                const turretDamage = player.instakillTimer > 0 ? t.hp : player.bulletDamage;
                 t.hp -= turretDamage;
                 t.hitFlash = 8;
                 t.hpBarTimer = 120;
@@ -3073,7 +3142,7 @@ function updateProjectiles() {
         for (const e of enemies) {
             if (!e.alive) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, e.x, e.y, p.size + e.size)) {
-                const enemyDamage = player.instakillTimer > 0 ? e.hp : 1;
+                const enemyDamage = player.instakillTimer > 0 ? e.hp : player.bulletDamage;
                 e.hp -= enemyDamage;
                 e.hitFlash   = 8;
                 e.hpBarTimer = 120;
@@ -3163,7 +3232,7 @@ function updateEnemyProjectiles() {
 
         if (segmentCircleHit(oldX, oldY, p.x, p.y, player.x, player.y, player.size + p.size)) {
             if (player.invulnTimer <= 0) {
-                player.hp = Math.max(0, player.hp - TUMOR_PROJECTILE_DAMAGE);
+                applyPlayerDamage(TUMOR_PROJECTILE_DAMAGE);
                 player.invulnTimer = 60;
             }
             enemyProjectiles.splice(i, 1);
@@ -4556,8 +4625,7 @@ function drawLevelUpMenu() {
     }
     if (mouseX >= skip.x && mouseX <= skip.x + skip.w && mouseY >= skip.y && mouseY <= skip.y + skip.h) levelUpMenuHover = 3;
 
-    const LABELS = ['Upgrade Slot 1', 'Upgrade Slot 2', 'Upgrade Slot 3'];
-    const ICONS  = ['❶', '❷', '❸'];
+    const ICONS  = ['I', 'II', 'III'];
 
     for (let i = 0; i < 3; i++) {
         const c     = cards[i];
@@ -4585,14 +4653,18 @@ function drawLevelUpMenu() {
         ctx.textAlign    = 'center';
         ctx.font         = '44px Arial';
         ctx.fillText(ICONS[i], c.x + c.w / 2, c.y + 42);
+        const upgrade = getUpgradeSlotInfo(i);
         ctx.font         = 'bold 14px Arial';
         ctx.fillStyle    = hover ? '#ddeeff' : '#aabbcc';
-        ctx.fillText(LABELS[i], c.x + c.w / 2, c.y + 78);
+        ctx.fillText(upgrade?.label ?? `Upgrade Slot ${i + 1}`, c.x + c.w / 2, c.y + 78);
+        ctx.font         = 'bold 16px Arial';
+        ctx.fillStyle    = hover ? '#ffffff' : '#d7e4ff';
+        ctx.fillText(upgrade?.title ?? 'Upgrade', c.x + c.w / 2, c.y + 124);
         ctx.font         = '12px Arial';
         ctx.fillStyle    = 'rgba(160,170,190,0.6)';
-        ctx.fillText('—  coming soon  —',  c.x + c.w / 2, c.y + 140);
-        ctx.fillText('Upgrade details',     c.x + c.w / 2, c.y + 162);
-        ctx.fillText('will appear here',    c.x + c.w / 2, c.y + 180);
+        ctx.fillText(upgrade?.detail ?? 'No upgrade info', c.x + c.w / 2, c.y + 162);
+        ctx.fillText(`Current Lv ${upgrade?.level ?? 0}`, c.x + c.w / 2, c.y + 184);
+        ctx.fillText('Click or press 1/2/3', c.x + c.w / 2, c.y + 206);
         ctx.restore();
     }
 
