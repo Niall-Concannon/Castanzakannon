@@ -4569,6 +4569,36 @@ function drawUI() {
         ctx.restore();
     }
 
+    if (devCheatMenuEnabled) {
+        const boxW = 290;
+        const boxH = 44;
+        const boxX = canvas.width / 2 - boxW / 2;
+        const boxY = devTestMode ? 40 : 14;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        ctx.strokeStyle = 'rgba(255,215,140,0.55)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        ctx.textAlign = 'left';
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 4;
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#ffd98a';
+        ctx.fillText('DEV CHEATS ENABLED', boxX + 8, boxY + 15);
+
+        ctx.font = '11px Arial';
+        ctx.fillStyle = '#f5f7ff';
+        if (showCheatMenu) {
+            ctx.fillText('K/F2: close cheat menu   Esc: close panel', boxX + 8, boxY + 33);
+        } else {
+            ctx.fillText('K/F2: open cheat menu', boxX + 8, boxY + 33);
+        }
+        ctx.restore();
+    }
+
     // Coords
     ctx.save();
     ctx.font      = '10px monospace';
