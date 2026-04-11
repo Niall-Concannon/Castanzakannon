@@ -228,9 +228,22 @@ const MUZZLE_SPARKS    = 5;    // number of sparks per shot
 const SHOOT_COOLDOWN   = 5;    // frames between shots (was 10)
 const BULLET_SPREAD    = 0.10; // max random angle offset in radians (~±6°)
 const MIN_SHOOT_COOLDOWN = 1;
+const RAILGUN_ULT_COOLDOWN_FRAMES = Math.round(30000 / FIXED_STEP);
+const RAILGUN_ULT_RANGE = 1800;
+const RAILGUN_BEAM_LIFE_FRAMES = 9;
 
-const LEVEL_UPGRADE_SLOTS = [
+const UPGRADE_RARITY_WEIGHTS = {  //default rarity weights for testing
+    common: 56, //56
+    rare: 1, //28
+    epic: 12, //12
+    legendary: 4, //4
+    mythical: 28, //1
+};
+
+const LEVEL_UPGRADES = [
     {
+        id: 'rapid_fire',
+        rarity: 'rare',
         title: 'Rapid Fire',
         detail: '+30% fire rate',
         apply: () => {
@@ -238,6 +251,8 @@ const LEVEL_UPGRADE_SLOTS = [
         },
     },
     {
+        id: 'high_cal_rounds',
+        rarity: 'rare',
         title: 'High-Cal Rounds',
         detail: '+1 bullet damage',
         apply: () => {
@@ -245,12 +260,112 @@ const LEVEL_UPGRADE_SLOTS = [
         },
     },
     {
+        id: 'juggernaut_frame',
+        rarity: 'rare',
         title: 'Juggernaut Frame',
         detail: '-10% damage taken, +12 max HP',
         apply: () => {
             player.damageTakenMult = Math.max(0.35, player.damageTakenMult * 0.9);
             player.maxHp += 12;
             player.hp = Math.min(player.maxHp, player.hp + 12);
+        },
+    },
+    {
+        id: 'fleet_footing',
+        rarity: 'common',
+        title: 'Fleet Footing',
+        detail: '+8% move speed',
+        apply: () => {
+            player.speed = Math.min(10, player.speed * 1.08);
+        },
+    },
+    {
+        id: 'magnet_core',
+        rarity: 'common',
+        title: 'Magnet Core',
+        detail: '+20% XP pickup radius',
+        apply: () => {
+            player.xpAttractMult = Math.min(4, player.xpAttractMult * 1.2);
+        },
+    },
+    {
+        id: 'scavenger_rounds',
+        rarity: 'common',
+        title: 'Scavenger Rounds',
+        detail: '+12% ammo regen speed',
+        apply: () => {
+            player.ammoRegenMult = Math.min(4, player.ammoRegenMult * 1.12);
+        },
+    },
+    {
+        id: 'vampire_teeth',
+        rarity: 'epic',
+        title: 'Vampire Teeth',
+        detail: '+2% lifesteal on kill',
+        apply: () => {
+            player.lifestealOnKill = Math.min(0.25, player.lifestealOnKill + 0.02);
+        },
+    },
+    {
+        id: 'overclock_dash',
+        rarity: 'epic',
+        title: 'Overclock Dash',
+        detail: '+1 dash charge, -12% dash cooldown',
+        apply: () => {
+            player.dashMaxCharges = Math.min(5, player.dashMaxCharges + 1);
+            player.dashCharges = Math.min(player.dashMaxCharges, player.dashCharges + 1);
+            player.dashRechargeFrames = Math.max(20, Math.round(player.dashRechargeFrames * 0.88));
+        },
+    },
+    {
+        id: 'vital_surge',
+        rarity: 'epic',
+        title: 'Vital Surge',
+        detail: '+20 max HP and heal 25 HP',
+        apply: () => {
+            player.maxHp += 20;
+            player.hp = Math.min(player.maxHp, player.hp + 25);
+        },
+    },
+    {
+        id: 'doom_protocol',
+        rarity: 'legendary',
+        title: 'Doom Protocol',
+        detail: '+3 bullet damage, +15% fire rate',
+        apply: () => {
+            player.bulletDamage = Math.min(25, player.bulletDamage + 3);
+            player.fireRateMult = Math.min(4.5, player.fireRateMult * 1.15);
+        },
+    },
+    {
+        id: 'chrono_shell',
+        rarity: 'legendary',
+        title: 'Chrono Shell',
+        detail: 'AoE pulse around player (damage + radius)',
+        apply: () => {
+            if (player.aoePulseDamage <= 0) {
+                player.aoePulseDamage = 2;
+                player.aoePulseRadius = 165;
+                player.aoePulseIntervalFrames = 34;
+                player.aoePulseTimer = 10;
+            } else {
+                player.aoePulseDamage = Math.min(18, player.aoePulseDamage + 1);
+                player.aoePulseRadius = Math.min(320, player.aoePulseRadius + 20);
+                player.aoePulseIntervalFrames = Math.max(12, player.aoePulseIntervalFrames - 2);
+                player.aoePulseTimer = Math.min(player.aoePulseTimer, player.aoePulseIntervalFrames);
+            }
+        },
+    },
+    {
+        id: 'mythic_railgun_core',
+        rarity: 'mythical',
+        title: 'Mythic Railgun Core',
+        detail: 'Unlock Q ult: piercing railgun shot (30s recharge)',
+        apply: () => {
+            player.hasRailgunUlt = true;
+            player.railgunUltDamage = Math.min(80, player.railgunUltDamage + 5);
+            player.railgunUltCooldownFrames = RAILGUN_ULT_COOLDOWN_FRAMES;
+            player.railgunUltCooldown = Math.min(player.railgunUltCooldown, RAILGUN_ULT_COOLDOWN_FRAMES);
         },
     },
 ];
@@ -613,6 +728,8 @@ let uiClickPool = [];
 let uiClickPoolIndex = 0;
 let expOrbPool = [];
 let expOrbPoolIndex = 0;
+let currentLevelUpChoices = [];
+let railgunBeams = [];
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -643,7 +760,18 @@ let player = {
     bulletDamage: 1,
     fireRateMult: 1,
     damageTakenMult: 1,
-    upgradeLevels: [0, 0, 0],
+    xpAttractMult: 1,
+    ammoRegenMult: 1,
+    aoePulseDamage: 0,
+    aoePulseRadius: 0,
+    aoePulseIntervalFrames: 34,
+    aoePulseTimer: 0,
+    aoePulseFlash: 0,
+    hasRailgunUlt: false,
+    railgunUltCooldown: 0,
+    railgunUltCooldownFrames: RAILGUN_ULT_COOLDOWN_FRAMES,
+    railgunUltDamage: 22,
+    upgradeLevels: {},
     xp: 0, xpToNextLevel: 100, level: 1,
 };
 
@@ -651,28 +779,205 @@ function getPlayerShootCooldownFrames() {
     return Math.max(MIN_SHOOT_COOLDOWN, SHOOT_COOLDOWN / player.fireRateMult);
 }
 
-function getUpgradeSlotInfo(slotIndex) {
-    const slot = LEVEL_UPGRADE_SLOTS[slotIndex];
-    if (!slot) return null;
-    const level = player.upgradeLevels?.[slotIndex] ?? 0;
-    return {
-        ...slot,
-        level,
-        label: `Upgrade Slot ${slotIndex + 1}`,
-    };
+function getUpgradeLevel(upgradeId) {
+    return player.upgradeLevels?.[upgradeId] ?? 0;
 }
 
-function applyUpgradeSlot(slotIndex) {
-    const slot = LEVEL_UPGRADE_SLOTS[slotIndex];
-    if (!slot) return;
-    slot.apply();
-    player.upgradeLevels[slotIndex] = (player.upgradeLevels[slotIndex] ?? 0) + 1;
+function getUpgradeRarityWeight(rarity) {
+    return UPGRADE_RARITY_WEIGHTS[rarity] ?? 0;
+}
+
+function getRarityUiColor(rarity) {
+    if (rarity === 'mythical') return '#ff79c6';
+    if (rarity === 'legendary') return '#ffcb66';
+    if (rarity === 'epic') return '#d3a2ff';
+    if (rarity === 'rare') return '#8ec7ff';
+    return '#b6ffb6';
+}
+
+function rollLevelUpChoices(count = 3) {
+    const available = LEVEL_UPGRADES.slice();
+    const picks = [];
+
+    for (let i = 0; i < count && available.length > 0; i++) {
+        let totalWeight = 0;
+        for (const upgrade of available) totalWeight += getUpgradeRarityWeight(upgrade.rarity);
+        if (totalWeight <= 0) break;
+
+        let roll = Math.random() * totalWeight;
+        let chosenIndex = 0;
+        for (let j = 0; j < available.length; j++) {
+            roll -= getUpgradeRarityWeight(available[j].rarity);
+            if (roll <= 0) {
+                chosenIndex = j;
+                break;
+            }
+        }
+
+        picks.push(available[chosenIndex]);
+        available.splice(chosenIndex, 1);
+    }
+
+    if (picks.length < count) {
+        for (const fallback of LEVEL_UPGRADES) {
+            if (picks.length >= count) break;
+            if (!picks.includes(fallback)) picks.push(fallback);
+        }
+    }
+
+    return picks;
+}
+
+function beginLevelUp() {
+    currentLevelUpChoices = rollLevelUpChoices(3);
+    gameState = 'levelUp';
+}
+
+function applyUpgradeChoice(choiceIndex) {
+    const upgrade = currentLevelUpChoices[choiceIndex];
+    if (!upgrade) return;
+
+    upgrade.apply();
+    player.upgradeLevels[upgrade.id] = getUpgradeLevel(upgrade.id) + 1;
+    currentLevelUpChoices = [];
     gameState = 'playing';
 }
 
 function applyPlayerDamage(baseDamage) {
     const scaledDamage = Math.max(1, Math.round(baseDamage * player.damageTakenMult));
     player.hp = Math.max(0, player.hp - scaledDamage);
+}
+
+function getPlayerXpAttractRadius() {
+    return XP_ATTRACT_RADIUS * player.xpAttractMult;
+}
+
+function handleEnemyDefeat(e) {
+    if (!e.alive) return;
+
+    e.alive = false;
+    enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
+
+    if (player.lifestealOnKill > 0 && player.hp > 0) {
+        const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
+        player.hp = Math.min(player.maxHp, player.hp + heal);
+    }
+
+    const ammoDropChance = AMMO_DROP_CHANCE;
+    const variant = e.type === 'tank' ? 'blue' : 'green';
+    pickups.push({
+        x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+        vx: 0, vy: 0,
+        size: variant === 'blue' ? 15 : 10,
+        type: 'xp', variant,
+        value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
+    });
+
+    const canSpawnAmmoPickup = !hasActiveAmmoPickup() && player.infiniteAmmoTimer <= 0;
+    if (canSpawnAmmoPickup && Math.random() < ammoDropChance) {
+        const ammoValue = AMMO_PICKUP_VALUE_MIN + Math.floor(Math.random() * (AMMO_PICKUP_VALUE_MAX - AMMO_PICKUP_VALUE_MIN + 1));
+        pickups.push({
+            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+            vx: 0, vy: 0,
+            size: AMMO_PICKUP_WORLD_SIZE,
+            type: 'ammo',
+            value: ammoValue,
+        });
+    }
+
+    const canSpawnHealPickup = !hasActiveHealPickup() && player.healOverTimeTimer <= 0;
+    if (canSpawnHealPickup && Math.random() < HEAL_DROP_CHANCE) {
+        pickups.push({
+            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+            vx: 0, vy: 0,
+            size: HEAL_PICKUP_WORLD_SIZE,
+            type: 'heal',
+        });
+    }
+
+    const canSpawnInstakillPickup = !hasActiveInstakillPickup() && player.instakillTimer <= 0;
+    if (canSpawnInstakillPickup && Math.random() < INSTAKILL_DROP_CHANCE) {
+        pickups.push({
+            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
+            vx: 0, vy: 0,
+            size: INSTAKILL_PICKUP_WORLD_SIZE,
+            type: 'instakill',
+        });
+    }
+}
+
+function triggerChronoPulse() {
+    if (player.aoePulseDamage <= 0 || player.aoePulseRadius <= 0) return;
+
+    if (player.aoePulseTimer > 0) {
+        player.aoePulseTimer--;
+        return;
+    }
+
+    player.aoePulseTimer = player.aoePulseIntervalFrames;
+    player.aoePulseFlash = 8;
+
+    for (const t of tumorTurrets) {
+        if (!t.alive) continue;
+        if (Math.hypot(t.x - player.x, t.y - player.y) <= player.aoePulseRadius + t.size) {
+            t.hp -= player.aoePulseDamage;
+            t.hitFlash = 8;
+            t.hpBarTimer = 120;
+            if (t.hp <= 0) t.alive = false;
+        }
+    }
+
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        if (Math.hypot(e.x - player.x, e.y - player.y) <= player.aoePulseRadius + e.size) {
+            e.hp -= player.aoePulseDamage;
+            e.hitFlash = 8;
+            e.hpBarTimer = 120;
+            if (e.hp <= 0) handleEnemyDefeat(e);
+        }
+    }
+}
+
+function activateRailgunUlt() {
+    if (!player.hasRailgunUlt || player.railgunUltCooldown > 0 || player.hp <= 0) return false;
+
+    const angle = player.weaponAngle;
+    const sx = player.x + Math.cos(angle) * (RAIL_RADIUS + 10);
+    const sy = player.y + Math.sin(angle) * (RAIL_RADIUS + 10);
+    const ex = sx + Math.cos(angle) * RAILGUN_ULT_RANGE;
+    const ey = sy + Math.sin(angle) * RAILGUN_ULT_RANGE;
+
+    for (const t of tumorTurrets) {
+        if (!t.alive) continue;
+        if (segmentCircleHit(sx, sy, ex, ey, t.x, t.y, t.size + 10)) {
+            t.hp -= player.railgunUltDamage;
+            t.hitFlash = 10;
+            t.hpBarTimer = 120;
+            if (t.hp <= 0) t.alive = false;
+        }
+    }
+
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        if (segmentCircleHit(sx, sy, ex, ey, e.x, e.y, e.size + 8)) {
+            e.hp -= player.railgunUltDamage;
+            e.hitFlash = 10;
+            e.hpBarTimer = 120;
+            if (e.hp <= 0) handleEnemyDefeat(e);
+        }
+    }
+
+    railgunBeams.push({ x1: sx, y1: sy, x2: ex, y2: ey, life: RAILGUN_BEAM_LIFE_FRAMES, maxLife: RAILGUN_BEAM_LIFE_FRAMES });
+    player.railgunUltCooldown = player.railgunUltCooldownFrames;
+    playLaserShot();
+    return true;
+}
+
+function updateRailgunBeams() {
+    for (let i = railgunBeams.length - 1; i >= 0; i--) {
+        railgunBeams[i].life--;
+        if (railgunBeams[i].life <= 0) railgunBeams.splice(i, 1);
+    }
 }
 
 let playerAnim = {
@@ -1032,14 +1337,18 @@ window.addEventListener('keydown', e => {
         if      (gameState === 'menu'    && menuPage === 'main') { playUiClick(); startGame(); }
         else if (gameState === 'gameOver') { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
         else if (gameState === 'win')      { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
-        else if (gameState === 'levelUp')  { playUiClick(); gameState = 'playing'; }
+        else if (gameState === 'levelUp')  { playUiClick(); currentLevelUpChoices = []; gameState = 'playing'; }
         else if (gameState === 'playing')  playerDash();
     }
 
+    if (gameState === 'playing' && !gamePaused && e.key.toLowerCase() === 'q') {
+        activateRailgunUlt();
+    }
+
     if (gameState === 'levelUp') {
-        if (e.key === '1') { playUiClick(); applyUpgradeSlot(0); }
-        if (e.key === '2') { playUiClick(); applyUpgradeSlot(1); }
-        if (e.key === '3') { playUiClick(); applyUpgradeSlot(2); }
+        if (e.key === '1') { playUiClick(); applyUpgradeChoice(0); }
+        if (e.key === '2') { playUiClick(); applyUpgradeChoice(1); }
+        if (e.key === '3') { playUiClick(); applyUpgradeChoice(2); }
     }
 });
 
@@ -1144,7 +1453,7 @@ window.addEventListener('mousedown', e => {
             const z = zones.cards[i];
             if (mouseX >= z.x && mouseX <= z.x + z.w && mouseY >= z.y && mouseY <= z.y + z.h) {
                 playUiClick();
-                applyUpgradeSlot(i);
+                applyUpgradeChoice(i);
                 return;
             }
         }
@@ -1985,6 +2294,7 @@ function startGame() {
     projectiles   = [];
     enemyProjectiles = [];
     muzzleFlashes = [];
+    railgunBeams = [];
     dashTrail     = [];
     trailTimer = 0;
 
@@ -2000,7 +2310,19 @@ function startGame() {
     player.bulletDamage = 1;
     player.fireRateMult = 1;
     player.damageTakenMult = 1;
-    player.upgradeLevels = [0, 0, 0];
+    player.xpAttractMult = 1;
+    player.ammoRegenMult = 1;
+    player.aoePulseDamage = 0;
+    player.aoePulseRadius = 0;
+    player.aoePulseIntervalFrames = 34;
+    player.aoePulseTimer = 0;
+    player.aoePulseFlash = 0;
+    player.hasRailgunUlt = false;
+    player.railgunUltCooldown = 0;
+    player.railgunUltCooldownFrames = RAILGUN_ULT_COOLDOWN_FRAMES;
+    player.railgunUltDamage = 22;
+    player.upgradeLevels = {};
+    currentLevelUpChoices = [];
     player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
     player.dashCharges = player.dashMaxCharges;
     player.dashDistanceMult = chosen.dashDistanceMult ?? 1;
@@ -2104,6 +2426,7 @@ function updateWaveProgression() {
     projectiles = [];
     enemyProjectiles = [];
     muzzleFlashes = [];
+    railgunBeams = [];
     dashTrail = [];
     trailTimer = 0;
 
@@ -2297,7 +2620,7 @@ function updatePlayer() {
         const idleSeconds = (player.ammoNoShootFrames * FIXED_STEP) / 1000;
         const regenInterval = Math.max(
             AMMO_REGEN_MIN_INTERVAL_FRAMES,
-            Math.floor(AMMO_REGEN_INTERVAL_FRAMES * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)),
+            Math.floor((AMMO_REGEN_INTERVAL_FRAMES * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)) / player.ammoRegenMult),
         );
         if (player.ammoRegenTimer >= regenInterval) {
             player.ammo = Math.min(AMMO_REGEN_STOP, player.ammo + 1);
@@ -2333,6 +2656,9 @@ function updatePlayer() {
     }
 
     if (player.instakillTimer > 0) player.instakillTimer--;
+    if (player.railgunUltCooldown > 0) player.railgunUltCooldown--;
+    if (player.aoePulseFlash > 0) player.aoePulseFlash--;
+    triggerChronoPulse();
 
     if (player.hp <= 0) { lastLevelDied = player.level; gameState = 'gameOver'; }
 
@@ -2575,6 +2901,21 @@ function drawPlayer() {
     ctx.lineWidth   = 1.2;
     ctx.stroke();
     ctx.restore();
+
+    if (player.aoePulseFlash > 0 && player.aoePulseRadius > 0) {
+        const pulseT = player.aoePulseFlash / 8;
+        const ringRadius = player.aoePulseRadius * (1 + (1 - pulseT) * 0.18);
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.strokeStyle = `rgba(120,220,255,${0.6 * pulseT})`;
+        ctx.lineWidth = 5 * pulseT;
+        ctx.shadowColor = 'rgba(120,220,255,0.9)';
+        ctx.shadowBlur = 14 * pulseT;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
 
     // Gun
     const angle      = player.weaponAngle;
@@ -3111,6 +3452,8 @@ function spawnDevModePowerupLine() {
 }
 
 function updateProjectiles() {
+    updateRailgunBeams();
+
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
         const oldX = p.x;
@@ -3148,52 +3491,7 @@ function updateProjectiles() {
                 e.hpBarTimer = 120;
 
                 if (e.hp <= 0) {
-                    e.alive = false;
-                    enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
-                    if (player.lifestealOnKill > 0 && player.hp > 0) {
-                        const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
-                        player.hp = Math.min(player.maxHp, player.hp + heal);
-                    }
-                    const ammoDropChance = AMMO_DROP_CHANCE;
-                    const variant = e.type === 'tank' ? 'blue' : 'green';
-                    pickups.push({
-                        x: e.x, y: e.y, prevX: e.x, prevY: e.y,
-                        vx: 0, vy: 0,
-                        size: variant === 'blue' ? 15 : 10,
-                        type: 'xp', variant,
-                        value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
-                    });
-                    const canSpawnAmmoPickup = !hasActiveAmmoPickup() && player.infiniteAmmoTimer <= 0;
-                    if (canSpawnAmmoPickup && Math.random() < ammoDropChance) {
-                        const ammoValue = AMMO_PICKUP_VALUE_MIN + Math.floor(Math.random() * (AMMO_PICKUP_VALUE_MAX - AMMO_PICKUP_VALUE_MIN + 1));
-                        pickups.push({
-                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
-                            vx: 0, vy: 0,
-                            size: AMMO_PICKUP_WORLD_SIZE,
-                            type: 'ammo',
-                            value: ammoValue,
-                        });
-                    }
-
-                    const canSpawnHealPickup = !hasActiveHealPickup() && player.healOverTimeTimer <= 0;
-                    if (canSpawnHealPickup && Math.random() < HEAL_DROP_CHANCE) {
-                        pickups.push({
-                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
-                            vx: 0, vy: 0,
-                            size: HEAL_PICKUP_WORLD_SIZE,
-                            type: 'heal',
-                        });
-                    }
-
-                    const canSpawnInstakillPickup = !hasActiveInstakillPickup() && player.instakillTimer <= 0;
-                    if (canSpawnInstakillPickup && Math.random() < INSTAKILL_DROP_CHANCE) {
-                        pickups.push({
-                            x: e.x, y: e.y, prevX: e.x, prevY: e.y,
-                            vx: 0, vy: 0,
-                            size: INSTAKILL_PICKUP_WORLD_SIZE,
-                            type: 'instakill',
-                        });
-                    }
+                    handleEnemyDefeat(e);
                 }
 
                 projectiles.splice(i, 1);
@@ -3212,6 +3510,32 @@ function drawProjectiles() {
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
         ctx.drawImage(projectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.restore();
+    }
+
+    for (const beam of railgunBeams) {
+        const s1 = toScreen(beam.x1, beam.y1);
+        const s2 = toScreen(beam.x2, beam.y2);
+        const life = beam.life / Math.max(1, beam.maxLife);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.strokeStyle = `rgba(255,170,240,${0.85 * life})`;
+        ctx.lineWidth = 8 * life;
+        ctx.shadowColor = 'rgba(255,110,220,0.95)';
+        ctx.shadowBlur = 22 * life;
+        ctx.beginPath();
+        ctx.moveTo(s1.x, s1.y);
+        ctx.lineTo(s2.x, s2.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255,255,255,${0.95 * life})`;
+        ctx.lineWidth = 2.5 * life;
+        ctx.shadowBlur = 8 * life;
+        ctx.beginPath();
+        ctx.moveTo(s1.x, s1.y);
+        ctx.lineTo(s2.x, s2.y);
+        ctx.stroke();
         ctx.restore();
     }
 }
@@ -3279,8 +3603,9 @@ function updatePickups() {
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
 
         if (p.type === 'xp') {
-            if (dist < XP_ATTRACT_RADIUS && dist > 0) {
-                const pull = XP_ATTRACT_SPEED * (1 - dist / XP_ATTRACT_RADIUS) + 0.5;
+            const attractRadius = getPlayerXpAttractRadius();
+            if (dist < attractRadius && dist > 0) {
+                const pull = XP_ATTRACT_SPEED * (1 - dist / attractRadius) + 0.5;
                 p.vx += (player.x - p.x) / dist * pull * 0.15;
                 p.vy += (player.y - p.y) / dist * pull * 0.15;
                 const sp = Math.hypot(p.vx, p.vy);
@@ -3314,7 +3639,7 @@ function updatePickups() {
                 if (player.xp >= player.xpToNextLevel) {
                     player.xp -= player.xpToNextLevel;
                     player.level++;
-                    gameState = 'levelUp';
+                    beginLevelUp();
                 }
             } else if (p.type === 'ammo') {
                 playAmmoPickupSound();
@@ -4022,14 +4347,10 @@ function drawAmmoPickupArrow() {
 }
 
 function drawUpgradeHud() {
-    const rapid = getUpgradeSlotInfo(0);
-    const rounds = getUpgradeSlotInfo(1);
-    const juggernaut = getUpgradeSlotInfo(2);
-
     const panelX = 20;
     const panelY = 252;
     const panelW = 260;
-    const panelH = 94;
+    const panelH = 108;
 
     const fireRateBonus = Math.round((player.fireRateMult - 1) * 100);
     const damageReduction = Math.round((1 - player.damageTakenMult) * 100);
@@ -4038,6 +4359,21 @@ function drawUpgradeHud() {
         : player.bulletDamage.toFixed(2);
     const baseHp = getSelectedCharacter().maxHp ?? 100;
     const maxHpBonus = Math.max(0, Math.round(player.maxHp - baseHp));
+    const speedBonus = Math.round(((player.speed / (getSelectedCharacter().speed || 1)) - 1) * 100);
+    const aoeText = player.aoePulseDamage > 0
+        ? `AOE ${player.aoePulseDamage} @ ${Math.round(player.aoePulseRadius)}`
+        : 'AOE off';
+    const ultText = player.hasRailgunUlt
+        ? (player.railgunUltCooldown > 0
+            ? `Q ${Math.ceil((player.railgunUltCooldown * FIXED_STEP) / 1000)}s`
+            : 'Q READY')
+        : 'Q locked';
+
+    const acquired = LEVEL_UPGRADES
+        .map(upgrade => ({ upgrade, level: getUpgradeLevel(upgrade.id) }))
+        .filter(entry => entry.level > 0)
+        .sort((a, b) => b.level - a.level || a.upgrade.title.localeCompare(b.upgrade.title));
+    const visibleEntries = acquired.slice(0, 2);
 
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
@@ -4055,13 +4391,26 @@ function drawUpgradeHud() {
     ctx.fillText('UPGRADES', panelX + 8, panelY + 14);
 
     ctx.font = '10px Arial';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(`1 ${rapid?.title ?? 'Rapid Fire'} L${rapid?.level ?? 0}   FR +${fireRateBonus}%`, panelX + 8, panelY + 33);
-    ctx.fillText(`2 ${rounds?.title ?? 'High-Cal Rounds'} L${rounds?.level ?? 0}   DMG ${bulletDamage}`, panelX + 8, panelY + 49);
-    ctx.fillText(`3 ${juggernaut?.title ?? 'Juggernaut Frame'} L${juggernaut?.level ?? 0}   DR ${damageReduction}%`, panelX + 8, panelY + 65);
+    if (visibleEntries.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillText('No upgrades yet', panelX + 8, panelY + 34);
+    } else {
+        for (let i = 0; i < visibleEntries.length; i++) {
+            const entry = visibleEntries[i];
+            const y = panelY + 34 + i * 16;
+            ctx.fillStyle = getRarityUiColor(entry.upgrade.rarity);
+            ctx.fillText(`${entry.upgrade.title} L${entry.level} [${entry.upgrade.rarity[0].toUpperCase()}]`, panelX + 8, y);
+        }
+        if (acquired.length > visibleEntries.length) {
+            ctx.fillStyle = 'rgba(220,230,255,0.7)';
+            ctx.fillText(`+${acquired.length - visibleEntries.length} more`, panelX + 8, panelY + 66);
+        }
+    }
 
     ctx.fillStyle = 'rgba(220,230,255,0.88)';
-    ctx.fillText(`CD ${getPlayerShootCooldownFrames().toFixed(2)}f   HP+ ${maxHpBonus}`, panelX + 8, panelY + 82);
+    ctx.fillText(`FR+${fireRateBonus}% DMG ${bulletDamage} DR ${damageReduction}%`, panelX + 8, panelY + 82);
+    ctx.fillText(`SPD+${speedBonus}% CD ${getPlayerShootCooldownFrames().toFixed(2)}f HP+${maxHpBonus}`, panelX + 8, panelY + 92);
+    ctx.fillText(`${aoeText}  |  ${ultText}`, panelX + 8, panelY + 102);
     ctx.restore();
 }
 
@@ -4674,6 +5023,7 @@ function drawLevelUpMenu() {
 
     for (let i = 0; i < 3; i++) {
         const c     = cards[i];
+        const choice = currentLevelUpChoices[i] ?? LEVEL_UPGRADES[i] ?? null;
         const hover = levelUpMenuHover === i;
         const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.06 + i * 1.1);
 
@@ -4698,18 +5048,22 @@ function drawLevelUpMenu() {
         ctx.textAlign    = 'center';
         ctx.font         = '44px Arial';
         ctx.fillText(ICONS[i], c.x + c.w / 2, c.y + 42);
-        const upgrade = getUpgradeSlotInfo(i);
+        const rarityColor = getRarityUiColor(choice?.rarity);
+        const level = choice ? getUpgradeLevel(choice.id) : 0;
         ctx.font         = 'bold 14px Arial';
         ctx.fillStyle    = hover ? '#ddeeff' : '#aabbcc';
-        ctx.fillText(upgrade?.label ?? `Upgrade Slot ${i + 1}`, c.x + c.w / 2, c.y + 78);
+        ctx.fillText(`Choice ${i + 1}`, c.x + c.w / 2, c.y + 78);
         ctx.font         = 'bold 16px Arial';
-        ctx.fillStyle    = hover ? '#ffffff' : '#d7e4ff';
-        ctx.fillText(upgrade?.title ?? 'Upgrade', c.x + c.w / 2, c.y + 124);
+        ctx.fillStyle    = hover ? '#ffffff' : rarityColor;
+        ctx.fillText(choice?.title ?? 'Upgrade', c.x + c.w / 2, c.y + 124);
         ctx.font         = '12px Arial';
         ctx.fillStyle    = 'rgba(160,170,190,0.6)';
-        ctx.fillText(upgrade?.detail ?? 'No upgrade info', c.x + c.w / 2, c.y + 162);
-        ctx.fillText(`Current Lv ${upgrade?.level ?? 0}`, c.x + c.w / 2, c.y + 184);
-        ctx.fillText('Click or press 1/2/3', c.x + c.w / 2, c.y + 206);
+        ctx.fillText(choice?.detail ?? 'No upgrade info', c.x + c.w / 2, c.y + 162);
+        ctx.fillStyle = rarityColor;
+        ctx.fillText((choice?.rarity ?? 'common').toUpperCase(), c.x + c.w / 2, c.y + 184);
+        ctx.fillStyle = 'rgba(210,220,240,0.78)';
+        ctx.fillText(`Current Lv ${level}`, c.x + c.w / 2, c.y + 202);
+        ctx.fillText('Click or press 1/2/3', c.x + c.w / 2, c.y + 220);
         ctx.restore();
     }
 
