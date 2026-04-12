@@ -94,14 +94,17 @@ const TUMOR_PROJECTILE_DAMAGE = 12;
 const TUMOR_PROJECTILE_FRAMES = 170;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
+// Increase for stronger anti-wall risk while dashing through tight lanes.
 const DASH_WALL_STUCK_DAMAGE = 20;
 const MAX_ACTIVE_ENEMIES = 50;
 const WAVES_PER_LEVEL = 5;
+// Raise/lower these two to control overall horde density curve per wave.
 const WAVE_BASE_ENEMIES = 50;
 const WAVE_STEP_ENEMIES = 25;
 const WAVE_CLEAR_DELAY_FRAMES = 45;
 const WAVE_START_SPAWN_DELAY_FRAMES = 5;
 const WAVE_BASE_SPAWNS_PER_SECOND = 6;
+// Higher values ramp pressure faster on later waves.
 const WAVE_SPAWN_RATE_STEP = 1;
 const MAX_ARENA_LEVELS = 5;
 const SPAWN_CLEAR_RADIUS = 4;
@@ -184,12 +187,15 @@ const EXP_ORB_PATHS = [
 const UI_CLICK_POOL_SIZE = 4;
 const EXP_ORB_POOL_SIZE = 4;
 const AMMO_MAX = 120;
+// Soft cap that passive regen returns to when player stops firing.
 const AMMO_REGEN_STOP = 60;
 const AMMO_REGEN_INTERVAL_FRAMES = 12;
 const AMMO_REGEN_MIN_INTERVAL_FRAMES = 2;
+// Increase to make ammo regen "spin up" faster while not shooting.
 const AMMO_REGEN_ACCEL_PER_SEC = 0.55;
 const AMMO_SHOT_COST = 1;
 const AMMO_POWERUP_DURATION_FRAMES = Math.round(10000 / FIXED_STEP);
+// Pickup economy knobs: tune how often support drops appear.
 const AMMO_DROP_CHANCE = 0.01;
 const AMMO_PICKUP_VALUE_MIN = 10;
 const AMMO_PICKUP_VALUE_MAX = 18;
@@ -215,6 +221,7 @@ const ENEMY_TYPES = {
 // Each variant (a, b, c, d) has unique hp and speed multipliers
 // base = Level 1, a = Level 2, b = Level 3, c = Level 4, d = Level 5
 const ENEMY_VARIANT_STATS = {
+    // Per-level enemy scaling table. Edit hp/speed here to tune each arena tier.
     base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 } },
     a:    { basic: { hp: 4, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 10, speed: 1.3 } },
     b:    { basic: { hp: 5, speed: 2.4 },    fast: { hp: 3, speed: 4.1 },   tank: { hp: 12, speed: 1.4 } },
@@ -228,11 +235,13 @@ const MUZZLE_SPARKS    = 5;    // number of sparks per shot
 const SHOOT_COOLDOWN   = 5;    // frames between shots (was 10)
 const BULLET_SPREAD    = 0.10; // max random angle offset in radians (~±6°)
 const MIN_SHOOT_COOLDOWN = 1;
+// Global ult cadence: this is the core lever for Q uptime.
 const RAILGUN_ULT_COOLDOWN_FRAMES = Math.round(30000 / FIXED_STEP);
 const RAILGUN_ULT_RANGE = 1800;
 const RAILGUN_BEAM_LIFE_FRAMES = 9;
 
 const UPGRADE_RARITY_WEIGHTS = {  //default rarity weights for testing
+    // Tuning note: increase a tier weight to make that rarity appear more often.
     common: 56, //56
     rare: 28, //28
     epic: 12, //12
@@ -424,6 +433,7 @@ function imgWithFallback(sources) {
     const sprite = new Image();
     let index = 0;
 
+    // Try candidates in order until one resolves.
     const tryNext = () => {
         if (index >= sources.length) return;
         sprite.src = sources[index++];
@@ -459,6 +469,7 @@ function createCharacterSprites(index = 1) {
 }
 
 const CHARACTER_LOADOUTS = [
+    // Character balance presets: speed, survivability, and passive identity.
     { name: 'Kannon Prime', speed: 4.0, maxHp: 100, xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(1) },
     { name: 'Ghost Runner', speed: 5.2, maxHp: 70,  xpGainMult: 1.00, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(2) },
     { name: 'Gambit',       speed: 4.0, maxHp: 50,  xpGainMult: 1.45, lifestealOnKill: 0.00, dashCharges: 1, dashDistanceMult: 1.00, dashRechargeFrames: 120, dashPhasesWalls: false, sprites: createCharacterSprites(3) },
@@ -802,6 +813,7 @@ function rollLevelUpChoices(count = 3) {
     const picks = [];
 
     for (let i = 0; i < count && available.length > 0; i++) {
+        // Weighted pick by rarity, then remove it so choices are unique.
         let totalWeight = 0;
         for (const upgrade of available) totalWeight += getUpgradeRarityWeight(upgrade.rarity);
         if (totalWeight <= 0) break;
@@ -910,6 +922,7 @@ function handleEnemyDefeat(e) {
         value: XP_PICKUP_BASE_VALUE * (variant === 'blue' ? TANK_XP_MULTIPLIER : 1),
     });
 
+    // Keep one world pickup of each utility type active at a time to avoid clutter.
     const canSpawnAmmoPickup = !hasActiveAmmoPickup() && player.infiniteAmmoTimer <= 0;
     if (canSpawnAmmoPickup && Math.random() < ammoDropChance) {
         const ammoValue = AMMO_PICKUP_VALUE_MIN + Math.floor(Math.random() * (AMMO_PICKUP_VALUE_MAX - AMMO_PICKUP_VALUE_MIN + 1));
@@ -946,6 +959,7 @@ function handleEnemyDefeat(e) {
 function triggerChronoPulse() {
     if (player.aoePulseDamage <= 0 || player.aoePulseRadius <= 0) return;
 
+    // Countdown until the next pulse tick.
     if (player.aoePulseTimer > 0) {
         player.aoePulseTimer--;
         return;
@@ -978,6 +992,7 @@ function triggerChronoPulse() {
 function activateRailgunUlt() {
     if (!player.hasRailgunUlt || player.railgunUltCooldown > 0 || player.hp <= 0) return false;
 
+    // Build a long hitscan segment from muzzle to max range.
     const angle = player.weaponAngle;
     const sx = player.x + Math.cos(angle) * (RAIL_RADIUS + 10);
     const sy = player.y + Math.sin(angle) * (RAIL_RADIUS + 10);
@@ -1041,6 +1056,7 @@ function readStoredVolume(storageKey, fallback) {
         const raw = localStorage.getItem(storageKey);
         if (raw == null) return fallback;
         const parsed = Number(raw);
+        // Clamp persisted values to a valid [0,1] range.
         if (!Number.isFinite(parsed)) return fallback;
         return clamp01(parsed);
     } catch (_) {
@@ -1083,6 +1099,7 @@ function createAudioWithFallback(sources, { loop = false } = {}) {
     const audio = new Audio();
     let srcIndex = 0;
 
+    // Retry with the next source when decode/load fails.
     const tryNextSource = () => {
         if (srcIndex >= sources.length) return;
         audio.src = sources[srcIndex++];
@@ -1161,6 +1178,7 @@ function playRandomMusicTrack() {
     const idx = pickRandomMusicTrackIndex();
     if (idx < 0) return;
 
+    // Swap tracks rather than layering multiple music instances.
     stopCurrentMusic();
 
     const nextTrack = createAudioWithFallback([MUSIC_TRACK_PATHS[idx]], { loop: false });
@@ -1441,6 +1459,7 @@ window.addEventListener('mousedown', e => {
             }
         }
 
+        // Swallow clicks inside the panel so the world does not shoot behind it.
         if (inPanel) return;
     }
 
@@ -1579,6 +1598,7 @@ function generateMap() {
 
     clearSpawnArea();
 
+    // Place level-specific hazards before corner conversion/nav build.
     resetTumorTurrets();
 
     if (currentArenaLevel === 5) {
@@ -1587,6 +1607,7 @@ function generateMap() {
     }
 
     applyCornerTiles();
+    // Re-open center in case procedural placement intruded into spawn safety.
     clearSpawnArea();
 
     if (currentArenaLevel === 4) {
@@ -1760,6 +1781,7 @@ function placeLevel5SausageWalls() {
         let best = null;
         let bestScore = -1;
 
+        // Sample many candidates and place the one with the best clearance score.
         for (let i = 0; i < candidateChecks; i++) {
             const dir = directions[Math.floor(Math.random() * directions.length)];
             const len = 5 + Math.floor(Math.random() * 7); // 5..11 tiles long
@@ -1931,6 +1953,7 @@ function findPath(fromX, fromY, toX, toY) {
     const queue = [startIdx];
     let qi = 0, found = false;
 
+    // Grid BFS over walkable nav cells.
     while (qi < queue.length) {
         const cur = queue[qi++];
         const cy2 = Math.floor(cur / MAP_W), cx2 = cur % MAP_W;
@@ -1975,6 +1998,7 @@ function wallCollision(x, y, size) {
         [-size * 0.75, -size * 0.75],
     ];
 
+    // Multi-point probe avoids tunneling through narrow geometry corners.
     for (let ty = t; ty <= b; ty++) {
         for (let tx = l; tx <= r; tx++) {
             if (ty < 0 || ty >= MAP_H || tx < 0 || tx >= MAP_W) continue;
@@ -2481,6 +2505,7 @@ function setMapThemeForCurrentLevel() {
 }
 
 function getWaveEnemyTotal(waveNumber) {
+    // Dev mode forces ultra-short waves for quick feature testing.
     if (devTestMode) return 1;
     return WAVE_BASE_ENEMIES + (waveNumber - 1) * WAVE_STEP_ENEMIES;
 }
@@ -2491,6 +2516,7 @@ function getConfiguredWavesPerLevel() {
 }
 
 function startWave(waveNumber) {
+    // Reset spawn pacing and counters for the new wave.
     currentWave = waveNumber;
     enemiesRemainingInWave = getWaveEnemyTotal(currentWave);
     enemiesToSpawn = enemiesRemainingInWave;
@@ -2512,6 +2538,7 @@ function updateWaveSpawner() {
     }
 
     const spawnsPerSecond = WAVE_BASE_SPAWNS_PER_SECOND + (currentWave - 1) * WAVE_SPAWN_RATE_STEP;
+    // Budgeted spawning keeps per-frame load stable at any frame rate.
     enemySpawnBudget += spawnsPerSecond * (FIXED_STEP / 1000);
     let alive = getAliveEnemyCount();
     while (enemySpawnBudget >= 1 && enemiesToSpawn > 0 && alive < MAX_ACTIVE_ENEMIES) {
@@ -2543,6 +2570,7 @@ function updateWaveProgression() {
         return;
     }
 
+    // Advance to next arena and hard-reset transient combat entities.
     currentArenaLevel++;
     setMapThemeForCurrentLevel();
     generateMap();
@@ -3079,6 +3107,7 @@ function pickRandomEnemyType() {
 }
 
 function getEnemySpawnPosition(wallSize) {
+    // Spawn mostly just outside the visible area to avoid pop-in near player.
     const minRadius = Math.min(canvas.width, canvas.height) * 0.5 + SPAWN_RING_INSET;
     const maxRadius = Math.max(canvas.width, canvas.height) * 0.7 + SPAWN_RING_INSET;
 
@@ -3233,6 +3262,7 @@ function updateEnemies() {
         if (e.pathTimer > 0) {
             e.pathTimer--;
         } else {
+            // Repath periodically; line-of-sight can still override this path.
             e.path = findPath(e.x, e.y, player.x, player.y);
             e.pathTimer = 60;
         }
@@ -3261,6 +3291,7 @@ function updateEnemies() {
 
         const moved = moveEnemyToward(e, tx, ty, e.speed * speedMult);
         if (!moved) {
+            // Force immediate repath if local steering gets stuck.
             e.path = [];
             e.pathTimer = 0;
         }
@@ -3302,6 +3333,7 @@ function getInterceptAimAngle(sourceX, sourceY, targetX, targetY, targetVx, targ
     const b = 2 * rv;
     const c = rr;
 
+    // Solve intercept time from quadratic; fallback to direct aim when unsolvable.
     let t = -1;
     if (Math.abs(a) < 0.000001) {
         if (Math.abs(b) > 0.000001) t = -c / b;
@@ -3350,6 +3382,7 @@ function updateTumorTurrets() {
         if (t.chargeFrames >= TUMOR_CHARGE_FRAMES) {
             const playerVx = player.x - (player.prevX ?? player.x);
             const playerVy = player.y - (player.prevY ?? player.y);
+            // Lead the shot using player velocity for more consistent hits.
             const angle = getInterceptAimAngle(
                 t.x,
                 t.y,
@@ -3596,6 +3629,7 @@ function updateProjectiles() {
 
         for (const t of tumorTurrets) {
             if (!t.alive) continue;
+            // Segment test prevents misses when bullets move farther than a hitbox in one tick.
             if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
                 const turretDamage = player.instakillTimer > 0 ? t.hp : player.bulletDamage;
                 t.hp -= turretDamage;
@@ -3712,6 +3746,7 @@ function drawEnemyProjectiles() {
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
+        // Backfill defaults so legacy/spawned pickups always have valid runtime fields.
         if (!p.vx)    p.vx    = 0;
         if (!p.vy)    p.vy    = 0;
         if (!p.trail) p.trail = [];
@@ -3788,6 +3823,7 @@ function updatePickups() {
 
 function drawPickups() {
     const drawList = [];
+    // Draw order keeps high-priority utility pickups visible above XP clutter.
     for (const p of pickups) {
         if (p.type === 'ammo' || p.type === 'heal' || p.type === 'instakill') continue;
         drawList.push(p);
@@ -4615,6 +4651,7 @@ function drawUI() {
     ctx.shadowBlur = 6;
     const waveLabel = `Level ${currentArenaLevel}  Wave ${currentWave}/${WAVES_PER_LEVEL}`;
     const alive = getAliveEnemyCount();
+    // Remaining-to-spawn estimate excludes currently alive enemies.
     const remainingNow = Math.max(0, enemiesRemainingInWave - alive);
     ctx.fillText(waveLabel, canvas.width - 22, 26);
     ctx.font = 'bold 14px Arial';
@@ -4675,6 +4712,7 @@ function drawVisibilityMask() {
     fogCtx.fillStyle = g;
     fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
+    // Punch out soft light halos where active bullets travel.
     fogCtx.globalCompositeOperation = 'destination-out';
     for (const p of projectiles) {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
@@ -5367,6 +5405,7 @@ function gameLoop(timestamp) {
     if (gameState === 'playing' && !gamePaused) {
         elapsedGameMs += dt;
         accumulator += dt;
+        // Fixed-step simulation for deterministic movement/collisions.
         while (accumulator >= FIXED_STEP) {
             savePrevPositions();
             updatePlayer();
@@ -5421,6 +5460,7 @@ sfxVolumeSlider.addEventListener('input', () => {
 
 setMusicVolume(musicVolume, { persist: false });
 setSfxVolume(sfxVolume, { persist: false });
+// Pre-warm audio pools once so gameplay SFX can fire without allocation spikes.
 initializeLaserShotPool();
 initializeDashPool();
 initializeAmmoPickupPool();
