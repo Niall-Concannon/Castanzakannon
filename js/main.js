@@ -4787,6 +4787,17 @@ function drawVisibilityMask() {
     ctx.drawImage(fogCanvas, 0, 0);
 }
 
+function drawLowHealthMarker() {
+    if (player.hp > 30 || player.hp <= 0) return;
+
+    const alpha = Math.min(0.18, (30 - player.hp) / 120);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+}
+
 
 // =============================================================================
 //  MENU & SCREENS
@@ -5486,6 +5497,7 @@ function gameLoop(timestamp) {
     drawEnemyProjectiles();
     drawPickups();
     drawDamageNumbers();
+    drawLowHealthMarker();
     drawUI();
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
