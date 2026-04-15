@@ -696,6 +696,7 @@ let enemyProjectiles = [];
 let enemies        = [];
 let pickups        = [];
 let muzzleFlashes  = [];
+let damageNumbers  = [];
 let levelDecorations = [];
 let navGrid        = [];
 let lastLevelDied  = 1;
@@ -3635,6 +3636,7 @@ function updateProjectiles() {
                 t.hp -= turretDamage;
                 t.hitFlash = 8;
                 t.hpBarTimer = 120;
+                spawnDamageNumber(t.x, t.y - t.size * 0.8, turretDamage);
                 if (t.hp <= 0) t.alive = false;
                 projectiles.splice(i, 1);
                 break;
@@ -3650,6 +3652,7 @@ function updateProjectiles() {
                 e.hp -= enemyDamage;
                 e.hitFlash   = 8;
                 e.hpBarTimer = 120;
+                spawnDamageNumber(e.x, e.y - e.size * 0.8, enemyDamage);
 
                 if (e.hp <= 0) {
                     handleEnemyDefeat(e);
@@ -3819,6 +3822,51 @@ function updatePickups() {
             pickups.splice(i, 1);
         }
     }
+}
+
+function spawnDamageNumber(x, y, value) {
+    const displayValue = Math.max(1, Math.round(value));
+    damageNumbers.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: -0.8 - Math.random() * 0.25,
+        life: 30,
+        maxLife: 30,
+        alpha: 1,
+        value: displayValue,
+        scale: 1 + Math.min(0.3, displayValue / 18),
+    });
+}
+
+function updateDamageNumbers() {
+    for (let i = damageNumbers.length - 1; i >= 0; i--) {
+        const n = damageNumbers[i];
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vy += 0.04;
+        n.life--;
+        if (n.life <= 0) {
+            damageNumbers.splice(i, 1);
+            continue;
+        }
+        n.alpha = n.life / n.maxLife;
+    }
+}
+
+function drawDamageNumbers() {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 8;
+    for (const n of damageNumbers) {
+        const screen = toScreen(n.x, n.y);
+        ctx.globalAlpha = n.alpha;
+        ctx.font = `bold ${Math.round(16 * n.scale)}px Arial`;
+        ctx.fillStyle = 'yellow';
+        ctx.fillText(n.value, screen.x, screen.y);
+    }
+    ctx.restore();
 }
 
 function drawPickups() {
@@ -5417,6 +5465,7 @@ function gameLoop(timestamp) {
             cleanupDeadEnemies();
             updateWaveProgression();
             updatePickups();
+            updateDamageNumbers();
             frameCount++;
             accumulator -= FIXED_STEP;
         }
@@ -5436,6 +5485,7 @@ function gameLoop(timestamp) {
     drawProjectiles();
     drawEnemyProjectiles();
     drawPickups();
+    drawDamageNumbers();
     drawUI();
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
