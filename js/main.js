@@ -745,6 +745,7 @@ let expOrbPoolIndex = 0;
 let currentLevelUpChoices = [];
 let railgunBeams = [];
 let screenShake = 0;
+let finalWaveBannerTimer = 0;
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -1078,7 +1079,7 @@ function saveVolume(storageKey, value) {
 function styleAudioControls() {
     audioControlPanel.style.position = 'fixed';
     audioControlPanel.style.right = '16px';
-    audioControlPanel.style.bottom = '16px';
+    audioControlPanel.style.bottom = '250px';
     audioControlPanel.style.zIndex = '25';
     audioControlPanel.style.display = 'none';
     audioControlPanel.style.flexDirection = 'column';
@@ -2526,6 +2527,10 @@ function startWave(waveNumber) {
     waveClearTimer = 0;
     waveSpawnDelayFrames = WAVE_START_SPAWN_DELAY_FRAMES;
     enemySpawnBudget = 0;
+
+    if (waveNumber === getConfiguredWavesPerLevel()) {
+        finalWaveBannerTimer = 180; // 3 seconds
+    }
 }
 
 function getAliveEnemyCount() {
@@ -4724,6 +4729,86 @@ function drawUI() {
     drawAmmoPickupArrow();
     drawLastEnemyArrow();
     drawCheatMenu();
+    drawFinalWaveBanner()
+}
+
+function drawFinalWaveBanner() {
+    if (finalWaveBannerTimer <= 0) return;
+    finalWaveBannerTimer--;
+    const alpha = Math.min(1, finalWaveBannerTimer / 30);
+    const pulse = 0.9 + 0.1 * Math.sin(frameCount * 0.3);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.font = `bold ${Math.round(52 * pulse)}px Arial`;
+    ctx.fillStyle = '#ff4444';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 18;
+    ctx.fillText('⚠ FINAL WAVE', canvas.width / 2, canvas.height / 2 - 60);
+    ctx.font = 'bold 22px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`Level ${currentArenaLevel} — Survive to advance`, canvas.width / 2, canvas.height / 2 - 14);
+    ctx.restore();
+}
+
+function drawMinimap() {
+    const MM_W = 260, MM_H = 220;
+    const MM_X = canvas.width - MM_W - 20;
+    const MM_Y = canvas.height - MM_H - 20;
+    const scaleX = MM_W / (MAP_W * TILE);
+    const scaleY = MM_H / (MAP_H * TILE);
+
+    ctx.save();
+
+    // Background
+    ctx.fillStyle = 'black';
+    ctx.fillRect(MM_X, MM_Y, MM_W, MM_H);
+    ctx.strokeStyle = 'grey';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(MM_X, MM_Y, MM_W, MM_H);
+
+    // Walls
+    ctx.fillStyle = 'grey';
+    for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+            if (isSolidTileType(mapTiles[y][x])) {
+                ctx.fillRect(
+                    MM_X + x * TILE * scaleX,
+                    MM_Y + y * TILE * scaleY,
+                    Math.ceil(TILE * scaleX),
+                    Math.ceil(TILE * scaleY)
+                );
+            }
+        }
+    }
+
+    // Pickups
+    for (const p of pickups) {
+        ctx.fillStyle = p.type === 'ammo' ? 'yellow'
+            : p.type === 'heal' ? 'lime'
+            : p.type === 'instakill' ? 'red'
+            : 'green';
+        ctx.beginPath();
+        ctx.arc(MM_X + p.x * scaleX, MM_Y + p.y * scaleY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Enemies
+    ctx.fillStyle = 'red';
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        ctx.beginPath();
+        ctx.arc(MM_X + e.x * scaleX, MM_Y + e.y * scaleY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Player
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(MM_X + player.x * scaleX, MM_Y + player.y * scaleY, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
 }
 
 function drawPauseOverlay() {
@@ -5507,6 +5592,7 @@ function gameLoop(timestamp) {
     drawPickups();
     drawDamageNumbers();
     drawLowHealthMarker();
+    drawMinimap();
     drawUI();
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
