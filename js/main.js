@@ -744,6 +744,7 @@ let expOrbPool = [];
 let expOrbPoolIndex = 0;
 let currentLevelUpChoices = [];
 let railgunBeams = [];
+let screenShake = 0;
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -868,6 +869,7 @@ function applyUpgradeChoice(choiceIndex) {
 function applyPlayerDamage(baseDamage) {
     const scaledDamage = Math.max(1, Math.round(baseDamage * player.damageTakenMult));
     player.hp = Math.max(0, player.hp - scaledDamage);
+    screenShake = 20;
 }
 
 function getPlayerXpAttractRadius() {
@@ -5405,6 +5407,13 @@ function updateCamera(alpha) {
     const py = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * a;
     camera.x = px - canvas.width  / 2;
     camera.y = py - canvas.height / 2;
+
+    if (screenShake > 0) {
+    const shake = screenShake * 0.8;
+    camera.x += (Math.random() - 0.5) * shake;
+    camera.y += (Math.random() - 0.5) * shake;
+    screenShake--;
+}
 }
 
 function savePrevPositions() {
