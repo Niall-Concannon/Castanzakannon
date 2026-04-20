@@ -240,23 +240,79 @@ const RAILGUN_ULT_COOLDOWN_FRAMES = Math.round(30000 / FIXED_STEP);
 const RAILGUN_ULT_RANGE = 1800;
 const RAILGUN_BEAM_LIFE_FRAMES = 9;
 
-const UPGRADE_RARITY_WEIGHTS = {  //default rarity weights for testing
-    // Tuning note: increase a tier weight to make that rarity appear more often.
-    common: 56, //56
-    rare: 28, //28
-    epic: 12, //12
-    legendary: 4, //4
-    mythical: 1, //1
+const UPGRADE_RARITY_WEIGHTS = {
+    // Level-up only stat boosts, weighted by rarity.
+    common: 42,
+    uncommon: 28,
+    rare: 16,
+    epic: 8,
+    legendary: 4,
+    mythical: 1,
 };
 
 const LEVEL_UPGRADES = [
     {
+        id: 'fleet_footing',
+        rarity: 'common',
+        title: 'Fleet Footing',
+        detail: '+6% move speed',
+        apply: () => {
+            player.speed = Math.min(11.2, player.speed * 1.06);
+        },
+    },
+    {
+        id: 'magnet_core',
+        rarity: 'common',
+        title: 'Magnet Core',
+        detail: '+16% XP pickup radius',
+        apply: () => {
+            player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.16);
+        },
+    },
+    {
+        id: 'scavenger_rounds',
+        rarity: 'common',
+        title: 'Scavenger Rounds',
+        detail: '+10% ammo regen speed',
+        apply: () => {
+            player.ammoRegenMult = Math.min(4.2, player.ammoRegenMult * 1.1);
+        },
+    },
+    {
+        id: 'steady_trigger',
+        rarity: 'uncommon',
+        title: 'Steady Trigger',
+        detail: '+14% fire rate',
+        apply: () => {
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.14);
+        },
+    },
+    {
+        id: 'reinforced_vitals',
+        rarity: 'uncommon',
+        title: 'Reinforced Vitals',
+        detail: '+10 max HP, heal 8',
+        apply: () => {
+            player.maxHp += 10;
+            player.hp = Math.min(player.maxHp, player.hp + 8);
+        },
+    },
+    {
+        id: 'ballistic_lining',
+        rarity: 'uncommon',
+        title: 'Ballistic Lining',
+        detail: '-6% damage taken',
+        apply: () => {
+            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.94);
+        },
+    },
+    {
         id: 'rapid_fire',
         rarity: 'rare',
         title: 'Rapid Fire',
-        detail: '+30% fire rate',
+        detail: '+24% fire rate',
         apply: () => {
-            player.fireRateMult = Math.min(4.5, player.fireRateMult * 1.3);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.24);
         },
     },
     {
@@ -265,7 +321,7 @@ const LEVEL_UPGRADES = [
         title: 'High-Cal Rounds',
         detail: '+1 bullet damage',
         apply: () => {
-            player.bulletDamage = Math.min(25, player.bulletDamage + 1);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 1);
         },
     },
     {
@@ -274,36 +330,9 @@ const LEVEL_UPGRADES = [
         title: 'Juggernaut Frame',
         detail: '-10% damage taken, +12 max HP',
         apply: () => {
-            player.damageTakenMult = Math.max(0.35, player.damageTakenMult * 0.9);
+            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.9);
             player.maxHp += 12;
             player.hp = Math.min(player.maxHp, player.hp + 12);
-        },
-    },
-    {
-        id: 'fleet_footing',
-        rarity: 'common',
-        title: 'Fleet Footing',
-        detail: '+8% move speed',
-        apply: () => {
-            player.speed = Math.min(10, player.speed * 1.08);
-        },
-    },
-    {
-        id: 'magnet_core',
-        rarity: 'common',
-        title: 'Magnet Core',
-        detail: '+20% XP pickup radius',
-        apply: () => {
-            player.xpAttractMult = Math.min(4, player.xpAttractMult * 1.2);
-        },
-    },
-    {
-        id: 'scavenger_rounds',
-        rarity: 'common',
-        title: 'Scavenger Rounds',
-        detail: '+12% ammo regen speed',
-        apply: () => {
-            player.ammoRegenMult = Math.min(4, player.ammoRegenMult * 1.12);
         },
     },
     {
@@ -312,18 +341,18 @@ const LEVEL_UPGRADES = [
         title: 'Vampire Teeth',
         detail: '+2% lifesteal on kill',
         apply: () => {
-            player.lifestealOnKill = Math.min(0.25, player.lifestealOnKill + 0.02);
+            player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.02);
         },
     },
     {
         id: 'overclock_dash',
         rarity: 'epic',
         title: 'Overclock Dash',
-        detail: '+1 dash charge, -12% dash cooldown',
+        detail: '+1 dash charge, -10% dash cooldown',
         apply: () => {
-            player.dashMaxCharges = Math.min(5, player.dashMaxCharges + 1);
+            player.dashMaxCharges = Math.min(6, player.dashMaxCharges + 1);
             player.dashCharges = Math.min(player.dashMaxCharges, player.dashCharges + 1);
-            player.dashRechargeFrames = Math.max(20, Math.round(player.dashRechargeFrames * 0.88));
+            player.dashRechargeFrames = Math.max(18, Math.round(player.dashRechargeFrames * 0.9));
         },
     },
     {
@@ -342,15 +371,198 @@ const LEVEL_UPGRADES = [
         title: 'Doom Protocol',
         detail: '+3 bullet damage, +15% fire rate',
         apply: () => {
-            player.bulletDamage = Math.min(25, player.bulletDamage + 3);
-            player.fireRateMult = Math.min(4.5, player.fireRateMult * 1.15);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 3);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.15);
         },
     },
     {
-        id: 'chrono_shell',
+        id: 'adamant_plate',
         rarity: 'legendary',
-        title: 'Chrono Shell',
-        detail: 'AoE pulse around player (damage + radius)',
+        title: 'Adamant Plate',
+        detail: '-16% damage taken, +30 max HP',
+        apply: () => {
+            player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.84);
+            player.maxHp += 30;
+            player.hp = Math.min(player.maxHp, player.hp + 18);
+        },
+    },
+    {
+        id: 'mythical_physiology',
+        rarity: 'mythical',
+        title: 'Mythical Physiology',
+        detail: '+35 max HP, +2 damage, +10% speed',
+        apply: () => {
+            player.maxHp += 35;
+            player.hp = Math.min(player.maxHp, player.hp + 28);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
+            player.speed = Math.min(11.8, player.speed * 1.1);
+        },
+    },
+];
+
+const ITEM_RARITY_WEIGHTS = {
+    common: 44,
+    uncommon: 30,
+    rare: 16,
+    epic: 8,
+    legendary: 4,
+    mythical: 1,
+};
+
+const CHEST_WORLD_SIZE = 16;
+const CHEST_DRAW_SCALE = 1.65;
+
+const ITEM_DEFINITIONS = [
+    {
+        id: 'iron_shards', rarity: 'common', title: 'Iron Shards',
+        detail: '+0.5 bullet damage', maxStacks: 12,
+        apply: () => { player.bulletDamage = Math.min(34, player.bulletDamage + 0.5); },
+    },
+    {
+        id: 'runner_wrap', rarity: 'common', title: 'Runner Wrap',
+        detail: '+4% move speed', maxStacks: 12,
+        apply: () => { player.speed = Math.min(11.8, player.speed * 1.04); },
+    },
+    {
+        id: 'vial_mesh', rarity: 'common', title: 'Vial Mesh',
+        detail: '+6 max HP', maxStacks: 14,
+        apply: () => { player.maxHp += 6; player.hp = Math.min(player.maxHp, player.hp + 4); },
+    },
+    {
+        id: 'ammo_pouch', rarity: 'common', title: 'Ammo Pouch',
+        detail: '+10% ammo regen speed', maxStacks: 10,
+        apply: () => { player.ammoRegenMult = Math.min(5, player.ammoRegenMult * 1.1); },
+    },
+    {
+        id: 'paper_shield', rarity: 'common', title: 'Paper Shield',
+        detail: '+1 shield charge', maxStacks: 6,
+        apply: () => {
+            player.shieldMax = Math.min(6, (player.shieldMax ?? 0) + 1);
+            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 1);
+        },
+    },
+    {
+        id: 'copper_jacket', rarity: 'uncommon', title: 'Copper Jacket',
+        detail: '-3% damage taken', maxStacks: 10,
+        apply: () => { player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.97); },
+    },
+    {
+        id: 'drill_mag', rarity: 'uncommon', title: 'Drill Mag',
+        detail: '+7% fire rate', maxStacks: 10,
+        apply: () => { player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.07); },
+    },
+    {
+        id: 'orb_compass', rarity: 'uncommon', title: 'Orb Compass',
+        detail: '+12% XP pull radius', maxStacks: 8,
+        apply: () => { player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.12); },
+    },
+    {
+        id: 'kinetic_cell', rarity: 'uncommon', title: 'Kinetic Cell',
+        detail: '+1 shield charge and faster shield recharge', maxStacks: 6,
+        apply: () => {
+            player.shieldMax = Math.min(8, (player.shieldMax ?? 0) + 1);
+            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 1);
+            player.shieldRegenCooldown = Math.max(90, Math.round(player.shieldRegenCooldown * 0.9));
+        },
+    },
+    {
+        id: 'splitter_rounds', rarity: 'uncommon', title: 'Splitter Rounds',
+        detail: '+1 bullet pierce', maxStacks: 6,
+        apply: () => { player.projectilePierce = Math.min(4, (player.projectilePierce ?? 0) + 1); },
+    },
+    {
+        id: 'predator_lens', rarity: 'uncommon', title: 'Predator Lens',
+        detail: '+5% crit chance', maxStacks: 8,
+        apply: () => { player.critChance = Math.min(0.75, (player.critChance ?? 0) + 0.05); },
+    },
+    {
+        id: 'dash_coil', rarity: 'rare', title: 'Dash Coil',
+        detail: '-6% dash recharge', maxStacks: 8,
+        apply: () => { player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.94)); },
+    },
+    {
+        id: 'blood_etching', rarity: 'rare', title: 'Blood Etching',
+        detail: '+1% lifesteal on kill', maxStacks: 8,
+        apply: () => { player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.01); },
+    },
+    {
+        id: 'chain_relay', rarity: 'rare', title: 'Chain Relay',
+        detail: 'Shots can chain lightning to a nearby foe', maxStacks: 8,
+        apply: () => { player.chainLightningChance = Math.min(0.5, (player.chainLightningChance ?? 0) + 0.1); },
+    },
+    {
+        id: 'blast_powder', rarity: 'rare', title: 'Blast Powder',
+        detail: 'Bullets explode on impact', maxStacks: 8,
+        apply: () => { player.explosionRadius = Math.min(140, (player.explosionRadius ?? 0) + 18); },
+    },
+    {
+        id: 'cleaving_ailment', rarity: 'rare', title: 'Cleaving Ailment',
+        detail: '+20% damage to low-health enemies', maxStacks: 8,
+        apply: () => { player.executeBonusMult = Math.min(2, (player.executeBonusMult ?? 1) + 0.2); },
+    },
+    {
+        id: 'ghost_fiber', rarity: 'epic', title: 'Ghost Fiber',
+        detail: '+10% speed, +10% fire rate', maxStacks: 5,
+        apply: () => {
+            player.speed = Math.min(11.8, player.speed * 1.1);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.1);
+        },
+    },
+    {
+        id: 'leviathan_ink', rarity: 'legendary', title: 'Leviathan Ink',
+        detail: '+2 damage, +20 max HP', maxStacks: 4,
+        apply: () => {
+            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
+            player.maxHp += 20;
+            player.hp = Math.min(player.maxHp, player.hp + 14);
+        },
+    },
+    {
+        id: 'godframe_scrap', rarity: 'mythical', title: 'Godframe Scrap',
+        detail: '-12% damage taken, +3 damage', maxStacks: 2,
+        apply: () => {
+            player.damageTakenMult = Math.max(0.2, player.damageTakenMult * 0.88);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 3);
+        },
+    },
+];
+
+const ITEM_PLACEHOLDER_NAMES = {
+    iron_shards: 'Iron Shards Placeholder',
+    runner_wrap: 'Runner Wrap Placeholder',
+    vial_mesh: 'Vial Mesh Placeholder',
+    ammo_pouch: 'Ammo Pouch Placeholder',
+    paper_shield: 'Paper Shield Placeholder',
+    copper_jacket: 'Copper Jacket Placeholder',
+    drill_mag: 'Drill Mag Placeholder',
+    orb_compass: 'Orb Compass Placeholder',
+    kinetic_cell: 'Kinetic Cell Placeholder',
+    splitter_rounds: 'Splitter Rounds Placeholder',
+    predator_lens: 'Predator Lens Placeholder',
+    dash_coil: 'Dash Coil Placeholder',
+    blood_etching: 'Blood Etching Placeholder',
+    chain_relay: 'Chain Relay Placeholder',
+    blast_powder: 'Blast Powder Placeholder',
+    cleaving_ailment: 'Cleaving Ailment Placeholder',
+    ghost_fiber: 'Ghost Fiber Placeholder',
+    leviathan_ink: 'Leviathan Ink Placeholder',
+    godframe_scrap: 'Godframe Scrap Placeholder',
+};
+
+const UNIQUE_ITEM_DEFINITIONS = [
+    {
+        id: 'boss_crown', rarity: 'rare', title: 'Boss Crown',
+        detail: '+1 dash charge and +12 max HP', maxStacks: 1,
+        apply: () => {
+            player.dashMaxCharges = Math.min(6, player.dashMaxCharges + 1);
+            player.dashCharges = Math.min(player.dashMaxCharges, player.dashCharges + 1);
+            player.maxHp += 12;
+            player.hp = Math.min(player.maxHp, player.hp + 10);
+        },
+    },
+    {
+        id: 'chrono_shell', rarity: 'legendary', title: 'Chrono Shell',
+        detail: 'Unlock AoE pulse around player', maxStacks: 4,
         apply: () => {
             if (player.aoePulseDamage <= 0) {
                 player.aoePulseDamage = 2;
@@ -366,10 +578,41 @@ const LEVEL_UPGRADES = [
         },
     },
     {
-        id: 'mythic_railgun_core',
-        rarity: 'mythical',
-        title: 'Mythic Railgun Core',
-        detail: 'Unlock Q ult: piercing railgun shot (30s recharge)',
+        id: 'overkill_matrix', rarity: 'epic', title: 'Overkill Matrix',
+        detail: '+1 extra shot and +8% fire rate', maxStacks: 4,
+        apply: () => {
+            player.extraShots = Math.min(3, (player.extraShots ?? 0) + 1);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.08);
+        },
+    },
+    {
+        id: 'soul_harvester', rarity: 'epic', title: 'Soul Harvester',
+        detail: 'Kills restore HP and ammo', maxStacks: 4,
+        apply: () => {
+            player.killHealFlat = Math.min(8, (player.killHealFlat ?? 0) + 2);
+            player.killAmmoFlat = Math.min(6, (player.killAmmoFlat ?? 0) + 1);
+        },
+    },
+    {
+        id: 'voltaic_core', rarity: 'epic', title: 'Voltaic Core',
+        detail: '+10% chain chance and stronger chain damage', maxStacks: 4,
+        apply: () => {
+            player.chainLightningChance = Math.min(0.75, (player.chainLightningChance ?? 0) + 0.1);
+            player.chainLightningDamageMult = Math.min(1, (player.chainLightningDamageMult ?? 0.55) + 0.08);
+        },
+    },
+    {
+        id: 'shield_matrix', rarity: 'epic', title: 'Shield Matrix',
+        detail: '+2 shield charges and faster recharge', maxStacks: 4,
+        apply: () => {
+            player.shieldMax = Math.min(10, (player.shieldMax ?? 0) + 2);
+            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 2);
+            player.shieldRegenCooldown = Math.max(60, Math.round(player.shieldRegenCooldown * 0.85));
+        },
+    },
+    {
+        id: 'mythic_railgun_core', rarity: 'mythical', title: 'Mythic Railgun Core',
+        detail: 'Unlock Q railgun and +5 railgun damage', maxStacks: 1,
         apply: () => {
             player.hasRailgunUlt = true;
             player.railgunUltDamage = Math.min(80, player.railgunUltDamage + 5);
@@ -377,7 +620,132 @@ const LEVEL_UPGRADES = [
             player.railgunUltCooldown = Math.min(player.railgunUltCooldown, RAILGUN_ULT_COOLDOWN_FRAMES);
         },
     },
+    {
+        id: 'sunflare_module', rarity: 'legendary', title: 'Sunflare Module',
+        detail: 'Aura damage around you every second', maxStacks: 3,
+        apply: () => {
+            player.auraDamage = Math.min(18, (player.auraDamage ?? 0) + 3);
+            player.auraRadius = Math.min(260, (player.auraRadius ?? 120) + 18);
+        },
+    },
+    {
+        id: 'phoenix_feather', rarity: 'legendary', title: 'Phoenix Feather',
+        detail: 'Revive once with a burst heal', maxStacks: 1,
+        apply: () => { player.reviveCharges = Math.min(1, (player.reviveCharges ?? 0) + 1); },
+    },
+    {
+        id: 'war_machine', rarity: 'legendary', title: 'War Machine',
+        detail: '+2 extra shots, +15% fire rate, +5% crit chance', maxStacks: 2,
+        apply: () => {
+            player.extraShots = Math.min(4, (player.extraShots ?? 0) + 2);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.15);
+            player.critChance = Math.min(0.8, (player.critChance ?? 0) + 0.05);
+        },
+    },
+    {
+        id: 'blackhole_core', rarity: 'legendary', title: 'Blackhole Core',
+        detail: 'Powerful aura that drains nearby enemies', maxStacks: 2,
+        apply: () => {
+            player.auraDamage = Math.min(24, (player.auraDamage ?? 0) + 6);
+            player.auraRadius = Math.min(300, (player.auraRadius ?? 120) + 28);
+        },
+    },
+    {
+        id: 'soul_battery', rarity: 'epic', title: 'Soul Battery',
+        detail: '+2% lifesteal and +12% fire rate', maxStacks: 3,
+        apply: () => {
+            player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.02);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.12);
+        },
+    },
+    {
+        id: 'warden_plating', rarity: 'legendary', title: 'Warden Plating',
+        detail: '-10% damage taken and +35 max HP', maxStacks: 2,
+        apply: () => {
+            player.damageTakenMult = Math.max(0.2, player.damageTakenMult * 0.9);
+            player.maxHp += 35;
+            player.hp = Math.min(player.maxHp, player.hp + 24);
+        },
+    },
+    {
+        id: 'warp_tendon', rarity: 'epic', title: 'Warp Tendon',
+        detail: '+15% speed and -14% dash recharge', maxStacks: 2,
+        apply: () => {
+            player.speed = Math.min(11.8, player.speed * 1.15);
+            player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.86));
+        },
+    },
+    {
+        id: 'recycler_spine', rarity: 'epic', title: 'Recycler Spine',
+        detail: 'Kills restore shield and extra ammo', maxStacks: 2,
+        apply: () => {
+            player.killAmmoFlat = Math.min(8, (player.killAmmoFlat ?? 0) + 2);
+            player.killShieldFlat = Math.min(3, (player.killShieldFlat ?? 0) + 1);
+        },
+    },
+    {
+        id: 'kingmaker_core', rarity: 'mythical', title: 'Kingmaker Core',
+        detail: '+4 damage, +20% fire rate, +20 max HP', maxStacks: 1,
+        apply: () => {
+            player.bulletDamage = Math.min(34, player.bulletDamage + 4);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.2);
+            player.maxHp += 20;
+            player.hp = Math.min(player.maxHp, player.hp + 18);
+        },
+    },
+    {
+        id: 'apocalypse_engine', rarity: 'mythical', title: 'Apocalypse Engine',
+        detail: 'Bullets pierce, chain, and explode', maxStacks: 1,
+        apply: () => {
+            player.projectilePierce = Math.min(6, (player.projectilePierce ?? 0) + 2);
+            player.explosionRadius = Math.min(160, (player.explosionRadius ?? 0) + 24);
+            player.chainLightningChance = Math.min(0.85, (player.chainLightningChance ?? 0) + 0.15);
+            player.chainLightningDamageMult = Math.min(1, (player.chainLightningDamageMult ?? 0.55) + 0.1);
+        },
+    },
+    {
+        id: 'celestial_heart', rarity: 'mythical', title: 'Celestial Heart',
+        detail: '+3 shield charges, revive once, big heal', maxStacks: 1,
+        apply: () => {
+            player.shieldMax = Math.min(12, (player.shieldMax ?? 0) + 3);
+            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 3);
+            player.reviveCharges = Math.min(1, (player.reviveCharges ?? 0) + 1);
+            player.maxHp += 45;
+            player.hp = Math.min(player.maxHp, player.hp + 40);
+        },
+    },
+    {
+        id: 'singularity_seed', rarity: 'mythical', title: 'Singularity Seed',
+        detail: 'Massive aura damage and stronger low-health damage', maxStacks: 1,
+        apply: () => {
+            player.auraDamage = Math.min(36, (player.auraDamage ?? 0) + 10);
+            player.auraRadius = Math.min(360, (player.auraRadius ?? 120) + 48);
+            player.executeBonusMult = Math.min(2.5, (player.executeBonusMult ?? 1) + 0.35);
+        },
+    },
 ];
+
+const UNIQUE_PLACEHOLDER_NAMES = {
+    boss_crown: 'Boss Crown Placeholder',
+    chrono_shell: 'Chrono Shell Placeholder',
+    overkill_matrix: 'Overkill Matrix Placeholder',
+    soul_harvester: 'Soul Harvester Placeholder',
+    voltaic_core: 'Voltaic Core Placeholder',
+    shield_matrix: 'Shield Matrix Placeholder',
+    mythic_railgun_core: 'Mythic Railgun Core Placeholder',
+    sunflare_module: 'Sunflare Module Placeholder',
+    phoenix_feather: 'Phoenix Feather Placeholder',
+    war_machine: 'War Machine Placeholder',
+    blackhole_core: 'Blackhole Core Placeholder',
+    soul_battery: 'Soul Battery Placeholder',
+    warden_plating: 'Warden Plating Placeholder',
+    warp_tendon: 'Warp Tendon Placeholder',
+    recycler_spine: 'Recycler Spine Placeholder',
+    kingmaker_core: 'Kingmaker Core Placeholder',
+    apocalypse_engine: 'Apocalypse Engine Placeholder',
+    celestial_heart: 'Celestial Heart Placeholder',
+    singularity_seed: 'Singularity Seed Placeholder',
+};
 
 const XP_PICKUP_BASE_VALUE = 5;
 const XP_ATTRACT_RADIUS    = 150;
@@ -527,6 +895,18 @@ const pickupInstaKillSprite = imgWithFallback([
     'assets/sprites/pickups/pickup_instakill_placeholder.png',
     'assets/sprites/pickups/pickup_xp_placeholder.png',
 ]);
+const pickupChestSprite = imgWithFallback([
+    'assets/sprites/pickups/chest_placeholder_green.png',
+    'assets/sprites/pickups/unique_placeholder_green.png',
+]);
+const itemPlaceholderSprite = imgWithFallback([
+    'assets/sprites/pickups/item_placeholder_black.png',
+    'assets/sprites/pickups/pickup_xp_placeholder.png',
+]);
+const uniquePlaceholderSprite = imgWithFallback([
+    'assets/sprites/pickups/unique_placeholder_green.png',
+    'assets/sprites/pickups/item_placeholder_black.png',
+]);
 
 const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
@@ -537,7 +917,6 @@ const ENEMY_SPRITE_PATHS = {
 const ENEMY_LEVEL_VARIANTS = {
     1: 'base',
     2: 'a',
-    3: 'b',
     4: 'c',
     5: 'd',
 };
@@ -564,6 +943,32 @@ const enemySpriteSets = {
     d: createEnemySpriteSet('d'),
 };
 
+const BOSS_NAME_OPTIONS = [
+    'Ember Titan',
+    'Cinder Warden',
+    'Molten Crown',
+    'Solar Tyrant',
+];
+
+const BOSS_ENEMY_SPRITE_FRAMES = [
+    imgWithFallback([
+        'assets/sprites/enemies/base/enemy_boss_frame1.png',
+        'assets/sprites/enemies/base/enemy_tank_frame1.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/base/enemy_boss_frame2.png',
+        'assets/sprites/enemies/base/enemy_tank_frame2.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/base/enemy_boss_frame3.png',
+        'assets/sprites/enemies/base/enemy_tank_frame3.png',
+    ]),
+];
+
+function getBossName(index = 0) {
+    return BOSS_NAME_OPTIONS[index % BOSS_NAME_OPTIONS.length];
+}
+
 function getEnemyVariantForLevel(level) {
     return ENEMY_LEVEL_VARIANTS[level] ?? 'base';
 }
@@ -577,6 +982,22 @@ function getEnemySpriteFrames(type) {
     const activeSet = getEnemySpritesForCurrentLevel();
     return activeSet[type] ?? enemySpriteSets.base[type];
 }
+
+const ITEM_PLACEHOLDER_SPRITES = Object.fromEntries(ITEM_DEFINITIONS.map(def => [
+    def.id,
+    imgWithFallback([
+        `assets/sprites/pickups/items/${def.id}_placeholder_green.png`,
+        'assets/sprites/pickups/unique_placeholder_green.png',
+    ]),
+]));
+
+const UNIQUE_PLACEHOLDER_SPRITES = Object.fromEntries(UNIQUE_ITEM_DEFINITIONS.map(def => [
+    def.id,
+    imgWithFallback([
+        `assets/sprites/pickups/uniques/${def.id}_placeholder_green.png`,
+        'assets/sprites/pickups/unique_placeholder_green.png',
+    ]),
+]));
 
 const cursorSprites = [
     { name: 'Crosshair',  img: img('assets/sprites/cursors/cursor_crosshair.png')  },
@@ -685,6 +1106,9 @@ let elapsedGameMs  = 0;
 let gameState      = 'splash';
 let gamePaused     = false;
 let menuPage       = 'main';
+let encyclopediaTab = 'enemies';
+let encyclopediaRarityFilter = 'all';
+let encyclopediaScroll = 0;
 let selectedCursor = 0;
 let selectedCharacter = 0;
 let characterHoverAnim = CHARACTER_LOADOUTS.map(() => 0);
@@ -746,6 +1170,7 @@ let currentLevelUpChoices = [];
 let railgunBeams = [];
 let screenShake = 0;
 let finalWaveBannerTimer = 0;
+let chests = [];
 
 // ── DASH TRAIL ────────────────────────────────────────────────────────────────
 // Each entry: { x, y, flipX, age }
@@ -788,6 +1213,30 @@ let player = {
     railgunUltCooldownFrames: RAILGUN_ULT_COOLDOWN_FRAMES,
     railgunUltDamage: 22,
     upgradeLevels: {},
+    itemLevels: {},
+    inventory: [],
+    lastLootText: '',
+    lastLootTimer: 0,
+    critChance: 0,
+    critMult: 1.75,
+    projectilePierce: 0,
+    extraShots: 0,
+    explosionRadius: 0,
+    chainLightningChance: 0,
+    chainLightningDamageMult: 0.6,
+    executeBonusMult: 1,
+    shieldMax: 0,
+    shieldCharges: 0,
+    shieldRegenCooldown: 180,
+    shieldRegenTimer: 0,
+    auraDamage: 0,
+    auraRadius: 120,
+    auraIntervalFrames: 60,
+    auraTimer: 60,
+    killHealFlat: 0,
+    killAmmoFlat: 0,
+    killShieldFlat: 0,
+    reviveCharges: 0,
     xp: 0, xpToNextLevel: 100, level: 1,
 };
 
@@ -803,12 +1252,224 @@ function getUpgradeRarityWeight(rarity) {
     return UPGRADE_RARITY_WEIGHTS[rarity] ?? 0;
 }
 
+function getItemRarityWeight(rarity) {
+    return ITEM_RARITY_WEIGHTS[rarity] ?? 0;
+}
+
 function getRarityUiColor(rarity) {
     if (rarity === 'mythical') return '#ff79c6';
     if (rarity === 'legendary') return '#ffcb66';
     if (rarity === 'epic') return '#d3a2ff';
     if (rarity === 'rare') return '#8ec7ff';
+    if (rarity === 'uncommon') return '#7cffb0';
     return '#b6ffb6';
+}
+
+function getCurrentProjectileDamage(baseDamage, target = null) {
+    let damage = baseDamage;
+    const healthRatio = target?.maxHp > 0 ? target.hp / target.maxHp : 1;
+    if (healthRatio <= 0.4 && (player.executeBonusMult ?? 1) > 1) {
+        damage *= player.executeBonusMult;
+    }
+    return damage;
+}
+
+function findNearestHostile(x, y, maxDistance = 260, exclude = null) {
+    let best = null;
+    let bestDist = maxDistance;
+
+    for (const e of enemies) {
+        if (!e.alive || e === exclude) continue;
+        const dist = Math.hypot(e.x - x, e.y - y);
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = e;
+        }
+    }
+
+    for (const t of tumorTurrets) {
+        if (!t.alive || t === exclude) continue;
+        const dist = Math.hypot(t.x - x, t.y - y);
+        if (dist < bestDist) {
+            bestDist = dist;
+            best = t;
+        }
+    }
+
+    return best;
+}
+
+function applyEnemyDamage(target, damage, { sourceX, sourceY, sourceProjectile = null, allowTriggers = true } = {}) {
+    if (!target || !target.alive) return false;
+
+    target.hp -= damage;
+    target.hitFlash = 8;
+    target.hpBarTimer = 120;
+    spawnDamageNumber(target.x, target.y - target.size * 0.8, damage);
+
+    if (allowTriggers && sourceProjectile) {
+        if (sourceProjectile.explosionRadius > 0) {
+            triggerExplosionProc(sourceX ?? target.x, sourceY ?? target.y, sourceProjectile.explosionRadius, damage * 0.65, target);
+        }
+
+        if ((sourceProjectile.chainChance ?? 0) > 0 && Math.random() < sourceProjectile.chainChance) {
+            triggerChainLightningProc(target, damage * (sourceProjectile.chainDamageMult ?? 0.6));
+        }
+    }
+
+    if (target.hp <= 0) {
+        target.hp = 0;
+        handleEnemyDefeat(target);
+        return true;
+    }
+
+    return false;
+}
+
+function triggerExplosionProc(centerX, centerY, radius, damage, excludeTarget = null) {
+    for (const e of enemies) {
+        if (!e.alive || e === excludeTarget) continue;
+        const dist = Math.hypot(e.x - centerX, e.y - centerY);
+        if (dist > radius + e.size) continue;
+        const splash = Math.max(1, Math.round(damage * (1 - Math.min(1, dist / Math.max(1, radius))) * 0.9));
+        applyEnemyDamage(e, splash, { sourceX: centerX, sourceY: centerY, allowTriggers: false });
+    }
+
+    for (const t of tumorTurrets) {
+        if (!t.alive || t === excludeTarget) continue;
+        const dist = Math.hypot(t.x - centerX, t.y - centerY);
+        if (dist > radius + t.size) continue;
+        const splash = Math.max(1, Math.round(damage * (1 - Math.min(1, dist / Math.max(1, radius))) * 0.9));
+        applyEnemyDamage(t, splash, { sourceX: centerX, sourceY: centerY, allowTriggers: false });
+    }
+}
+
+function triggerChainLightningProc(origin, damage) {
+    const arcTarget = findNearestHostile(origin.x, origin.y, 280, origin);
+    if (!arcTarget) return;
+    const arcDamage = Math.max(1, Math.round(damage * (player.chainLightningDamageMult ?? 0.6)));
+    applyEnemyDamage(arcTarget, arcDamage, { sourceX: origin.x, sourceY: origin.y, allowTriggers: false });
+}
+
+function getItemLevel(itemId) {
+    return player.itemLevels?.[itemId] ?? 0;
+}
+
+function rollByRarity(pool, weightFn) {
+    if (!pool.length) return null;
+    let totalWeight = 0;
+    for (const entry of pool) totalWeight += Math.max(0, weightFn(entry.rarity));
+    if (totalWeight <= 0) return pool[Math.floor(Math.random() * pool.length)] ?? null;
+
+    let roll = Math.random() * totalWeight;
+    for (const entry of pool) {
+        roll -= Math.max(0, weightFn(entry.rarity));
+        if (roll <= 0) return entry;
+    }
+    return pool[pool.length - 1] ?? null;
+}
+
+function registerLootGain(definition, source) {
+    if (!definition) return false;
+
+    const level = getItemLevel(definition.id);
+    const maxStacks = definition.maxStacks ?? 1;
+    if (level >= maxStacks) return false;
+
+    definition.apply();
+    player.itemLevels[definition.id] = level + 1;
+
+    let entry = player.inventory.find(item => item.id === definition.id);
+    if (!entry) {
+        entry = {
+            id: definition.id,
+            title: definition.title,
+            detail: definition.detail,
+            rarity: definition.rarity,
+            level: 0,
+            source,
+            unique: source === 'unique',
+        };
+        player.inventory.push(entry);
+    }
+
+    entry.level = player.itemLevels[definition.id];
+    player.lastLootText = `${source === 'unique' ? 'UNIQUE' : 'ITEM'}: ${definition.title}`;
+    player.lastLootTimer = 220;
+    return true;
+}
+
+function rollRandomStackableLoot(pool, source, maxTries = 12) {
+    for (let i = 0; i < maxTries; i++) {
+        const definition = rollByRarity(pool, getItemRarityWeight);
+        if (!definition) return false;
+        if (registerLootGain(definition, source)) return true;
+    }
+    return false;
+}
+
+function rewardBossLoot() {
+    const gotUnique = rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique');
+    if (Math.random() < 0.55) {
+        rollRandomStackableLoot(ITEM_DEFINITIONS, 'item');
+    }
+    return gotUnique;
+}
+
+function rewardChestLoot() {
+    const rollUnique = Math.random() < 0.26;
+    if (rollUnique && rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique')) return true;
+    if (rollRandomStackableLoot(ITEM_DEFINITIONS, 'item')) return true;
+    return rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique');
+}
+
+function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 300) {
+    for (let i = 0; i < maxTries; i++) {
+        const tx = 3 + Math.floor(Math.random() * (MAP_W - 6));
+        const ty = 3 + Math.floor(Math.random() * (MAP_H - 6));
+        if (mapTiles[ty]?.[tx] !== TILE_FLOOR) continue;
+
+        const x = tx * TILE + TILE * 0.5;
+        const y = ty * TILE + TILE * 0.5;
+        if (Math.hypot(x - player.x, y - player.y) < minDistanceFromPlayer) continue;
+        if (wallCollision(x, y, CHEST_WORLD_SIZE)) continue;
+
+        return { x, y };
+    }
+
+    return {
+        x: player.x + TILE * 5,
+        y: player.y + TILE * 3,
+    };
+}
+
+function spawnArenaChest() {
+    chests = [];
+    const pos = findRandomFloorPosition(TILE * 7);
+    chests.push({
+        x: pos.x,
+        y: pos.y,
+        prevX: pos.x,
+        prevY: pos.y,
+        size: CHEST_WORLD_SIZE,
+        opened: false,
+    });
+}
+
+function spawnBossEnemy() {
+    const enemy = { alive: true };
+    recycleEnemy(enemy, 'tank');
+    enemy.isBoss = true;
+    enemy.bossName = getBossName(currentArenaLevel + currentWave);
+    enemy.maxHp = Math.round(enemy.maxHp * 9.5);
+    enemy.hp = enemy.maxHp;
+    enemy.size = 30;
+    enemy.wallSize = 24;
+    enemy.speed = Math.max(0.7, enemy.speed * 0.78);
+    enemy.color = '#b84cff';
+    enemy.hpBarTimer = 999999;
+    enemies.push(enemy);
+    enemiesRemainingInWave++;
 }
 
 function rollLevelUpChoices(count = 3) {
@@ -868,7 +1529,23 @@ function applyUpgradeChoice(choiceIndex) {
 }
 
 function applyPlayerDamage(baseDamage) {
+    if ((player.shieldCharges ?? 0) > 0) {
+        player.shieldCharges--;
+        player.shieldRegenTimer = player.shieldRegenCooldown;
+        screenShake = 12;
+        return;
+    }
+
     const scaledDamage = Math.max(1, Math.round(baseDamage * player.damageTakenMult));
+    if ((player.reviveCharges ?? 0) > 0 && scaledDamage >= player.hp) {
+        player.reviveCharges--;
+        player.hp = Math.max(1, Math.round(player.maxHp * 0.45));
+        player.invulnTimer = 120;
+        player.shieldCharges = Math.min(player.shieldMax, player.shieldCharges + 1);
+        screenShake = 24;
+        return;
+    }
+
     player.hp = Math.max(0, player.hp - scaledDamage);
     screenShake = 20;
 }
@@ -911,9 +1588,25 @@ function handleEnemyDefeat(e) {
     e.alive = false;
     enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
 
+    if (e.isBoss) {
+        rewardBossLoot();
+    }
+
     if (player.lifestealOnKill > 0 && player.hp > 0) {
         const heal = Math.max(1, Math.round(player.maxHp * player.lifestealOnKill));
         player.hp = Math.min(player.maxHp, player.hp + heal);
+    }
+
+    if ((player.killHealFlat ?? 0) > 0 && player.hp > 0) {
+        player.hp = Math.min(player.maxHp, player.hp + player.killHealFlat);
+    }
+
+    if ((player.killAmmoFlat ?? 0) > 0) {
+        player.ammo = Math.min(AMMO_MAX, player.ammo + player.killAmmoFlat);
+    }
+
+    if ((player.killShieldFlat ?? 0) > 0 && (player.shieldMax ?? 0) > 0) {
+        player.shieldCharges = Math.min(player.shieldMax, player.shieldCharges + player.killShieldFlat);
     }
 
     const ammoDropChance = AMMO_DROP_CHANCE;
@@ -1382,7 +2075,7 @@ window.addEventListener('keydown', e => {
 
     keys[e.key.toLowerCase()] = true;
 
-    if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters')) {
+    if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters' || menuPage === 'encyclopedia')) {
         menuPage = 'main';
         playUiClick();
     }
@@ -1427,6 +2120,17 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup',     e  => { keys[e.key.toLowerCase()] = false; });
 window.addEventListener('mousemove', e  => { mouseX = e.clientX; mouseY = e.clientY; });
 window.addEventListener('mouseup',   () => { mouseDown = false; });
+window.addEventListener('wheel', e => {
+    if (gameState !== 'menu' || menuPage !== 'encyclopedia') return;
+
+    const entries = filterEncyclopediaEntries(getEncyclopediaEntriesForTab());
+    const metrics = getEncyclopediaScrollMetrics(entries);
+    if (metrics.maxScroll <= 0) return;
+
+    const wheelStep = e.deltaMode === 1 ? 28 : e.deltaMode === 2 ? metrics.listH : 1;
+    encyclopediaScroll = Math.min(metrics.maxScroll, Math.max(0, encyclopediaScroll + e.deltaY * wheelStep));
+    e.preventDefault();
+}, { passive: false });
 
 window.addEventListener('mousedown', e => {
     if (devTestWaveControl.contains(e.target)) return;
@@ -1473,6 +2177,7 @@ window.addEventListener('mousedown', e => {
         if (menuPage === 'main') {
             const charBtn = getSelectCharacterButton();
             const btn = getSelectCursorButton();
+            const ecb = getEncyclopediaButton();
             const ftb = getFogToggleButton();
             const pb  = getPerfButton();
             const fpb = getFpsToggleButton();
@@ -1481,6 +2186,11 @@ window.addEventListener('mousedown', e => {
             if (mouseX >= charBtn.x && mouseX <= charBtn.x + charBtn.w && mouseY >= charBtn.y && mouseY <= charBtn.y + charBtn.h) {
                 playUiClick();
                 menuPage = 'characters';
+            } else if (mouseX >= ecb.x && mouseX <= ecb.x + ecb.w && mouseY >= ecb.y && mouseY <= ecb.y + ecb.h) {
+                playUiClick();
+                menuPage = 'encyclopedia';
+                encyclopediaTab = 'enemies';
+                encyclopediaScroll = 0;
             } else if (mouseX >= pb.x && mouseX <= pb.x + pb.w && mouseY >= pb.y && mouseY <= pb.y + pb.h) {
                 playUiClick();
                 showPerfGuide = !showPerfGuide;
@@ -1535,6 +2245,26 @@ window.addEventListener('mousedown', e => {
                         break;
                     }
                 }
+            }
+        } else if (menuPage === 'encyclopedia') {
+            const back = getEncyclopediaBackButton();
+            const tabs = getEncyclopediaTabButtons();
+            const filterButton = getEncyclopediaFilterButtonAt(mouseX, mouseY);
+            if (filterButton) {
+                playUiClick();
+                encyclopediaRarityFilter = filterButton.rarity;
+                encyclopediaScroll = 0;
+            } else if (mouseX >= back.x && mouseX <= back.x + back.w && mouseY >= back.y && mouseY <= back.y + back.h) {
+                playUiClick();
+                menuPage = 'main';
+            } else if (mouseX >= tabs.enemies.x && mouseX <= tabs.enemies.x + tabs.enemies.w && mouseY >= tabs.enemies.y && mouseY <= tabs.enemies.y + tabs.enemies.h) {
+                playUiClick();
+                encyclopediaTab = 'enemies';
+                encyclopediaScroll = 0;
+            } else if (mouseX >= tabs.items.x && mouseX <= tabs.items.x + tabs.items.w && mouseY >= tabs.items.y && mouseY <= tabs.items.y + tabs.items.h) {
+                playUiClick();
+                encyclopediaTab = 'items';
+                encyclopediaScroll = 0;
             }
         }
     } else if (gameState === 'gameOver') {
@@ -2401,6 +3131,7 @@ function startGame() {
     railgunBeams = [];
     dashTrail     = [];
     trailTimer = 0;
+    chests = [];
 
     player.x     = (MAP_W * TILE) / 2;
     player.y     = (MAP_H * TILE) / 2;
@@ -2426,6 +3157,30 @@ function startGame() {
     player.railgunUltCooldownFrames = RAILGUN_ULT_COOLDOWN_FRAMES;
     player.railgunUltDamage = 22;
     player.upgradeLevels = {};
+    player.itemLevels = {};
+    player.inventory = [];
+    player.lastLootText = '';
+    player.lastLootTimer = 0;
+    player.critChance = 0;
+    player.critMult = 1.75;
+    player.projectilePierce = 0;
+    player.extraShots = 0;
+    player.explosionRadius = 0;
+    player.chainLightningChance = 0;
+    player.chainLightningDamageMult = 0.6;
+    player.executeBonusMult = 1;
+    player.shieldMax = 0;
+    player.shieldCharges = 0;
+    player.shieldRegenCooldown = 180;
+    player.shieldRegenTimer = 0;
+    player.auraDamage = 0;
+    player.auraRadius = 120;
+    player.auraIntervalFrames = 60;
+    player.auraTimer = 60;
+    player.killHealFlat = 0;
+    player.killAmmoFlat = 0;
+    player.killShieldFlat = 0;
+    player.reviveCharges = 0;
     currentLevelUpChoices = [];
     player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
     player.dashCharges = player.dashMaxCharges;
@@ -2527,9 +3282,11 @@ function startWave(waveNumber) {
     waveClearTimer = 0;
     waveSpawnDelayFrames = WAVE_START_SPAWN_DELAY_FRAMES;
     enemySpawnBudget = 0;
+    spawnArenaChest();
 
     if (waveNumber === getConfiguredWavesPerLevel()) {
         finalWaveBannerTimer = 180; // 3 seconds
+        spawnBossEnemy();
     }
 }
 
@@ -2592,6 +3349,7 @@ function updateWaveProgression() {
     railgunBeams = [];
     dashTrail = [];
     trailTimer = 0;
+    chests = [];
 
     player.x = (MAP_W * TILE) / 2;
     player.y = (MAP_H * TILE) / 2;
@@ -2658,12 +3416,27 @@ function playerShoot() {
     const bx = gunX + Math.cos(angle) * barrelTip;
     const by = gunY + Math.sin(angle) * barrelTip;
 
-    projectiles.push({
-        x: bx, y: by, prevX: bx, prevY: by,
-        velocityX: Math.cos(angle) * 12,
-        velocityY: Math.sin(angle) * 12,
-        size: 5, framesLeft: 80,
-    });
+    const shotCount = Math.max(1, 1 + (player.extraShots ?? 0));
+    const spreadStep = shotCount > 1 ? 0.055 : 0;
+    const startOffset = -(shotCount - 1) * 0.5;
+
+    for (let i = 0; i < shotCount; i++) {
+        const shotAngle = angle + (startOffset + i) * spreadStep;
+        projectiles.push({
+            x: bx, y: by, prevX: bx, prevY: by,
+            velocityX: Math.cos(shotAngle) * 12,
+            velocityY: Math.sin(shotAngle) * 12,
+            size: 5,
+            framesLeft: 80,
+            piercesLeft: player.projectilePierce ?? 0,
+            critChance: player.critChance ?? 0,
+            critMult: player.critMult ?? 1.75,
+            explosionRadius: player.explosionRadius ?? 0,
+            chainChance: player.chainLightningChance ?? 0,
+            chainDamageMult: player.chainLightningDamageMult ?? 0.6,
+            isCrit: Math.random() < (player.critChance ?? 0),
+        });
+    }
 
     // Spawn muzzle flash at the barrel tip (world coords)
     const sparks = [];
@@ -2822,6 +3595,36 @@ function updatePlayer() {
     if (player.railgunUltCooldown > 0) player.railgunUltCooldown--;
     if (player.aoePulseFlash > 0) player.aoePulseFlash--;
     triggerChronoPulse();
+
+    if ((player.shieldMax ?? 0) > 0 && (player.shieldCharges ?? 0) < player.shieldMax) {
+        if (player.shieldRegenTimer > 0) {
+            player.shieldRegenTimer--;
+        } else {
+            player.shieldCharges = Math.min(player.shieldMax, player.shieldCharges + 1);
+            player.shieldRegenTimer = player.shieldRegenCooldown;
+        }
+    }
+
+    if ((player.auraDamage ?? 0) > 0) {
+        if (player.auraTimer > 0) {
+            player.auraTimer--;
+        } else {
+            player.auraTimer = player.auraIntervalFrames;
+            const auraRadius = player.auraRadius ?? 120;
+            for (const e of enemies) {
+                if (!e.alive) continue;
+                if (Math.hypot(player.x - e.x, player.y - e.y) <= auraRadius + e.size) {
+                    applyEnemyDamage(e, Math.max(1, player.auraDamage), { sourceX: player.x, sourceY: player.y, allowTriggers: false });
+                }
+            }
+            for (const t of tumorTurrets) {
+                if (!t.alive) continue;
+                if (Math.hypot(player.x - t.x, player.y - t.y) <= auraRadius + t.size) {
+                    applyEnemyDamage(t, Math.max(1, player.auraDamage), { sourceX: player.x, sourceY: player.y, allowTriggers: false });
+                }
+            }
+        }
+    }
 
     if (player.hp <= 0) { lastLevelDied = player.level; gameState = 'gameOver'; }
 
@@ -3251,20 +4054,22 @@ function updateEnemies() {
     for (const e of enemies) {
         if (!e.alive) continue;
 
-        if (isEnemyOffscreenFromPlayer(e)) {
-            e.offscreenFrames = (e.offscreenFrames ?? 0) + 1;
-        } else {
-            e.offscreenFrames = 0;
-        }
+        if (!e.isBoss) {
+            if (isEnemyOffscreenFromPlayer(e)) {
+                e.offscreenFrames = (e.offscreenFrames ?? 0) + 1;
+            } else {
+                e.offscreenFrames = 0;
+            }
 
-        if (e.offscreenFrames >= ENEMY_OFFSCREEN_DESPAWN_FRAMES) {
-            recycleEnemy(e);
-            continue;
-        }
+            if (e.offscreenFrames >= ENEMY_OFFSCREEN_DESPAWN_FRAMES) {
+                recycleEnemy(e);
+                continue;
+            }
 
-        if (Math.hypot(player.x - e.x, player.y - e.y) > getEnemyRecycleDistance() * 1.35) {
-            recycleEnemy(e);
-            continue;
+            if (Math.hypot(player.x - e.x, player.y - e.y) > getEnemyRecycleDistance() * 1.35) {
+                recycleEnemy(e);
+                continue;
+            }
         }
 
         if (e.pathTimer > 0) {
@@ -3433,7 +4238,7 @@ function drawEnemies() {
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
         const sz  = e.size * 2;
-        const frames = getEnemySpriteFrames(e.type);
+        const frames = e.isBoss ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
         const sprite = frames[e.animFrame % Math.max(1, frames.length)] ?? frames[0];
 
         ctx.save();
@@ -3448,6 +4253,19 @@ function drawEnemies() {
         }
         ctx.restore();
 
+        if (e.isBoss) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = 'rgba(210,120,255,0.9)';
+            ctx.shadowColor = 'rgba(210,120,255,0.8)';
+            ctx.shadowBlur = 14;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, e.size + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         if (alpha > 0.15 && e.hpBarTimer > 0) {
             const bw = e.size * 2, bh = 4, hf = e.hp / e.maxHp;
             const bx = sc.x - bw / 2, by = sc.y - e.size - 12;
@@ -3460,6 +4278,13 @@ function drawEnemies() {
             ctx.strokeStyle = 'white';
             ctx.lineWidth   = 1;
             ctx.strokeRect(bx, by, bw, bh);
+
+            if (e.isBoss) {
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'rgba(255,230,255,0.95)';
+                ctx.fillText(e.bossName ?? 'BOSS', sc.x, by - 3);
+            }
             ctx.restore();
         }
     }
@@ -3639,13 +4464,15 @@ function updateProjectiles() {
             if (!t.alive) continue;
             // Segment test prevents misses when bullets move farther than a hitbox in one tick.
             if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
-                const turretDamage = player.instakillTimer > 0 ? t.hp : player.bulletDamage;
-                t.hp -= turretDamage;
-                t.hitFlash = 8;
-                t.hpBarTimer = 120;
-                spawnDamageNumber(t.x, t.y - t.size * 0.8, turretDamage);
-                if (t.hp <= 0) t.alive = false;
-                projectiles.splice(i, 1);
+                const turretDamageBase = player.instakillTimer > 0 ? t.hp : player.bulletDamage;
+                let turretDamage = getCurrentProjectileDamage(turretDamageBase, t);
+                if (p.isCrit) turretDamage = Math.round(turretDamage * (p.critMult ?? 1.75));
+                applyEnemyDamage(t, turretDamage, { sourceX: p.x, sourceY: p.y, sourceProjectile: p });
+                if ((p.piercesLeft ?? 0) > 0) {
+                    p.piercesLeft--;
+                } else {
+                    projectiles.splice(i, 1);
+                }
                 break;
             }
         }
@@ -3655,17 +4482,16 @@ function updateProjectiles() {
         for (const e of enemies) {
             if (!e.alive) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, e.x, e.y, p.size + e.size)) {
-                const enemyDamage = player.instakillTimer > 0 ? e.hp : player.bulletDamage;
-                e.hp -= enemyDamage;
-                e.hitFlash   = 8;
-                e.hpBarTimer = 120;
-                spawnDamageNumber(e.x, e.y - e.size * 0.8, enemyDamage);
+                const enemyDamageBase = player.instakillTimer > 0 ? e.hp : player.bulletDamage;
+                let enemyDamage = getCurrentProjectileDamage(enemyDamageBase, e);
+                if (p.isCrit) enemyDamage = Math.round(enemyDamage * (p.critMult ?? 1.75));
+                applyEnemyDamage(e, enemyDamage, { sourceX: p.x, sourceY: p.y, sourceProjectile: p });
 
-                if (e.hp <= 0) {
-                    handleEnemyDefeat(e);
+                if ((p.piercesLeft ?? 0) > 0) {
+                    p.piercesLeft--;
+                } else {
+                    projectiles.splice(i, 1);
                 }
-
-                projectiles.splice(i, 1);
                 break;
             }
         }
@@ -3752,6 +4578,59 @@ function drawEnemyProjectiles() {
 // =============================================================================
 //  PICKUPS
 // =============================================================================
+
+function updateChests() {
+    for (let i = chests.length - 1; i >= 0; i--) {
+        const chest = chests[i];
+        const dist = Math.hypot(player.x - chest.x, player.y - chest.y);
+        if (dist <= player.size + chest.size) {
+            rewardChestLoot();
+            chests.splice(i, 1);
+        }
+    }
+}
+
+function drawChests() {
+    for (const chest of chests) {
+        const crx = (chest.prevX ?? chest.x) + (chest.x - (chest.prevX ?? chest.x)) * renderAlpha;
+        const cry = (chest.prevY ?? chest.y) + (chest.y - (chest.prevY ?? chest.y)) * renderAlpha;
+        const sc = toScreen(crx, cry);
+        const drawRadius = chest.size * CHEST_DRAW_SCALE;
+        const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.06);
+
+        ctx.save();
+        const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.3 * pulse);
+        halo.addColorStop(0, 'rgba(40,210,90,0.35)');
+        halo.addColorStop(0.5, 'rgba(40,210,90,0.13)');
+        halo.addColorStop(1, 'rgba(40,210,90,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, drawRadius * 3.3 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowColor = '#6bff8f';
+        ctx.shadowBlur = 18 * pulse;
+        if (pickupChestSprite.complete && pickupChestSprite.naturalWidth) {
+            ctx.drawImage(pickupChestSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+        } else {
+            ctx.fillStyle = '#0a2b0f';
+            ctx.fillRect(sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+            ctx.strokeStyle = '#62ff8c';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = 'rgba(220,255,225,0.95)';
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 5;
+        ctx.fillText('CHEST', sc.x, sc.y - drawRadius - 10);
+        ctx.restore();
+    }
+}
 
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {
@@ -4632,6 +5511,122 @@ function drawUpgradeHud() {
     ctx.restore();
 }
 
+function drawInventoryHud() {
+    const panelX = 20;
+    const panelY = 370;
+    const panelW = 340;
+    const panelH = 146;
+    const slotSize = 28;
+    const gap = 6;
+    const cols = 9;
+    const rows = 3;
+    const maxSlots = cols * rows;
+    const entries = player.inventory.slice(0, maxSlots);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.56)';
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 4;
+    ctx.font = 'bold 11px Arial';
+    ctx.fillStyle = '#d5e7ff';
+    ctx.fillText('ITEMS & UNIQUES (hover icons)', panelX + 8, panelY + 14);
+
+    let hovered = null;
+    for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        if (row >= rows) break;
+
+        const x = panelX + 8 + col * (slotSize + gap);
+        const y = panelY + 22 + row * (slotSize + gap);
+        const hover = mouseX >= x && mouseX <= x + slotSize && mouseY >= y && mouseY <= y + slotSize;
+        if (hover) hovered = { x, y, entry };
+
+        ctx.fillStyle = hover ? 'rgba(255,255,255,0.16)' : 'rgba(10,10,10,0.82)';
+        ctx.fillRect(x, y, slotSize, slotSize);
+        ctx.strokeStyle = hover ? '#ffffff' : getRarityUiColor(entry.rarity);
+        ctx.lineWidth = hover ? 2 : 1;
+        ctx.strokeRect(x, y, slotSize, slotSize);
+
+        const icon = entry.unique ? uniquePlaceholderSprite : itemPlaceholderSprite;
+        if (icon.complete && icon.naturalWidth) {
+            ctx.drawImage(icon, x + 3, y + 3, slotSize - 6, slotSize - 6);
+        } else {
+            ctx.fillStyle = entry.unique ? '#35dd69' : '#111111';
+            ctx.fillRect(x + 3, y + 3, slotSize - 6, slotSize - 6);
+        }
+
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(String(entry.level), x + slotSize - 2, y + slotSize - 2);
+    }
+
+    if (!entries.length) {
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(255,255,255,0.78)';
+        ctx.fillText('No chest/boss loot yet', panelX + 8, panelY + 42);
+    }
+
+    const uniqueCount = player.inventory.filter(item => item.unique).length;
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(220,230,255,0.88)';
+    ctx.fillText(`Total ${player.inventory.length}  |  Uniques ${uniqueCount}`, panelX + 8, panelY + panelH - 8);
+
+    if (hovered) {
+        const tipW = 280;
+        const tipH = 66;
+        const tipX = Math.min(canvas.width - tipW - 14, hovered.x + slotSize + 10);
+        const tipY = Math.max(14, Math.min(canvas.height - tipH - 14, hovered.y - 8));
+
+        ctx.fillStyle = 'rgba(0,0,0,0.93)';
+        ctx.fillRect(tipX, tipY, tipW, tipH);
+        ctx.strokeStyle = getRarityUiColor(hovered.entry.rarity);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tipX, tipY, tipW, tipH);
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = getRarityUiColor(hovered.entry.rarity);
+        ctx.fillText(`${hovered.entry.title}  L${hovered.entry.level}`, tipX + 8, tipY + 16);
+        ctx.font = '10px Arial';
+        ctx.fillStyle = 'rgba(235,240,255,0.9)';
+        ctx.fillText(hovered.entry.detail, tipX + 8, tipY + 34);
+        ctx.fillStyle = 'rgba(210,220,240,0.82)';
+        ctx.fillText(`Type: ${hovered.entry.unique ? 'Unique' : 'Item'}  |  Rarity: ${hovered.entry.rarity.toUpperCase()}`, tipX + 8, tipY + 52);
+    }
+
+    ctx.restore();
+}
+
+function drawLootToast() {
+    if (player.lastLootTimer <= 0) return;
+    player.lastLootTimer--;
+
+    const alpha = Math.min(1, player.lastLootTimer / 30);
+    const y = 122 + Math.sin((220 - player.lastLootTimer) * 0.05) * 2;
+    const text = player.lastLootText;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#d6ffd9';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(text, canvas.width / 2, y);
+    ctx.restore();
+}
+
 
 // =============================================================================
 //  UI — HUD OVERLAY
@@ -4726,6 +5721,8 @@ function drawUI() {
     drawAmmoPowerupOverlay();
     drawInstakillPowerupOverlay();
     drawUpgradeHud();
+    drawInventoryHud();
+    drawLootToast();
     drawAmmoPickupArrow();
     drawLastEnemyArrow();
     drawCheatMenu();
@@ -4791,6 +5788,12 @@ function drawMinimap() {
         ctx.beginPath();
         ctx.arc(MM_X + p.x * scaleX, MM_Y + p.y * scaleY, 2, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    // Chests
+    ctx.fillStyle = '#65ff8a';
+    for (const chest of chests) {
+        ctx.fillRect(MM_X + chest.x * scaleX - 2, MM_Y + chest.y * scaleY - 2, 4, 4);
     }
 
     // Enemies
@@ -4901,7 +5904,298 @@ function getDevTestWaveControlRect() {
 function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
 function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
 function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
+function getEncyclopediaButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 366, w: 160, h: 36 }; }
 function getBackButton()         { return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 }; }
+function getEncyclopediaPanel() {
+    const w = Math.min(1140, canvas.width - 70);
+    const h = Math.min(620, canvas.height - 84);
+    return {
+        x: canvas.width / 2 - w / 2,
+        y: canvas.height / 2 - h / 2,
+        w,
+        h,
+    };
+}
+
+function getEncyclopediaTabButtons() {
+    const panel = getEncyclopediaPanel();
+    const tabY = panel.y + 72;
+    return {
+        enemies: { x: panel.x + 26, y: tabY, w: 150, h: 34 },
+        items: { x: panel.x + 190, y: tabY, w: 150, h: 34 },
+    };
+}
+
+function getEncyclopediaBackButton() {
+    const panel = getEncyclopediaPanel();
+    return { x: panel.x + panel.w / 2 - 72, y: panel.y + panel.h - 50, w: 144, h: 34 };
+}
+
+const ENCYCLOPEDIA_RARITY_FILTERS = ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'];
+
+function getEncyclopediaFilterButtons() {
+    const panel = getEncyclopediaPanel();
+    const listX = panel.x + 26;
+    const topY = panel.y + 102;
+    const gap = 8;
+    const buttonW = Math.floor((panel.w - 52 - gap * (ENCYCLOPEDIA_RARITY_FILTERS.length - 1)) / ENCYCLOPEDIA_RARITY_FILTERS.length);
+    return ENCYCLOPEDIA_RARITY_FILTERS.map((rarity, index) => ({
+        rarity,
+        x: listX + index * (buttonW + gap),
+        y: topY,
+        w: buttonW,
+        h: 28,
+    }));
+}
+
+function getEncyclopediaEntriesForTab() {
+    return encyclopediaTab === 'enemies' ? getEncyclopediaEnemyEntries() : getEncyclopediaItemEntries();
+}
+
+function getEncyclopediaScrollMetrics(entries) {
+    const panel = getEncyclopediaPanel();
+    const listX = panel.x + 26;
+    const listY = panel.y + 144;
+    const listW = panel.w - 52;
+    const listH = panel.h - 220;
+    const isEnemies = encyclopediaTab === 'enemies';
+    const cols = isEnemies ? 1 : 2;
+    const entryH = isEnemies ? 78 : 92;
+    const gap = 10;
+    const rows = entries.length > 0 ? Math.ceil(entries.length / cols) : 0;
+    const contentH = rows > 0 ? rows * entryH + Math.max(0, rows - 1) * gap : 0;
+    const maxScroll = Math.max(0, contentH - listH);
+
+    return { panel, listX, listY, listW, listH, entryH, gap, contentH, maxScroll, cols };
+}
+
+function filterEncyclopediaEntries(entries) {
+    if (encyclopediaRarityFilter === 'all') return entries;
+    return entries.filter(entry => entry.rarity === encyclopediaRarityFilter);
+}
+
+function getEncyclopediaEnemyEntries() {
+    const entries = [];
+    const nameMap = { basic: 'Basic', fast: 'Fast', tank: 'Tank' };
+
+    for (const [id, base] of Object.entries(ENEMY_TYPES)) {
+        const lvl5 = ENEMY_VARIANT_STATS.d?.[id] ?? ENEMY_VARIANT_STATS.base?.[id] ?? { hp: base.hp, speed: base.speed };
+        const frames = getEnemySpriteFrames(id);
+        entries.push({
+            title: `${nameMap[id] ?? id} Enemy`,
+            rarity: 'common',
+            detail: `Base HP ${base.hp}  SPD ${base.speed.toFixed(1)}  Size ${base.size}`,
+            extra: `Level 5 scaling: HP ${lvl5.hp}  SPD ${lvl5.speed.toFixed(1)}`,
+            icon: frames?.[0] ?? null,
+            iconFrames: frames,
+            kind: 'enemy',
+        });
+    }
+
+    entries.push({
+        title: 'Tumor Turret',
+        rarity: 'epic',
+        detail: `HP ${TUMOR_HP}  Range ${TUMOR_RANGE}  Projectile DMG ${TUMOR_PROJECTILE_DAMAGE}`,
+        extra: `Charge ${Math.round(TUMOR_CHARGE_FRAMES * FIXED_STEP)}ms  Cooldown ${Math.round(TUMOR_COOLDOWN_FRAMES * FIXED_STEP)}ms`,
+        icon: tumorIdleSprite,
+        iconFrames: [tumorIdleSprite, tumorShootSprite],
+        kind: 'enemy',
+    });
+
+    const bossTank = ENEMY_VARIANT_STATS.d?.tank ?? ENEMY_TYPES.tank;
+    entries.push({
+        title: `Boss - ${getBossName(currentArenaLevel + currentWave)}`,
+        rarity: 'legendary',
+        detail: `HP x9.5 of tank variant (about ${Math.round((bossTank.hp ?? 16) * 9.5)})`,
+        extra: `Names: ${BOSS_NAME_OPTIONS.join(' / ')}`,
+        icon: BOSS_ENEMY_SPRITE_FRAMES[0] ?? null,
+        iconFrames: BOSS_ENEMY_SPRITE_FRAMES,
+        kind: 'enemy',
+    });
+
+    return entries;
+}
+
+function getEncyclopediaItemEntries() {
+    const items = ITEM_DEFINITIONS.map(def => ({
+        title: ITEM_PLACEHOLDER_NAMES[def.id] ?? def.title,
+        subtitle: def.title,
+        rarity: def.rarity,
+        detail: def.detail,
+        extra: `Item  |  Max stacks ${def.maxStacks ?? 1}`,
+        icon: ITEM_PLACEHOLDER_SPRITES[def.id] ?? uniquePlaceholderSprite,
+        kind: 'item',
+    }));
+
+    const uniques = UNIQUE_ITEM_DEFINITIONS.map(def => ({
+        title: UNIQUE_PLACEHOLDER_NAMES[def.id] ?? def.title,
+        subtitle: def.title,
+        rarity: def.rarity,
+        detail: def.detail,
+        extra: `Unique  |  Max stacks ${def.maxStacks ?? 1}`,
+        icon: UNIQUE_PLACEHOLDER_SPRITES[def.id] ?? uniquePlaceholderSprite,
+        kind: 'unique',
+    }));
+
+    return [...items, ...uniques].sort((a, b) => a.title.localeCompare(b.title));
+}
+
+function getEncyclopediaFilterButtonAt(x, y) {
+    const buttons = getEncyclopediaFilterButtons();
+    for (const button of buttons) {
+        if (x >= button.x && x <= button.x + button.w && y >= button.y && y <= button.y + button.h) {
+            return button;
+        }
+    }
+    return null;
+}
+
+function drawEncyclopediaMenu() {
+    const panel = getEncyclopediaPanel();
+    const tabs = getEncyclopediaTabButtons();
+    const back = getEncyclopediaBackButton();
+    const filterButtons = getEncyclopediaFilterButtons();
+
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(8,8,8,0.95)';
+    ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.76)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(panel.x, panel.y, panel.w, panel.h);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 38px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Encyclopedia', canvas.width / 2, panel.y + 46);
+    ctx.font = '15px Arial';
+    ctx.fillStyle = '#cfd4db';
+    ctx.fillText('Enemy and item reference', canvas.width / 2, panel.y + 66);
+
+    const isEnemies = encyclopediaTab === 'enemies';
+    const enemyHover = mouseX >= tabs.enemies.x && mouseX <= tabs.enemies.x + tabs.enemies.w && mouseY >= tabs.enemies.y && mouseY <= tabs.enemies.y + tabs.enemies.h;
+    const itemHover = mouseX >= tabs.items.x && mouseX <= tabs.items.x + tabs.items.w && mouseY >= tabs.items.y && mouseY <= tabs.items.y + tabs.items.h;
+
+    const drawTab = (tab, active, hover, label) => {
+        ctx.fillStyle = active ? 'rgba(255,255,255,0.22)' : hover ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)';
+        ctx.fillRect(tab.x, tab.y, tab.w, tab.h);
+        ctx.strokeStyle = active ? '#ffffff' : 'rgba(210,220,235,0.5)';
+        ctx.lineWidth = active ? 2 : 1;
+        ctx.strokeRect(tab.x, tab.y, tab.w, tab.h);
+        ctx.fillStyle = active ? '#ffffff' : '#dbe1ea';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, tab.x + tab.w / 2, tab.y + 22);
+    };
+
+    drawTab(tabs.enemies, isEnemies, enemyHover, 'Enemies');
+    drawTab(tabs.items, !isEnemies, itemHover, 'Items');
+
+    for (const button of filterButtons) {
+        const active = encyclopediaRarityFilter === button.rarity;
+        ctx.fillStyle = active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)';
+        ctx.fillRect(button.x, button.y, button.w, button.h);
+        ctx.strokeStyle = active ? '#ffffff' : 'rgba(210,220,235,0.38)';
+        ctx.lineWidth = active ? 2 : 1;
+        ctx.strokeRect(button.x, button.y, button.w, button.h);
+        ctx.fillStyle = active ? '#ffffff' : '#dbe1ea';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(button.rarity === 'all' ? 'All' : button.rarity, button.x + button.w / 2, button.y + 19);
+    }
+
+    const entries = filterEncyclopediaEntries(getEncyclopediaEntriesForTab());
+    const { listX, listY, listW, listH, entryH, gap, maxScroll } = getEncyclopediaScrollMetrics(entries);
+    encyclopediaScroll = Math.min(maxScroll, Math.max(0, encyclopediaScroll));
+
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(listX, listY, listW, listH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(listX, listY, listW, listH);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(listX, listY, listW, listH);
+    ctx.clip();
+
+    const entryWidth = listW - 12;
+    const iconSize = isEnemies ? 54 : 50;
+    const slotPad = 10;
+    const rowStep = entryH + gap;
+    let hoveredEntry = null;
+    const encyclopediaAnimTick = Math.floor((performance.now?.() ?? Date.now()) / 120);
+
+    for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const row = Math.floor(i / (isEnemies ? 1 : 2));
+        const col = isEnemies ? 0 : (i % 2);
+        const cardW = isEnemies ? entryWidth : Math.floor((entryWidth - gap) / 2);
+        const x = listX + 6 + col * (cardW + gap);
+        const y = listY + row * rowStep - encyclopediaScroll;
+        if (y + entryH < listY || y > listY + listH) continue;
+
+        const hover = mouseX >= x && mouseX <= x + cardW && mouseY >= y && mouseY <= y + entryH;
+        if (hover) hoveredEntry = { entry, x, y };
+
+        ctx.fillStyle = hover ? 'rgba(255,255,255,0.15)' : (i % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.025)');
+        ctx.fillRect(x, y, cardW, entryH);
+        ctx.strokeStyle = hover ? getRarityUiColor(entry.rarity) : 'rgba(255,255,255,0.16)';
+        ctx.lineWidth = hover ? 2 : 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, cardW - 1, entryH - 1);
+
+        const iconX = x + slotPad;
+        const iconY = y + (entryH - iconSize) / 2;
+        const iconFrames = entry.iconFrames;
+        const icon = iconFrames?.length ? iconFrames[encyclopediaAnimTick % iconFrames.length] : entry.icon;
+        if (icon?.complete && icon.naturalWidth) {
+            ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+        } else {
+            ctx.fillStyle = entry.kind === 'enemy' ? '#243824' : entry.kind === 'unique' ? '#2f6b39' : '#111111';
+            ctx.fillRect(iconX, iconY, iconSize, iconSize);
+        }
+
+        ctx.fillStyle = getRarityUiColor(entry.rarity);
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(entry.title, iconX + iconSize + 14, y + 24);
+
+        ctx.fillStyle = '#d6dbe2';
+        ctx.font = '11px Arial';
+        ctx.fillText(entry.detail, iconX + iconSize + 14, y + 44);
+
+        ctx.fillStyle = 'rgba(210,220,235,0.86)';
+        ctx.fillText(entry.extra, iconX + iconSize + 14, y + 61);
+    }
+
+    ctx.restore();
+
+    if (maxScroll > 0) {
+        const trackX = listX + listW - 10;
+        const trackH = listH;
+        const totalRows = entries.length > 0 ? Math.ceil(entries.length / (isEnemies ? 1 : 2)) : 0;
+        const totalContentH = totalRows > 0 ? totalRows * entryH + Math.max(0, totalRows - 1) * gap : 0;
+        const thumbH = Math.max(34, Math.round(trackH * (listH / Math.max(1, totalContentH))));
+        const thumbY = listY + Math.round((encyclopediaScroll / maxScroll) * (trackH - thumbH));
+
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(trackX, listY, 4, trackH);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(trackX - 1, thumbY, 6, thumbH);
+    }
+
+    const backHover = mouseX >= back.x && mouseX <= back.x + back.w && mouseY >= back.y && mouseY <= back.y + back.h;
+    ctx.fillStyle = backHover ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)';
+    ctx.fillRect(back.x, back.y, back.w, back.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(back.x, back.y, back.w, back.h);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('<  Back', back.x + back.w / 2, back.y + 22);
+}
 
 function syncDevTestWaveControl() {
     const shouldShow = gameState === 'menu' && menuPage === 'main' && devTestMode;
@@ -5138,6 +6432,17 @@ function drawMenu() {
         ctx.textAlign   = 'center';
         ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
 
+        const ecb = getEncyclopediaButton();
+        ctx.fillStyle   = '#000000';
+        ctx.fillRect(ecb.x, ecb.y, ecb.w, ecb.h);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(ecb.x, ecb.y, ecb.w, ecb.h);
+        ctx.fillStyle   = '#ffffff';
+        ctx.font        = '16px Arial';
+        ctx.textAlign   = 'center';
+        ctx.fillText('Encyclopedia  >', ecb.x + ecb.w / 2, ecb.y + ecb.h / 2 + 6);
+
         // Fog toggle button
         const ftb = getFogToggleButton();
         ctx.fillStyle   = '#000000';
@@ -5303,7 +6608,7 @@ function drawMenu() {
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('<  Back', back.x + back.w / 2, back.y + back.h / 2 + 6);
-    } else {
+    } else if (menuPage === 'cursors') {
         ctx.fillStyle = 'white';
         ctx.font      = 'bold 40px Arial';
         ctx.textAlign = 'center';
@@ -5335,6 +6640,8 @@ function drawMenu() {
         ctx.font        = '16px Arial';
         ctx.textAlign   = 'center';
         ctx.fillText('<  Back', back.x + back.w / 2, back.y + back.h / 2 + 6);
+    } else if (menuPage === 'encyclopedia') {
+        drawEncyclopediaMenu();
     }
 
     drawCursor();
@@ -5363,7 +6670,7 @@ function drawLevelUpMenu() {
     ctx.font        = '18px Arial';
     ctx.shadowBlur  = 8;
     ctx.fillStyle   = 'rgba(200,220,255,0.85)';
-    ctx.fillText('Choose an upgrade  —  or skip', canvas.width / 2, canvas.height / 2 - 235);
+    ctx.fillText('Choose a stat boost  —  or skip', canvas.width / 2, canvas.height / 2 - 235);
     ctx.restore();
 
     const { cards, skip } = getLevelUpZones();
@@ -5509,6 +6816,7 @@ function savePrevPositions() {
     for (const p of enemyProjectiles) { p.prevX = p.x; p.prevY = p.y; }
     for (const t of tumorTurrets) { t.prevX = t.x; t.prevY = t.y; }
     for (const p of pickups)     { p.prevX = p.x; p.prevY = p.y; }
+    for (const chest of chests)  { chest.prevX = chest.x; chest.prevY = chest.y; }
 }
 
 
@@ -5570,6 +6878,7 @@ function gameLoop(timestamp) {
             cleanupDeadEnemies();
             updateWaveProgression();
             updatePickups();
+            updateChests();
             updateDamageNumbers();
             frameCount++;
             accumulator -= FIXED_STEP;
@@ -5589,6 +6898,7 @@ function gameLoop(timestamp) {
     drawTumorTurrets();
     drawProjectiles();
     drawEnemyProjectiles();
+    drawChests();
     drawPickups();
     drawDamageNumbers();
     drawLowHealthMarker();
