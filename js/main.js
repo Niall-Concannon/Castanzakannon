@@ -121,6 +121,16 @@ const GUN_H         = 18;
 
 const FIXED_STEP = 1000 / 60;
 const SPLASH_FADE_DURATION_MS = 1500;
+const MENU_TITLE_FONT_FAMILY = '"Orbitron", "Segoe UI", sans-serif';
+const MENU_UI_FONT_FAMILY = '"Rajdhani", "Trebuchet MS", sans-serif';
+const MENU_TEXT_COLORS = {
+    title: '#f4d27c',
+    titleShadow: 'rgba(255, 176, 71, 0.28)',
+    subtitle: '#e1edf8',
+    selectedCharacter: '#bfe9d4',
+    loadoutHeader: '#90d7ff',
+    systemHeader: '#ffd58c',
+};
 const AUDIO_STORAGE_KEYS = {
     music: 'castanza_music_volume',
     sfx: 'castanza_sfx_volume',
@@ -6459,51 +6469,59 @@ function drawMenu() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (menuPage === 'main') {
-        ctx.fillStyle  = '#ffffff';
-        ctx.font       = 'bold 64px Arial';
+        ctx.font       = `800 64px ${MENU_TITLE_FONT_FAMILY}`;
         ctx.textAlign  = 'center';
+        ctx.fillStyle  = MENU_TEXT_COLORS.title;
+        ctx.shadowColor = MENU_TEXT_COLORS.titleShadow;
+        ctx.shadowBlur = 18;
         ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 136);
-        ctx.font       = '20px Arial';
-        ctx.fillStyle  = '#ffffff';
+        ctx.font       = `600 21px ${MENU_UI_FONT_FAMILY}`;
+        ctx.fillStyle  = MENU_TEXT_COLORS.subtitle;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 8;
         ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 100);
-        ctx.font       = '15px Arial';
-        ctx.fillStyle  = '#d6d6d6';
+        ctx.font       = `600 17px ${MENU_UI_FONT_FAMILY}`;
+        ctx.fillStyle  = MENU_TEXT_COLORS.selectedCharacter;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 6;
         ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 - 74);
+        ctx.shadowBlur = 0;
 
         const mainLayout = getMainMenuLayout();
-        ctx.font = 'bold 17px Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = `700 19px ${MENU_UI_FONT_FAMILY}`;
+        ctx.fillStyle = MENU_TEXT_COLORS.loadoutHeader;
         ctx.fillText(mainLayout.leftHeader.text, mainLayout.leftHeader.x, mainLayout.leftHeader.y);
+        ctx.fillStyle = MENU_TEXT_COLORS.systemHeader;
         ctx.fillText(mainLayout.rightHeader.text, mainLayout.rightHeader.x, mainLayout.rightHeader.y);
 
         const charBtn = getSelectCharacterButton();
-        drawMenuSpriteButton(charBtn, menuButtonSprites.selectCharacter, 'Select Character  >', '16px Arial');
+        drawMenuSpriteButton(charBtn, menuButtonSprites.selectCharacter, 'Select Character  >', `600 16px ${MENU_UI_FONT_FAMILY}`);
 
         const btn = getSelectCursorButton();
-        drawMenuSpriteButton(btn, menuButtonSprites.selectCursor, 'Select Cursor  >', '16px Arial');
+        drawMenuSpriteButton(btn, menuButtonSprites.selectCursor, 'Select Cursor  >', `600 16px ${MENU_UI_FONT_FAMILY}`);
 
         const ecb = getEncyclopediaButton();
-        drawMenuSpriteButton(ecb, menuButtonSprites.encyclopedia, 'Encyclopedia  >', '16px Arial');
+        drawMenuSpriteButton(ecb, menuButtonSprites.encyclopedia, 'Encyclopedia  >', `600 16px ${MENU_UI_FONT_FAMILY}`);
 
         // Fog toggle button
         const ftb = getFogToggleButton();
-        drawMenuSpriteButton(ftb, fogEnabled ? menuButtonSprites.fogOn : menuButtonSprites.fogOff, 'Fog: ' + (fogEnabled ? 'ON' : 'OFF'), '14px Arial');
+        drawMenuSpriteButton(ftb, fogEnabled ? menuButtonSprites.fogOn : menuButtonSprites.fogOff, 'Fog: ' + (fogEnabled ? 'ON' : 'OFF'), `600 14px ${MENU_UI_FONT_FAMILY}`);
 
         // Graphics tutorial button
         const pb = getPerfButton();
-        drawMenuSpriteButton(pb, menuButtonSprites.graphicsTutorial, 'Graphics Tutorial', '13px Arial');
+        drawMenuSpriteButton(pb, menuButtonSprites.graphicsTutorial, 'Graphics Tutorial', `600 14px ${MENU_UI_FONT_FAMILY}`);
 
         // FPS counter toggle button
         const fpb = getFpsToggleButton();
-        drawMenuSpriteButton(fpb, showFpsCounter ? menuButtonSprites.fpsOn : menuButtonSprites.fpsOff, 'FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), '13px Arial');
+        drawMenuSpriteButton(fpb, showFpsCounter ? menuButtonSprites.fpsOn : menuButtonSprites.fpsOff, 'FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), `600 14px ${MENU_UI_FONT_FAMILY}`);
 
         // Dev test mode button
         const dtb = getDevTestButton();
-        drawMenuSpriteButton(dtb, devTestMode ? menuButtonSprites.devTestOn : menuButtonSprites.devTestOff, 'Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), '13px Arial');
+        drawMenuSpriteButton(dtb, devTestMode ? menuButtonSprites.devTestOn : menuButtonSprites.devTestOff, 'Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), `600 14px ${MENU_UI_FONT_FAMILY}`);
 
         // Dev cheat menu enable button
         const dcb = getDevCheatButton();
-        drawMenuSpriteButton(dcb, devCheatMenuEnabled ? menuButtonSprites.devCheatsOn : menuButtonSprites.devCheatsOff, 'Dev Cheats: ' + (devCheatMenuEnabled ? 'ON' : 'OFF'), '13px Arial');
+        drawMenuSpriteButton(dcb, devCheatMenuEnabled ? menuButtonSprites.devCheatsOn : menuButtonSprites.devCheatsOff, 'Dev Cheats: ' + (devCheatMenuEnabled ? 'ON' : 'OFF'), `600 14px ${MENU_UI_FONT_FAMILY}`);
 
         if (showPerfGuide) drawPerfGuide();
     } else if (menuPage === 'characters') {
