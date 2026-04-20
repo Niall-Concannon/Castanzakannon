@@ -5918,15 +5918,15 @@ function drawLowHealthMarker() {
 // =============================================================================
 
 function getMainMenuLayout() {
-    const buttonW = Math.min(300, Math.max(220, Math.floor(canvas.width * 0.22)));
-    const buttonH = Math.min(54, Math.max(42, Math.floor(canvas.height * 0.065)));
-    const rowGap = Math.max(10, Math.floor(buttonH * 0.25));
-    const colGap = Math.max(38, Math.floor(buttonW * 0.18));
+    const buttonW = Math.min(380, Math.max(280, Math.floor(canvas.width * 0.27)));
+    const buttonH = Math.min(68, Math.max(52, Math.floor(canvas.height * 0.08)));
+    const rowGap = Math.max(10, Math.floor(buttonH * 0.22));
+    const colGap = Math.max(44, Math.floor(buttonW * 0.18));
     const leftX = Math.floor(canvas.width / 2 - buttonW - colGap / 2);
     const rightX = Math.floor(canvas.width / 2 + colGap / 2);
-    const topY = Math.floor(canvas.height / 2 + 30);
+    const topY = Math.floor(canvas.height / 2 + 12);
     const rightTopY = topY;
-    const headerY = topY - 14;
+    const headerY = topY - 16;
 
     const mk = (x, y) => ({ x, y, w: buttonW, h: buttonH });
 
