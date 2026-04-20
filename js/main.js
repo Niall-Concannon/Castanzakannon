@@ -1039,6 +1039,20 @@ const ammoBarGlowSprite = imgWithFallback([
 
 const splashImage = img('assets/sprites/ui/intro.png');
 const menuBackgroundImage = img('assets/sprites/ui/menu.png');
+const menuButtonSprites = {
+    selectCharacter: img('assets/sprites/buttons/selectcharacter.png'),
+    selectCursor: img('assets/sprites/buttons/selectcursor.png'),
+    encyclopedia: img('assets/sprites/buttons/encyclopedia.png'),
+    fogOn: img('assets/sprites/buttons/fogOn.png'),
+    fogOff: img('assets/sprites/buttons/fogOff.png'),
+    graphicsTutorial: img('assets/sprites/buttons/GraphicsTutorial.png'),
+    fpsOn: img('assets/sprites/buttons/fpsCountOn.png'),
+    fpsOff: img('assets/sprites/buttons/fpsCountOff.png'),
+    devTestOn: img('assets/sprites/buttons/devTestOn.png'),
+    devTestOff: img('assets/sprites/buttons/devTestOff.png'),
+    devCheatsOn: img('assets/sprites/buttons/devCheatsOn.png'),
+    devCheatsOff: img('assets/sprites/buttons/DevCheatsOff.png'),
+};
 
 const MAP_THEME_SPRITES = {
     1: {
@@ -5893,18 +5907,47 @@ function drawLowHealthMarker() {
 //  MENU & SCREENS
 // =============================================================================
 
-function getPerfButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 174, w: 160, h: 36 }; }
-function getFpsToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 222, w: 160, h: 36 }; }
-function getDevTestButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 270, w: 160, h: 36 }; }
-function getDevCheatButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 318, w: 160, h: 36 }; }
+function getMainMenuLayout() {
+    const buttonW = Math.min(300, Math.max(220, Math.floor(canvas.width * 0.22)));
+    const buttonH = Math.min(54, Math.max(42, Math.floor(canvas.height * 0.065)));
+    const rowGap = Math.max(10, Math.floor(buttonH * 0.25));
+    const colGap = Math.max(38, Math.floor(buttonW * 0.18));
+    const leftX = Math.floor(canvas.width / 2 - buttonW - colGap / 2);
+    const rightX = Math.floor(canvas.width / 2 + colGap / 2);
+    const topY = Math.floor(canvas.height / 2 + 30);
+    const rightTopY = topY;
+    const headerY = topY - 14;
+
+    const mk = (x, y) => ({ x, y, w: buttonW, h: buttonH });
+
+    return {
+        leftHeader: { x: leftX + buttonW / 2, y: headerY, text: 'Loadout' },
+        rightHeader: { x: rightX + buttonW / 2, y: headerY, text: 'System & Dev' },
+        buttons: {
+            selectCharacter: mk(leftX, topY),
+            selectCursor: mk(leftX, topY + (buttonH + rowGap)),
+            encyclopedia: mk(leftX, topY + (buttonH + rowGap) * 2),
+            fogToggle: mk(rightX, rightTopY),
+            graphicsTutorial: mk(rightX, rightTopY + (buttonH + rowGap)),
+            fpsToggle: mk(rightX, rightTopY + (buttonH + rowGap) * 2),
+            devTest: mk(rightX, rightTopY + (buttonH + rowGap) * 3),
+            devCheat: mk(rightX, rightTopY + (buttonH + rowGap) * 4),
+        },
+    };
+}
+
+function getPerfButton() { return getMainMenuLayout().buttons.graphicsTutorial; }
+function getFpsToggleButton() { return getMainMenuLayout().buttons.fpsToggle; }
+function getDevTestButton() { return getMainMenuLayout().buttons.devTest; }
+function getDevCheatButton() { return getMainMenuLayout().buttons.devCheat; }
 function getDevTestWaveControlRect() {
     const anchor = getDevCheatButton();
     return { x: anchor.x, y: anchor.y + anchor.h + 8, w: anchor.w, h: 28 };
 }
-function getFogToggleButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 126, w: 160, h: 36 }; }
-function getSelectCursorButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 78,  w: 160, h: 36 }; }
-function getSelectCharacterButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 30, w: 160, h: 36 }; }
-function getEncyclopediaButton() { return { x: canvas.width / 2 - 80, y: canvas.height / 2 + 366, w: 160, h: 36 }; }
+function getFogToggleButton() { return getMainMenuLayout().buttons.fogToggle; }
+function getSelectCursorButton() { return getMainMenuLayout().buttons.selectCursor; }
+function getSelectCharacterButton() { return getMainMenuLayout().buttons.selectCharacter; }
+function getEncyclopediaButton() { return getMainMenuLayout().buttons.encyclopedia; }
 function getBackButton()         { return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 }; }
 function getEncyclopediaPanel() {
     const w = Math.min(1140, canvas.width - 70);
@@ -6376,6 +6419,23 @@ function drawBlackFade(alpha) {
     ctx.restore();
 }
 
+function drawMenuSpriteButton(rect, sprite, fallbackLabel, fallbackFont = '13px Arial') {
+    if (sprite?.complete && sprite.naturalWidth) {
+        ctx.drawImage(sprite, rect.x, rect.y, rect.w, rect.h);
+        return;
+    }
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = fallbackFont;
+    ctx.textAlign = 'center';
+    ctx.fillText(fallbackLabel, rect.x + rect.w / 2, rect.y + rect.h / 2 + 5);
+}
+
 function drawMenu() {
     if (menuBackgroundImage.complete && menuBackgroundImage.naturalWidth) {
         const iw = menuBackgroundImage.naturalWidth;
@@ -6402,117 +6462,48 @@ function drawMenu() {
         ctx.fillStyle  = '#ffffff';
         ctx.font       = 'bold 64px Arial';
         ctx.textAlign  = 'center';
-        ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 80);
+        ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 136);
         ctx.font       = '20px Arial';
         ctx.fillStyle  = '#ffffff';
-        ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillText('Press ENTER or Click to Start', canvas.width / 2, canvas.height / 2 - 100);
         ctx.font       = '15px Arial';
         ctx.fillStyle  = '#d6d6d6';
-        ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 + 6);
+        ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 - 74);
+
+        const mainLayout = getMainMenuLayout();
+        ctx.font = 'bold 17px Arial';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(mainLayout.leftHeader.text, mainLayout.leftHeader.x, mainLayout.leftHeader.y);
+        ctx.fillText(mainLayout.rightHeader.text, mainLayout.rightHeader.x, mainLayout.rightHeader.y);
 
         const charBtn = getSelectCharacterButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(charBtn.x, charBtn.y, charBtn.w, charBtn.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '16px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Select Character  >', charBtn.x + charBtn.w / 2, charBtn.y + charBtn.h / 2 + 6);
+        drawMenuSpriteButton(charBtn, menuButtonSprites.selectCharacter, 'Select Character  >', '16px Arial');
 
         const btn = getSelectCursorButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '16px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Select Cursor  >', btn.x + btn.w / 2, btn.y + btn.h / 2 + 6);
+        drawMenuSpriteButton(btn, menuButtonSprites.selectCursor, 'Select Cursor  >', '16px Arial');
 
         const ecb = getEncyclopediaButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(ecb.x, ecb.y, ecb.w, ecb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(ecb.x, ecb.y, ecb.w, ecb.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '16px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Encyclopedia  >', ecb.x + ecb.w / 2, ecb.y + ecb.h / 2 + 6);
+        drawMenuSpriteButton(ecb, menuButtonSprites.encyclopedia, 'Encyclopedia  >', '16px Arial');
 
         // Fog toggle button
         const ftb = getFogToggleButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(ftb.x, ftb.y, ftb.w, ftb.h);
-        const pillW = 34, pillH = 18, pillY = ftb.y + (ftb.h - pillH) / 2;
-        const pillX = ftb.x + 8;
-        ctx.fillStyle = fogEnabled ? '#4a4a4a' : '#1f1f1f';
-        ctx.beginPath();
-        ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
-        ctx.fill();
-        const knobX = fogEnabled ? pillX + pillW - pillH / 2 - 2 : pillX + pillH / 2 + 2;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(knobX, pillY + pillH / 2, pillH / 2 - 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '14px Arial';
-        ctx.textAlign   = 'left';
-        ctx.fillText('Fog: ' + (fogEnabled ? 'ON' : 'OFF'), ftb.x + pillW + 16, ftb.y + ftb.h / 2 + 5);
+        drawMenuSpriteButton(ftb, fogEnabled ? menuButtonSprites.fogOn : menuButtonSprites.fogOff, 'Fog: ' + (fogEnabled ? 'ON' : 'OFF'), '14px Arial');
 
         // Graphics tutorial button
         const pb = getPerfButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '13px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Graphics Tutorial', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
+        drawMenuSpriteButton(pb, menuButtonSprites.graphicsTutorial, 'Graphics Tutorial', '13px Arial');
 
         // FPS counter toggle button
         const fpb = getFpsToggleButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(fpb.x, fpb.y, fpb.w, fpb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(fpb.x, fpb.y, fpb.w, fpb.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '13px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), fpb.x + fpb.w / 2, fpb.y + fpb.h / 2 + 5);
+        drawMenuSpriteButton(fpb, showFpsCounter ? menuButtonSprites.fpsOn : menuButtonSprites.fpsOff, 'FPS Counter: ' + (showFpsCounter ? 'ON' : 'OFF'), '13px Arial');
 
         // Dev test mode button
         const dtb = getDevTestButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(dtb.x, dtb.y, dtb.w, dtb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(dtb.x, dtb.y, dtb.w, dtb.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '13px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), dtb.x + dtb.w / 2, dtb.y + dtb.h / 2 + 5);
+        drawMenuSpriteButton(dtb, devTestMode ? menuButtonSprites.devTestOn : menuButtonSprites.devTestOff, 'Dev Test: ' + (devTestMode ? 'ON' : 'OFF'), '13px Arial');
 
         // Dev cheat menu enable button
         const dcb = getDevCheatButton();
-        ctx.fillStyle   = '#000000';
-        ctx.fillRect(dcb.x, dcb.y, dcb.w, dcb.h);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(dcb.x, dcb.y, dcb.w, dcb.h);
-        ctx.fillStyle   = '#ffffff';
-        ctx.font        = '13px Arial';
-        ctx.textAlign   = 'center';
-        ctx.fillText('Dev Cheats: ' + (devCheatMenuEnabled ? 'ON' : 'OFF'), dcb.x + dcb.w / 2, dcb.y + dcb.h / 2 + 5);
+        drawMenuSpriteButton(dcb, devCheatMenuEnabled ? menuButtonSprites.devCheatsOn : menuButtonSprites.devCheatsOff, 'Dev Cheats: ' + (devCheatMenuEnabled ? 'ON' : 'OFF'), '13px Arial');
 
         if (showPerfGuide) drawPerfGuide();
     } else if (menuPage === 'characters') {
