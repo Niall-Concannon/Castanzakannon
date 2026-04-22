@@ -83,7 +83,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
 
     ctx.drawImage(vialFrameSprite, 0, 0, W, H);
 
-    if (colors.bot === 'red' && fillPercent < 0.25) {
+    if (colors.bot === '#ff0000' && fillPercent < 0.25) {
         const fl = 0.12 + 0.12 * Math.sin(frameCount * 0.35);
         ctx.save();
         ctx.beginPath();
@@ -96,7 +96,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
 
     ctx.textAlign  = 'center';
     ctx.font       = `bold ${Math.round(13 * sc)}px Arial`;
-    ctx.shadowColor = 'black';
+    ctx.shadowColor = '#000000';
     ctx.shadowBlur  = 5;
     ctx.fillStyle   = 'rgba(220,220,255,0.92)';
     ctx.fillText(label, W / 2, H + 18 * sc);
@@ -121,13 +121,13 @@ function drawVials() {
     const hf    = player.hp / player.maxHp;
 
     const hc = hf > 0.5
-        ? { top: 'red', mid: 'red', bot: 'red' }
+        ? { top: '#ff0000', mid: '#ff0000', bot: '#ff0000' }
         : hf > 0.25
-        ? { top: 'red', mid: 'red', bot: 'red' }
-        : { top: 'red', mid: 'red', bot: 'red' };
+        ? { top: '#ff0000', mid: '#ff0000', bot: '#ff0000' }
+        : { top: '#ff0000', mid: '#ff0000', bot: '#ff0000' };
 
     const hpValue = `${Math.ceil(player.hp)} / ${player.maxHp}`;
-    drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, 'â¤  HP', hpValue);
+    drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, 'HP', hpValue);
 
     const baseCharges = player.dashCharges;
     const hasPartial = player.dashCharges < player.dashMaxCharges;
@@ -135,20 +135,20 @@ function drawVials() {
     const df = Math.max(0, Math.min(1, (baseCharges + partial) / player.dashMaxCharges));
     const dr = player.dashCharges > 0;
     const dc = dr
-        ? { top: 'red', mid: 'red', bot: 'red' }
-        : { top: 'red', mid: 'red', bot: 'red' };
+        ? { top: '#00d9ff', mid: '#0099ff', bot: '#0066ff' }
+        : { top: '#003366', mid: '#002244', bot: '#001133' };
 
     const dashValue = `${player.dashCharges}/${player.dashMaxCharges}`;
-    drawVial(dashX, dashY, df, dc, vialGlowDashSprite, 'âš¡ DASH', dashValue);
+    drawVial(dashX, dashY, df, dc, vialGlowDashSprite, 'DASH', dashValue);
 
     if (dr) {
         const ra = 0.55 + 0.45 * Math.abs(Math.sin(frameCount * 0.07));
         ctx.save();
         ctx.globalAlpha = ra;
-        ctx.fillStyle   = 'red';
+        ctx.fillStyle   = '#ff0000';
         ctx.font        = `bold ${Math.round(11 * VIAL_SCALE)}px Arial`;
         ctx.textAlign   = 'center';
-        ctx.shadowColor = 'red';
+        ctx.shadowColor = '#ff0000';
         ctx.shadowBlur  = 8;
         ctx.fillText('READY', dashX + VIAL_W / 2, dashY - 6);
         ctx.restore();

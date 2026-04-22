@@ -34,14 +34,14 @@ function drawChests() {
         ctx.arc(sc.x, sc.y, drawRadius * 3.3 * pulse, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.shadowColor = 'red';
+        ctx.shadowColor = '#ff0000';
         ctx.shadowBlur = 18 * pulse;
         if (pickupChestSprite.complete && pickupChestSprite.naturalWidth) {
             ctx.drawImage(pickupChestSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
         } else {
-            ctx.fillStyle = 'red';
+            ctx.fillStyle = '#ff0000';
             ctx.fillRect(sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
-            ctx.strokeStyle = 'red';
+            ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 2;
             ctx.strokeRect(sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
         }
@@ -179,7 +179,7 @@ function drawDamageNumbers() {
         const screen = toScreen(n.x, n.y);
         ctx.globalAlpha = n.alpha;
         ctx.font = `bold ${Math.round(16 * n.scale)}px Arial`;
-        ctx.fillStyle = 'yellow';
+        ctx.fillStyle = '#ffff00';
         ctx.fillText(n.value, screen.x, screen.y);
     }
     ctx.restore();
@@ -211,11 +211,11 @@ function drawPickups() {
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
         const variant = p.type === 'ammo'
-            ? { shadow: 'red', rgb: '255,238,102' }
+            ? { shadow: '#ff0000', rgb: '255,238,102' }
             : p.type === 'heal'
-                ? { shadow: 'red', rgb: '117,255,144' }
+                ? { shadow: '#ff0000', rgb: '117,255,144' }
             : p.type === 'instakill'
-                ? { shadow: 'red', rgb: '255,94,94' }
+                ? { shadow: '#ff0000', rgb: '255,94,94' }
             : XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
 
 

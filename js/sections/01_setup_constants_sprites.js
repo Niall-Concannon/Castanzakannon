@@ -8,7 +8,7 @@ canvas.height = window.innerHeight;
 canvas.style.willChange = 'transform';
 canvas.style.transform = 'translateZ(0)';
 canvas.style.imageRendering = 'pixelated';
-document.body.style.background = 'red';
+document.body.style.background = '#000000';
 document.body.style.overflow = 'hidden';
 
 const devTestWaveControl = document.createElement('div');
@@ -122,12 +122,12 @@ const SPLASH_FADE_DURATION_MS = 1500;
 const MENU_TITLE_FONT_FAMILY = '"Orbitron", "Segoe UI", sans-serif';
 const MENU_UI_FONT_FAMILY = '"Rajdhani", "Trebuchet MS", sans-serif';
 const MENU_TEXT_COLORS = {
-    title: 'red',
+    title: '#f4d27c',
     titleShadow: 'rgba(255, 176, 71, 0.28)',
-    subtitle: 'red',
-    selectedCharacter: 'red',
-    loadoutHeader: 'red',
-    systemHeader: 'red',
+    subtitle: '#e1edf8',
+    selectedCharacter: '#bfe9d4',
+    loadoutHeader: '#90d7ff',
+    systemHeader: '#ffd58c',
 };
 const AUDIO_STORAGE_KEYS = {
     music: 'castanza_music_volume',
@@ -220,9 +220,9 @@ const INSTAKILL_PICKUP_DRAW_SCALE = 1.28;
 const INSTAKILL_DURATION_FRAMES = Math.round(5000 / FIXED_STEP);
 
 const ENEMY_TYPES = {
-    basic: { hp: 3, size: 14, speed: 2,   color: 'green',  animSpeed: 10 },
-    fast:  { hp: 2, size: 12, speed: 3.5, color: 'yellow', animSpeed: 6  },
-    tank:  { hp: 8, size: 20, speed: 1.2, color: 'red',    animSpeed: 14 },
+    basic: { hp: 3, size: 14, speed: 2,   color: '#00ff00', animSpeed: 10 },
+    fast:  { hp: 2, size: 12, speed: 3.5, color: '#ffff00', animSpeed: 6  },
+    tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
 };
 
 
@@ -756,13 +756,13 @@ const UNIQUE_PLACEHOLDER_NAMES = {
 };
 
 const XP_PICKUP_BASE_VALUE = 5;
-const XP_ATTRACT_RADIUS    = 150;
-const XP_ATTRACT_SPEED     = 3;
+const XP_ATTRACT_RADIUS    = 450;
+const XP_ATTRACT_SPEED     = 10;
 const TANK_XP_MULTIPLIER   = 1.5;
 
 const XP_PICKUP_VARIANTS = {
-    green: { shadow: 'red', rgb: '57,255,20'  },
-    blue:  { shadow: 'red', rgb: '49,182,255' },
+    green: { shadow: '#39ff14', rgb: '57,255,20'  },
+    blue:  { shadow: '#31b6ff', rgb: '49,182,255' },
 };
 
 
@@ -1060,6 +1060,8 @@ const menuButtonSprites = {
     selectCharacter: img('assets/sprites/buttons/selectcharacter.png'),
     selectCursor: img('assets/sprites/buttons/selectcursor.png'),
     encyclopedia: img('assets/sprites/buttons/encyclopedia.png'),
+    mapConfig: img('assets/sprites/buttons/map.png'),
+    audioConfig: img('assets/sprites/buttons/audio.png'),
     fogOn: img('assets/sprites/buttons/fogOn.png'),
     fogOff: img('assets/sprites/buttons/fogOff.png'),
     graphicsTutorial: img('assets/sprites/buttons/GraphicsTutorial.png'),

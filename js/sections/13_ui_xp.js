@@ -64,7 +64,7 @@ function drawXpBar() {
     ctx.font       = 'bold 15px Arial';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur  = 7;
-    ctx.fillStyle   = 'red';
+    ctx.fillStyle   = '#ff0000';
     ctx.fillText(`Level  ${player.level}`, canvas.width / 2, by - 6);
     ctx.font       = 'bold 12px Arial';
     ctx.shadowBlur  = 5;
@@ -146,7 +146,7 @@ function drawAmmoBar() {
     ctx.font = 'bold 14px Arial';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 6;
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.fillText(ammoPowerupActive ? 'AMMO POWER' : 'AMMO', bx, by - 6);
     ctx.font = 'bold 12px Arial';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -172,12 +172,12 @@ function drawAmmoPowerupOverlay() {
 
     ctx.save();
     ctx.globalAlpha = flashAlpha;
-    ctx.shadowColor = 'red';
+    ctx.shadowColor = '#ff0000';
     ctx.shadowBlur = 26;
     if (pickupAmmoSprite.complete && pickupAmmoSprite.naturalWidth) {
         ctx.drawImage(pickupAmmoSprite, cx - size * 0.5, cy - size * 0.5, size, size);
     } else {
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         ctx.beginPath();
         ctx.arc(cx, cy, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
@@ -187,7 +187,7 @@ function drawAmmoPowerupOverlay() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 8;
     ctx.fillText(`INFINITE AMMO ${secsLeft}s`, cx, cy + 56);
@@ -207,12 +207,12 @@ function drawInstakillPowerupOverlay() {
 
     ctx.save();
     ctx.globalAlpha = flashAlpha;
-    ctx.shadowColor = 'red';
+    ctx.shadowColor = '#ff0000';
     ctx.shadowBlur = 26;
     if (pickupInstaKillSprite.complete && pickupInstaKillSprite.naturalWidth) {
         ctx.drawImage(pickupInstaKillSprite, cx - size * 0.5, cy - size * 0.5, size, size);
     } else {
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         ctx.beginPath();
         ctx.arc(cx, cy, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
@@ -222,7 +222,7 @@ function drawInstakillPowerupOverlay() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 8;
     ctx.fillText(`INSTA KILL ${secsLeft}s`, cx, cy + 54);
@@ -274,7 +274,7 @@ function drawLastEnemyArrow() {
     ctx.rotate(angle);
 
     ctx.globalAlpha = 0.95;
-    ctx.shadowColor = 'red';
+    ctx.shadowColor = '#ff0000';
     ctx.shadowBlur = 14 * pulse;
 
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -282,7 +282,7 @@ function drawLastEnemyArrow() {
     ctx.arc(0, 0, 19, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.moveTo(18, 0);
     ctx.lineTo(-10, -9);
@@ -298,7 +298,7 @@ function drawLastEnemyArrow() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = 6;
     ctx.fillText('LAST ENEMY', ax, ay - 24);
@@ -347,7 +347,7 @@ function drawAmmoPickupArrow() {
     ctx.translate(ax, ay);
     ctx.rotate(angle);
     ctx.globalAlpha = 0.96;
-    ctx.shadowColor = 'red';
+    ctx.shadowColor = '#ff0000';
     ctx.shadowBlur = 16 * pulse;
 
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
@@ -355,7 +355,7 @@ function drawAmmoPickupArrow() {
     ctx.arc(0, 0, 20, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.moveTo(19, 0);
     ctx.lineTo(-11, -10);
@@ -371,7 +371,7 @@ function drawAmmoPickupArrow() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 6;
     ctx.fillText('MAX AMMO PICKUP', ax, ay - 24);
@@ -420,7 +420,7 @@ function drawUpgradeHud() {
     ctx.shadowBlur = 4;
 
     ctx.font = 'bold 11px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.fillText('UPGRADES', panelX + 8, panelY + 14);
 
     ctx.font = '10px Arial';
@@ -471,7 +471,7 @@ function drawInventoryHud() {
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 4;
     ctx.font = 'bold 11px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.fillText('ITEMS & UNIQUES (hover icons)', panelX + 8, panelY + 14);
 
     let hovered = null;
@@ -488,7 +488,7 @@ function drawInventoryHud() {
 
         ctx.fillStyle = hover ? 'rgba(255,255,255,0.16)' : 'rgba(10,10,10,0.82)';
         ctx.fillRect(x, y, slotSize, slotSize);
-        ctx.strokeStyle = hover ? 'red' : getRarityUiColor(entry.rarity);
+        ctx.strokeStyle = hover ? '#ff0000' : getRarityUiColor(entry.rarity);
         ctx.lineWidth = hover ? 2 : 1;
         ctx.strokeRect(x, y, slotSize, slotSize);
 
@@ -496,13 +496,13 @@ function drawInventoryHud() {
         if (icon.complete && icon.naturalWidth) {
             ctx.drawImage(icon, x + 3, y + 3, slotSize - 6, slotSize - 6);
         } else {
-            ctx.fillStyle = entry.unique ? 'red' : 'red';
+            ctx.fillStyle = entry.unique ? '#ff0000' : '#ff0000';
             ctx.fillRect(x + 3, y + 3, slotSize - 6, slotSize - 6);
         }
 
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'right';
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         ctx.fillText(String(entry.level), x + slotSize - 2, y + slotSize - 2);
     }
 
@@ -558,7 +558,7 @@ function drawLootToast() {
     ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
     ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 8;
     ctx.fillText(text, canvas.width / 2, y);

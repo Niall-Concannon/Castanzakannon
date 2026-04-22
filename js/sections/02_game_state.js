@@ -43,6 +43,9 @@ let splashFadeTimerMs = 0;
 let devTestMode    = false;
 let devCheatMenuEnabled = false;
 let showCheatMenu = false;
+let mapSize        = 1.0;
+let mapOpacity     = 1.0;
+let mapShape       = 'circle';
 let devTestWaveLimit = WAVES_PER_LEVEL;
 let currentArenaLevel = 1;
 let currentWave = 1;
@@ -169,12 +172,12 @@ function getItemRarityWeight(rarity) {
 
 // Chooses a UI colour for the given rarity.
 function getRarityUiColor(rarity) {
-    if (rarity === 'mythical') return 'red';
-    if (rarity === 'legendary') return 'red';
-    if (rarity === 'epic') return 'red';
-    if (rarity === 'rare') return 'red';
-    if (rarity === 'uncommon') return 'red';
-    return 'red';
+    if (rarity === 'mythical') return '#ff79c6';
+    if (rarity === 'legendary') return '#ffcb66';
+    if (rarity === 'epic') return '#d3a2ff';
+    if (rarity === 'rare') return '#8ec7ff';
+    if (rarity === 'uncommon') return '#7cffb0';
+    return '#b6ffb6';
 }
 
 // Applies execute damage rules to a projectile hit.
@@ -392,7 +395,7 @@ function spawnBossEnemy() {
     enemy.size = 30;
     enemy.wallSize = 24;
     enemy.speed = Math.max(0.7, enemy.speed * 0.78);
-    enemy.color = 'red';
+    enemy.color = '#b84cff';
     enemy.hpBarTimer = 999999;
     enemies.push(enemy);
     enemiesRemainingInWave++;
@@ -721,9 +724,9 @@ function styleAudioControls() {
     audioControlPanel.style.gap = '6px';
     audioControlPanel.style.width = '220px';
     audioControlPanel.style.padding = '10px 12px';
-    audioControlPanel.style.border = '1px solid red';
+    audioControlPanel.style.border = '1px solid #ffffff';
     audioControlPanel.style.background = 'rgba(0,0,0,0.78)';
-    audioControlPanel.style.color = 'red';
+    audioControlPanel.style.color = '#ffffff';
     audioControlPanel.style.font = '12px Arial, sans-serif';
     audioControlPanel.style.pointerEvents = 'auto';
 
@@ -1021,7 +1024,7 @@ function unlockAudioIfNeeded() {
 
 // Sync Audio Control Panel keeps the game logic moving.
 function syncAudioControlPanel() {
-    const visible = gameState === 'menu' || gameState === 'playing' || gameState === 'levelUp';
+    const visible = false;
     audioControlPanel.style.display = visible ? 'flex' : 'none';
 }
 

@@ -9,8 +9,8 @@ function drawUI() {
         ctx.save();
         ctx.textAlign  = 'center';
         ctx.font       = 'bold 13px monospace';
-        ctx.fillStyle  = 'red';
-        ctx.shadowColor = 'black';
+        ctx.fillStyle  = '#ff0000';
+        ctx.shadowColor = '#000000';
         ctx.shadowBlur  = 4;
         ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
         ctx.restore();
@@ -20,8 +20,8 @@ function drawUI() {
         ctx.save();
         ctx.textAlign = 'left';
         ctx.font = 'bold 13px Arial';
-        ctx.fillStyle = 'red';
-        ctx.shadowColor = 'black';
+        ctx.fillStyle = '#ff0000';
+        ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
         ctx.fillText('DEV TEST MODE: 1 ENEMY PER WAVE', 20, 22);
         ctx.restore();
@@ -44,11 +44,11 @@ function drawUI() {
         ctx.shadowColor = 'rgba(0,0,0,0.95)';
         ctx.shadowBlur = 4;
         ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         ctx.fillText('DEV CHEATS ENABLED', boxX + 8, boxY + 15);
 
         ctx.font = '11px Arial';
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         if (showCheatMenu) {
             ctx.fillText('K/F2: close cheat menu   Esc: close panel', boxX + 8, boxY + 33);
         } else {
@@ -68,8 +68,8 @@ function drawUI() {
     ctx.save();
     ctx.textAlign = 'right';
     ctx.font = 'bold 16px Arial';
-    ctx.fillStyle = 'red';
-    ctx.shadowColor = 'black';
+    ctx.fillStyle = '#ff0000';
+    ctx.shadowColor = '#000000';
     ctx.shadowBlur = 6;
     const waveLabel = `Level ${currentArenaLevel}  Wave ${currentWave}/${WAVES_PER_LEVEL}`;
     const alive = getAliveEnemyCount();
@@ -77,7 +77,7 @@ function drawUI() {
     const remainingNow = Math.max(0, enemiesRemainingInWave - alive);
     ctx.fillText(waveLabel, canvas.width - 22, 26);
     ctx.font = 'bold 14px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.fillText(`Enemies Remaining: ${enemiesRemainingInWave}`, canvas.width - 22, 48);
     ctx.fillStyle = 'rgba(220,220,220,0.9)';
     ctx.fillText(`To Spawn: ${remainingNow > 0 ? remainingNow : 0}`, canvas.width - 22, 68);
@@ -111,41 +111,72 @@ function drawFinalWaveBanner() {
     ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
     ctx.font = `bold ${Math.round(52 * pulse)}px Arial`;
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 18;
-    ctx.fillText('âš  FINAL WAVE', canvas.width / 2, canvas.height / 2 - 60);
+    ctx.fillText('FINAL WAVE', canvas.width / 2, canvas.height / 2 - 60);
     ctx.font = 'bold 22px Arial';
-    ctx.fillStyle = 'red';
-    ctx.fillText(`Level ${currentArenaLevel} â€” Survive to advance`, canvas.width / 2, canvas.height / 2 - 14);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillText(`Level ${currentArenaLevel} - Survive to advance`, canvas.width / 2, canvas.height / 2 - 14);
     ctx.restore();
 }
 
 // Draw Minimap keeps the game logic moving.
 function drawMinimap() {
-    const MM_W = 260, MM_H = 220;
+    const BASE_MM_W = 260, BASE_MM_H = 220;
+    const MM_W = Math.max(140, Math.round(BASE_MM_W * mapSize));
+    const MM_H = Math.max(120, Math.round(BASE_MM_H * mapSize));
     const MM_X = canvas.width - MM_W - 20;
     const MM_Y = canvas.height - MM_H - 20;
     const scaleX = MM_W / (MAP_W * TILE);
     const scaleY = MM_H / (MAP_H * TILE);
+    const viewOriginX = player.x - (MM_W * 0.5) / scaleX;
+    const viewOriginY = player.y - (MM_H * 0.5) / scaleY;
+    const mmCenterX = MM_X + MM_W / 2;
+    const mmCenterY = MM_Y + MM_H / 2;
+    const mmRadius = Math.min(MM_W, MM_H) * 0.5 - 1;
 
     ctx.save();
 
+    function traceMinimapShape() {
+        if (mapShape === 'circle') {
+            ctx.arc(mmCenterX, mmCenterY, mmRadius, 0, Math.PI * 2);
+            return;
+        }
+        if (mapShape === 'hexagon') {
+            for (let i = 0; i < 6; i++) {
+                const angle = Math.PI / 3 * i + Math.PI / 6;
+                const x = mmCenterX + mmRadius * Math.cos(angle);
+                const y = mmCenterY + mmRadius * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            return;
+        }
+        ctx.rect(MM_X, MM_Y, MM_W, MM_H);
+    }
 
-    ctx.fillStyle = 'black';
-    ctx.fillRect(MM_X, MM_Y, MM_W, MM_H);
-    ctx.strokeStyle = 'grey';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(MM_X, MM_Y, MM_W, MM_H);
+    ctx.save();
+    ctx.globalAlpha = mapOpacity;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    traceMinimapShape();
+    ctx.fill();
+    ctx.restore();
 
+    ctx.save();
+    ctx.beginPath();
+    traceMinimapShape();
+    ctx.clip();
 
-    ctx.fillStyle = 'grey';
+    ctx.fillStyle = '#808080';
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             if (isSolidTileType(mapTiles[y][x])) {
                 ctx.fillRect(
-                    MM_X + x * TILE * scaleX,
-                    MM_Y + y * TILE * scaleY,
+                    MM_X + (x * TILE - viewOriginX) * scaleX,
+                    MM_Y + (y * TILE - viewOriginY) * scaleY,
                     Math.ceil(TILE * scaleX),
                     Math.ceil(TILE * scaleY)
                 );
@@ -155,35 +186,45 @@ function drawMinimap() {
 
 
     for (const p of pickups) {
-        ctx.fillStyle = p.type === 'ammo' ? 'yellow'
-            : p.type === 'heal' ? 'lime'
-            : p.type === 'instakill' ? 'red'
-            : 'green';
+        ctx.fillStyle = p.type === 'ammo' ? '#ffff00'
+            : p.type === 'heal' ? '#00ff00'
+            : p.type === 'instakill' ? '#ff0000'
+            : '#00ff00';
         ctx.beginPath();
-        ctx.arc(MM_X + p.x * scaleX, MM_Y + p.y * scaleY, 2, 0, Math.PI * 2);
+        ctx.arc(MM_X + (p.x - viewOriginX) * scaleX, MM_Y + (p.y - viewOriginY) * scaleY, 2, 0, Math.PI * 2);
         ctx.fill();
     }
 
 
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     for (const chest of chests) {
-        ctx.fillRect(MM_X + chest.x * scaleX - 2, MM_Y + chest.y * scaleY - 2, 4, 4);
+        ctx.fillRect(MM_X + (chest.x - viewOriginX) * scaleX - 2, MM_Y + (chest.y - viewOriginY) * scaleY - 2, 4, 4);
     }
 
 
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     for (const e of enemies) {
         if (!e.alive) continue;
         ctx.beginPath();
-        ctx.arc(MM_X + e.x * scaleX, MM_Y + e.y * scaleY, 2, 0, Math.PI * 2);
+        ctx.arc(MM_X + (e.x - viewOriginX) * scaleX, MM_Y + (e.y - viewOriginY) * scaleY, 2, 0, Math.PI * 2);
         ctx.fill();
     }
 
 
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(MM_X + player.x * scaleX, MM_Y + player.y * scaleY, 3, 0, Math.PI * 2);
+    ctx.arc(MM_X + (player.x - viewOriginX) * scaleX, MM_Y + (player.y - viewOriginY) * scaleY, 3, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = mapOpacity;
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    traceMinimapShape();
+    ctx.stroke();
+    ctx.restore();
 
     ctx.restore();
 }
@@ -191,13 +232,13 @@ function drawMinimap() {
 // Draw Pause Overlay keeps the game logic moving.
 function drawPauseOverlay() {
     ctx.save();
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'black';
+    ctx.shadowColor = '#000000';
     ctx.shadowBlur = 12;
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 32px Arial';
     ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 16);
     ctx.font = '16px Arial';
@@ -260,7 +301,7 @@ function drawLowHealthMarker() {
     const alpha = Math.min(0.18, (30 - player.hp) / 120);
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
 }

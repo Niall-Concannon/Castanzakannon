@@ -113,14 +113,14 @@ function drawCheatMenu() {
     ctx.strokeRect(panel.x, panel.y, panel.w, panel.h);
 
     ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#ff0000';
     ctx.textAlign = 'left';
     ctx.fillText('DEV CHEAT MENU (K/F2)', panel.x + 10, panel.y + 22);
 
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     const closeHover = mouseX >= close.x && mouseX <= close.x + close.w && mouseY >= close.y && mouseY <= close.y + close.h;
-    ctx.fillStyle = closeHover ? 'red' : 'red';
+    ctx.fillStyle = closeHover ? '#ff0000' : '#ff0000';
     ctx.fillText('X', close.x + close.w / 2, close.y + 15);
 
     for (const row of rows) {
@@ -139,7 +139,7 @@ function drawCheatMenu() {
         ctx.fillText(`[${row.upgrade.rarity[0].toUpperCase()}] ${row.upgrade.title}`, row.x + 6, row.y + 15);
 
         ctx.textAlign = 'right';
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#ff0000';
         ctx.fillText(`Lv ${level}`, row.x + row.w - 8, row.y + 15);
     }
 

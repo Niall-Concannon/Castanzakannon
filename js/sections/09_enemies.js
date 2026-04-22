@@ -380,11 +380,11 @@ function drawEnemies() {
             const bx = sc.x - bw / 2, by = sc.y - e.size - 12;
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = '#000000';
             ctx.fillRect(bx, by, bw, bh);
-            ctx.fillStyle = hf > 0.5 ? 'green' : hf > 0.25 ? 'yellow' : 'red';
+            ctx.fillStyle = hf > 0.5 ? '#00ff00' : hf > 0.25 ? '#ffff00' : '#ff0000';
             ctx.fillRect(bx, by, bw * hf, bh);
-            ctx.strokeStyle = 'white';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth   = 1;
             ctx.strokeRect(bx, by, bw, bh);
 
@@ -471,11 +471,11 @@ function drawTumorTurrets() {
             const by = sc.y - t.size - 16;
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = '#000000';
             ctx.fillRect(bx, by, bw, bh);
-            ctx.fillStyle = hf > 0.5 ? 'green' : hf > 0.25 ? 'yellow' : 'red';
+            ctx.fillStyle = hf > 0.5 ? '#00ff00' : hf > 0.25 ? '#ffff00' : '#ff0000';
             ctx.fillRect(bx, by, bw * hf, bh);
-            ctx.strokeStyle = 'white';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth   = 1;
             ctx.strokeRect(bx, by, bw, bh);
             ctx.restore();

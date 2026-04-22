@@ -7,7 +7,7 @@
 
 /* quick note this styles body and shows how it looks no punctuation */
 body {
-    background: gray;
+    background: #222;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
@@ -15,7 +15,7 @@ body {
 /* quick note this styles canvas and shows how it looks no punctuation */
 canvas {
     display: block;
-    background: black;
+    background: #000;
     cursor: none;
 }
 
@@ -31,7 +31,7 @@ canvas {
 
 /* quick note this styles #devTestWaveLabel and shows how it looks no punctuation */
 #devTestWaveLabel {
-    color: white;
+    color: #fff;
     font-size: 12px;
     font-family: Arial, sans-serif;
     white-space: nowrap;
@@ -42,9 +42,9 @@ canvas {
     flex: 1;
     min-width: 0;
     height: 28px;
-    border: 1px solid white;
-    background: black;
-    color: white;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
     font-size: 12px;
     font-family: Arial, sans-serif;
     padding: 0 6px;

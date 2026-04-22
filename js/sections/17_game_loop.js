@@ -14,7 +14,7 @@ function gameLoop(timestamp) {
 
     fps = dt > 0 ? Math.round(1000 / dt) : fps;
 
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === 'splash')   { drawSplash();   requestAnimationFrame(gameLoop); return; }
