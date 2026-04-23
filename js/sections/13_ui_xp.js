@@ -492,7 +492,9 @@ function drawInventoryHud() {
         ctx.lineWidth = hover ? 2 : 1;
         ctx.strokeRect(x, y, slotSize, slotSize);
 
-        const icon = entry.unique ? uniquePlaceholderSprite : itemPlaceholderSprite;
+        const icon = entry.unique 
+            ? (UNIQUE_PLACEHOLDER_SPRITES[entry.id] ?? uniquePlaceholderSprite)
+            : (ITEM_PLACEHOLDER_SPRITES[entry.id] ?? itemPlaceholderSprite);
         if (icon.complete && icon.naturalWidth) {
             ctx.drawImage(icon, x + 3, y + 3, slotSize - 6, slotSize - 6);
         } else {
