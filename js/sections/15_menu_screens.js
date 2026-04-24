@@ -1239,7 +1239,7 @@ function drawLevelUpMenu() {
     ctx.font        = '18px Arial';
     ctx.shadowBlur  = 8;
     ctx.fillStyle   = 'rgba(200,220,255,0.85)';
-    ctx.fillText('Choose a stat boost  â€”  or skip', canvas.width / 2, canvas.height / 2 - 235);
+    ctx.fillText('Choose a stat boost or skip', canvas.width / 2, canvas.height / 2 - 235);
     ctx.restore();
 
     const { cards, skip } = getLevelUpZones();
@@ -1302,13 +1302,17 @@ function drawLevelUpMenu() {
     const sp = 0.85 + 0.15 * Math.sin(frameCount * 0.06);
     ctx.save();
     if (sh) { ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 16; ctx.globalAlpha = sp; }
-    ctx.drawImage(lvlSkipBgSprite, skip.x, skip.y, skip.w, skip.h);
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(skip.x, skip.y, skip.w, skip.h);
+    ctx.strokeStyle = sh ? 'rgba(255,0,0,0.9)' : 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(skip.x, skip.y, skip.w, skip.h);
     ctx.globalAlpha = 1;
     ctx.shadowBlur  = 0;
     ctx.textAlign   = 'center';
     ctx.font        = 'bold 16px Arial';
     ctx.fillStyle   = sh ? '#ff0000' : 'rgba(200,200,200,0.85)';
-    ctx.fillText('Skip  â€º', skip.x + skip.w / 2, skip.y + skip.h / 2 + 6);
+    ctx.fillText('Skip', skip.x + skip.w / 2, skip.y + skip.h / 2 + 6);
     ctx.restore();
 
     drawUpgradeHud();

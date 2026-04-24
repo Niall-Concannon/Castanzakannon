@@ -103,10 +103,12 @@ function drawCheatMenu() {
     if (!showCheatMenu || gameState !== 'playing') return;
 
     const zones = getCheatMenuZones();
-    const { panel, close, rows } = zones;
+    const { panel, close, tabs, entries } = zones;
+    const activeColor = '#ff0000';
+    const inactiveColor = 'rgba(255,255,255,0.28)';
 
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
     ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 1;
@@ -115,7 +117,7 @@ function drawCheatMenu() {
     ctx.font = 'bold 13px Arial';
     ctx.fillStyle = '#ff0000';
     ctx.textAlign = 'left';
-    ctx.fillText('DEV CHEAT MENU (K/F2)', panel.x + 10, panel.y + 22);
+    ctx.fillText('DEV CHEAT MENU', panel.x + 10, panel.y + 22);
 
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
@@ -123,30 +125,55 @@ function drawCheatMenu() {
     ctx.fillStyle = closeHover ? '#ff0000' : '#ff0000';
     ctx.fillText('X', close.x + close.w / 2, close.y + 15);
 
-    for (const row of rows) {
-        const hover = mouseX >= row.x && mouseX <= row.x + row.w && mouseY >= row.y && mouseY <= row.y + row.h;
-        const level = getUpgradeLevel(row.upgrade.id);
-        const rarityColor = getRarityUiColor(row.upgrade.rarity);
+    const tabsList = [
+        { id: 'items', label: 'ITEMS' },
+        { id: 'upgrades', label: 'UPGRADES' },
+    ];
+
+    for (const tab of tabsList) {
+        const tabZone = tabs[tab.id];
+        const tabHover = mouseX >= tabZone.x && mouseX <= tabZone.x + tabZone.w && mouseY >= tabZone.y && mouseY <= tabZone.y + tabZone.h;
+        const active = devCheatMenuTab === tab.id;
+        ctx.fillStyle = active ? 'rgba(255,0,0,0.18)' : tabHover ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+        ctx.fillRect(tabZone.x, tabZone.y, tabZone.w, tabZone.h);
+        ctx.strokeStyle = active ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.18)';
+        ctx.strokeRect(tabZone.x, tabZone.y, tabZone.w, tabZone.h);
+        ctx.fillStyle = active ? activeColor : inactiveColor;
+        ctx.fillText(tab.label, tabZone.x + tabZone.w / 2, tabZone.y + 16);
+    }
+
+    for (const cell of entries) {
+        const hover = mouseX >= cell.x && mouseX <= cell.x + cell.w && mouseY >= cell.y && mouseY <= cell.y + cell.h;
+        const level = cell.entry.kind === 'upgrade' ? getUpgradeLevel(cell.entry.id) : getItemLevel(cell.entry.id);
+        const rarityColor = getRarityUiColor(cell.entry.rarity);
 
         if (hover) {
             ctx.fillStyle = 'rgba(255,255,255,0.08)';
-            ctx.fillRect(row.x, row.y, row.w, row.h);
+            ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
         }
 
         ctx.font = '11px Arial';
         ctx.textAlign = 'left';
         ctx.fillStyle = rarityColor;
-        ctx.fillText(`[${row.upgrade.rarity[0].toUpperCase()}] ${row.upgrade.title}`, row.x + 6, row.y + 15);
+        ctx.fillText(cell.entry.title, cell.x + 6, cell.y + 15);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#ff0000';
-        ctx.fillText(`Lv ${level}`, row.x + row.w - 8, row.y + 15);
+        ctx.fillText(`Lv ${level}`, cell.x + cell.w - 8, cell.y + 15);
     }
 
-    ctx.font = '10px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(220,230,255,0.85)';
-    ctx.fillText('Click an upgrade to apply it instantly', panel.x + 10, panel.y + panel.h - 8);
+    const hoveredCell = entries.find(cell => mouseX >= cell.x && mouseX <= cell.x + cell.w && mouseY >= cell.y && mouseY <= cell.y + cell.h);
+    if (hoveredCell) {
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(220,230,255,0.88)';
+        ctx.fillText(hoveredCell.entry.detail, panel.x + 10, panel.y + panel.h - 10);
+    } else {
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'rgba(220,230,255,0.85)';
+        ctx.fillText(devCheatMenuTab === 'items' ? 'Click an item to add it' : 'Click an upgrade to apply it', panel.x + 10, panel.y + panel.h - 10);
+    }
     ctx.restore();
 }
 

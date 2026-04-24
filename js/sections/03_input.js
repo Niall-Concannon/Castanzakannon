@@ -46,9 +46,11 @@ window.addEventListener('keydown', e => {
 
     if (gameState === 'playing' && devCheatMenuEnabled) {
         const lower = e.key.toLowerCase();
-        if (lower === 'k' || e.key === 'F2') {
+        if (lower === 'k') {
             showCheatMenu = !showCheatMenu;
+            if (showCheatMenu) devCheatMenuTab = 'items';
             playUiClick();
+            return;
         }
     }
 
@@ -107,9 +109,18 @@ window.addEventListener('mousedown', e => {
             return;
         }
 
-        for (const row of zones.rows) {
-            if (mouseX >= row.x && mouseX <= row.x + row.w && mouseY >= row.y && mouseY <= row.y + row.h) {
-                if (applyUpgradeById(row.upgrade.id)) playUiClick();
+        for (const tabName of ['items', 'upgrades']) {
+            const tab = zones.tabs[tabName];
+            if (mouseX >= tab.x && mouseX <= tab.x + tab.w && mouseY >= tab.y && mouseY <= tab.y + tab.h) {
+                devCheatMenuTab = tabName;
+                playUiClick();
+                return;
+            }
+        }
+
+        for (const cell of zones.entries) {
+            if (mouseX >= cell.x && mouseX <= cell.x + cell.w && mouseY >= cell.y && mouseY <= cell.y + cell.h) {
+                if (cell.entry.apply()) playUiClick();
                 return;
             }
         }
@@ -158,7 +169,12 @@ window.addEventListener('mousedown', e => {
             } else if (mouseX >= dcb.x && mouseX <= dcb.x + dcb.w && mouseY >= dcb.y && mouseY <= dcb.y + dcb.h) {
                 playUiClick();
                 devCheatMenuEnabled = !devCheatMenuEnabled;
-                if (!devCheatMenuEnabled) showCheatMenu = false;
+                if (!devCheatMenuEnabled) {
+                    showCheatMenu = false;
+                } else {
+                    showCheatMenu = true;
+                    devCheatMenuTab = 'items';
+                }
             } else if (mouseX >= ftb.x && mouseX <= ftb.x + ftb.w && mouseY >= ftb.y && mouseY <= ftb.y + ftb.h) {
                 playUiClick();
                 fogEnabled = !fogEnabled;

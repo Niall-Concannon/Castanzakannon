@@ -7,31 +7,31 @@
 function drawUI() {
     if (showFpsCounter) {
         ctx.save();
-        ctx.textAlign  = 'center';
+        ctx.textAlign  = 'left';
         ctx.font       = 'bold 13px monospace';
         ctx.fillStyle  = '#ff0000';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur  = 4;
-        ctx.fillText(fps + ' FPS', canvas.width / 2, 18);
+        ctx.fillText(fps + ' FPS', 10, canvas.height - 10);
         ctx.restore();
     }
 
     if (devTestMode) {
         ctx.save();
-        ctx.textAlign = 'left';
+        ctx.textAlign = 'center';
         ctx.font = 'bold 13px Arial';
         ctx.fillStyle = '#ff0000';
         ctx.shadowColor = '#000000';
         ctx.shadowBlur = 4;
-        ctx.fillText('DEV TEST MODE: 1 ENEMY PER WAVE', 20, 22);
+        ctx.fillText('DEV TEST MODE: 1 ENEMY PER WAVE', canvas.width / 2, 22);
         ctx.restore();
     }
 
     if (devCheatMenuEnabled) {
         const boxW = 290;
         const boxH = 44;
-        const boxX = canvas.width / 2 - boxW / 2;
-        const boxY = devTestMode ? 40 : 14;
+        const boxX = 18;
+        const boxY = Math.max(120, Math.floor(canvas.height * 0.5) - Math.floor(boxH / 2));
 
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.62)';
@@ -50,9 +50,9 @@ function drawUI() {
         ctx.font = '11px Arial';
         ctx.fillStyle = '#ff0000';
         if (showCheatMenu) {
-            ctx.fillText('K/F2: close cheat menu   Esc: close panel', boxX + 8, boxY + 33);
+            ctx.fillText('K: items menu   Esc: close panel', boxX + 8, boxY + 33);
         } else {
-            ctx.fillText('K/F2: open cheat menu', boxX + 8, boxY + 33);
+            ctx.fillText('K: open items menu', boxX + 8, boxY + 33);
         }
         ctx.restore();
     }

@@ -3,7 +3,7 @@
 
 
 
-let fogEnabled     = true;
+let fogEnabled     = false;
 let keys           = {};
 let camera         = { x: 0, y: 0 };
 let mapTiles       = [];
@@ -43,6 +43,7 @@ let splashFadeTimerMs = 0;
 let devTestMode    = false;
 let devCheatMenuEnabled = false;
 let showCheatMenu = false;
+let devCheatMenuTab = 'items';
 let mapSize        = 1.0;
 let mapOpacity     = 1.0;
 let mapShape       = 'circle';
@@ -489,32 +490,78 @@ function getPlayerXpAttractRadius() {
     return XP_ATTRACT_RADIUS * player.xpAttractMult;
 }
 
+// Get Dev Cheat Menu Entries keeps the game logic moving.
+function getDevCheatMenuEntries(tab) {
+    if (tab === 'upgrades') {
+        return LEVEL_UPGRADES.map(upgrade => ({
+            id: upgrade.id,
+            title: upgrade.title,
+            detail: upgrade.detail,
+            rarity: upgrade.rarity,
+            level: getUpgradeLevel(upgrade.id),
+            maxStacks: upgrade.maxStacks ?? 1,
+            kind: 'upgrade',
+            apply: () => applyUpgradeById(upgrade.id),
+        }));
+    }
+
+    const items = ITEM_DEFINITIONS.map(def => ({
+        id: def.id,
+        title: def.title,
+        detail: def.detail,
+        rarity: def.rarity,
+        level: getItemLevel(def.id),
+        maxStacks: def.maxStacks ?? 1,
+        kind: 'item',
+        apply: () => registerLootGain(def, 'item'),
+    }));
+
+    const uniques = UNIQUE_ITEM_DEFINITIONS.map(def => ({
+        id: def.id,
+        title: def.title,
+        detail: def.detail,
+        rarity: def.rarity,
+        level: getItemLevel(def.id),
+        maxStacks: def.maxStacks ?? 1,
+        kind: 'unique',
+        apply: () => registerLootGain(def, 'unique'),
+    }));
+
+    return [...items, ...uniques].sort((a, b) => a.title.localeCompare(b.title));
+}
+
 // Get Cheat Menu Zones keeps the game logic moving.
 function getCheatMenuZones() {
-    const panelW = 390;
-    const rowH = 24;
-    const panelH = Math.min(canvas.height - 120, 64 + LEVEL_UPGRADES.length * rowH + 12);
-    const panelX = canvas.width - panelW - 20;
-    const panelY = 112;
+    const entries = getDevCheatMenuEntries(devCheatMenuTab);
+    const panelW = 640;
+    const tabH = 24;
+    const cellH = 26;
+    const cellGap = 6;
+    const cols = 2;
+    const rowCount = Math.ceil(entries.length / cols);
+    const panelH = Math.min(canvas.height - 110, 74 + tabH + rowCount * cellH + Math.max(0, rowCount - 1) * cellGap + 18);
+    const panelX = canvas.width / 2 - panelW / 2;
+    const panelY = 106;
     const close = { x: panelX + panelW - 34, y: panelY + 8, w: 24, h: 20 };
+    const tabs = {
+        items: { x: panelX + 10, y: panelY + 36, w: 110, h: tabH },
+        upgrades: { x: panelX + 126, y: panelY + 36, w: 110, h: tabH },
+    };
 
-    const rows = [];
-    for (let i = 0; i < LEVEL_UPGRADES.length; i++) {
-        const y = panelY + 40 + i * rowH;
-        if (y + rowH > panelY + panelH - 8) break;
-        rows.push({
-            x: panelX + 10,
-            y,
-            w: panelW - 20,
-            h: rowH - 2,
-            upgrade: LEVEL_UPGRADES[i],
-        });
-    }
+    const entriesZones = entries.map((entry, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const cellW = Math.floor((panelW - 24 - cellGap) / cols);
+        const x = panelX + 10 + col * (cellW + cellGap);
+        const y = panelY + 70 + row * (cellH + cellGap);
+        return { x, y, w: cellW, h: cellH, entry };
+    });
 
     return {
         panel: { x: panelX, y: panelY, w: panelW, h: panelH },
         close,
-        rows,
+        tabs,
+        entries: entriesZones,
     };
 }
 

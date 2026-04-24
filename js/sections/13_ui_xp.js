@@ -449,44 +449,40 @@ function drawUpgradeHud() {
 
 // Draw Inventory Hud keeps the game logic moving.
 function drawInventoryHud() {
-    const panelX = 20;
-    const panelY = 370;
-    const panelW = 340;
-    const panelH = 146;
-    const slotSize = 28;
-    const gap = 6;
-    const cols = 9;
-    const rows = 3;
-    const maxSlots = cols * rows;
-    const entries = player.inventory.slice(0, maxSlots);
+    const slotSize = 44;
+    const gap = 8;
+    const entries = player.inventory;
+    const rows = Math.min(2, Math.max(1, Math.ceil(entries.length / 9)));
+    const cols = Math.max(1, Math.ceil(entries.length / rows));
+    const padX = 12;
+    const padY = 10;
+    const panelW = cols * slotSize + (cols - 1) * gap + padX * 2;
+    const panelH = rows * slotSize + (rows - 1) * gap + padY * 2;
+    const panelX = canvas.width / 2 - panelW / 2;
+    const panelY = 8;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.56)';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(panelX, panelY, panelW, panelH);
-    ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
     ctx.strokeRect(panelX, panelY, panelW, panelH);
 
-    ctx.textAlign = 'left';
-    ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 11px Arial';
-    ctx.fillStyle = '#ff0000';
-    ctx.fillText('ITEMS & UNIQUES (hover icons)', panelX + 8, panelY + 14);
-
     let hovered = null;
-    for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        if (row >= rows) break;
+    for (let row = 0; row < rows; row++) {
+        const startIndex = row * cols;
+        const rowCount = Math.min(cols, entries.length - startIndex);
+        const rowWidth = rowCount * slotSize + Math.max(0, rowCount - 1) * gap;
+        const rowX = panelX + padX + (panelW - padX * 2 - rowWidth) / 2;
+        const y = panelY + padY + row * (slotSize + gap);
 
-        const x = panelX + 8 + col * (slotSize + gap);
-        const y = panelY + 22 + row * (slotSize + gap);
+        for (let col = 0; col < rowCount; col++) {
+            const entry = entries[startIndex + col];
+            const x = rowX + col * (slotSize + gap);
         const hover = mouseX >= x && mouseX <= x + slotSize && mouseY >= y && mouseY <= y + slotSize;
         if (hover) hovered = { x, y, entry };
 
-        ctx.fillStyle = hover ? 'rgba(255,255,255,0.16)' : 'rgba(10,10,10,0.82)';
+        ctx.fillStyle = hover ? 'rgba(255,255,255,0.14)' : 'rgba(10,10,10,0.72)';
         ctx.fillRect(x, y, slotSize, slotSize);
         ctx.strokeStyle = hover ? '#ff0000' : getRarityUiColor(entry.rarity);
         ctx.lineWidth = hover ? 2 : 1;
@@ -496,52 +492,29 @@ function drawInventoryHud() {
             ? (UNIQUE_PLACEHOLDER_SPRITES[entry.id] ?? uniquePlaceholderSprite)
             : (ITEM_PLACEHOLDER_SPRITES[entry.id] ?? itemPlaceholderSprite);
         if (icon.complete && icon.naturalWidth) {
-            ctx.drawImage(icon, x + 3, y + 3, slotSize - 6, slotSize - 6);
+            ctx.drawImage(icon, x + 4, y + 4, slotSize - 8, slotSize - 8);
         } else {
             ctx.fillStyle = entry.unique ? '#ff0000' : '#ff0000';
-            ctx.fillRect(x + 3, y + 3, slotSize - 6, slotSize - 6);
+            ctx.fillRect(x + 4, y + 4, slotSize - 8, slotSize - 8);
         }
 
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'right';
         ctx.fillStyle = '#ff0000';
         ctx.fillText(String(entry.level), x + slotSize - 2, y + slotSize - 2);
+        }
     }
-
-    if (!entries.length) {
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'rgba(255,255,255,0.78)';
-        ctx.fillText('No chest/boss loot yet', panelX + 8, panelY + 42);
-    }
-
-    const uniqueCount = player.inventory.filter(item => item.unique).length;
-    ctx.font = '10px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(220,230,255,0.88)';
-    ctx.fillText(`Total ${player.inventory.length}  |  Uniques ${uniqueCount}`, panelX + 8, panelY + panelH - 8);
 
     if (hovered) {
-        const tipW = 280;
-        const tipH = 66;
-        const tipX = Math.min(canvas.width - tipW - 14, hovered.x + slotSize + 10);
-        const tipY = Math.max(14, Math.min(canvas.height - tipH - 14, hovered.y - 8));
-
-        ctx.fillStyle = 'rgba(0,0,0,0.93)';
-        ctx.fillRect(tipX, tipY, tipW, tipH);
-        ctx.strokeStyle = getRarityUiColor(hovered.entry.rarity);
-        ctx.lineWidth = 1;
-        ctx.strokeRect(tipX, tipY, tipW, tipH);
+        const tipX = Math.min(canvas.width - 20, hovered.x + slotSize + 10);
+        const tipY = Math.max(20, hovered.y + 10);
 
         ctx.textAlign = 'left';
-        ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = getRarityUiColor(hovered.entry.rarity);
-        ctx.fillText(`${hovered.entry.title}  L${hovered.entry.level}`, tipX + 8, tipY + 16);
         ctx.font = '10px Arial';
-        ctx.fillStyle = 'rgba(235,240,255,0.9)';
-        ctx.fillText(hovered.entry.detail, tipX + 8, tipY + 34);
-        ctx.fillStyle = 'rgba(210,220,240,0.82)';
-        ctx.fillText(`Type: ${hovered.entry.unique ? 'Unique' : 'Item'}  |  Rarity: ${hovered.entry.rarity.toUpperCase()}`, tipX + 8, tipY + 52);
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = getRarityUiColor(hovered.entry.rarity);
+        ctx.fillText(hovered.entry.detail, tipX, tipY);
     }
 
     ctx.restore();
