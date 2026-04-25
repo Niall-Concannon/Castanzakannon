@@ -161,16 +161,22 @@ function filterEncyclopediaEntries(entries) {
 // Get Encyclopedia Enemy Entries keeps the game logic moving.
 function getEncyclopediaEnemyEntries() {
     const entries = [];
-    const nameMap = { basic: 'Basic', fast: 'Fast', tank: 'Tank' };
+    const nameMap = { basic: 'Basic', fast: 'Fast', tank: 'Tank', sniper: 'Sniper' };
 
     for (const [id, base] of Object.entries(ENEMY_TYPES)) {
+        const lvl1 = ENEMY_VARIANT_STATS.base?.[id] ?? { hp: base.hp, speed: base.speed };
         const lvl5 = ENEMY_VARIANT_STATS.d?.[id] ?? ENEMY_VARIANT_STATS.base?.[id] ?? { hp: base.hp, speed: base.speed };
         const frames = getEnemySpriteFrames(id);
+        const isSniper = id === 'sniper';
+        const rarity = isSniper ? 'uncommon' : 'common';
+        const extraText = isSniper
+            ? `Projectile DMG ${lvl1.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE} -> ${lvl5.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE}  Range ${SNIPER_RANGE}`
+            : `Level 5 scaling: HP ${lvl5.hp}  SPD ${lvl5.speed.toFixed(1)}`;
         entries.push({
             title: `${nameMap[id] ?? id} Enemy`,
-            rarity: 'common',
+            rarity,
             detail: `Base HP ${base.hp}  SPD ${base.speed.toFixed(1)}  Size ${base.size}`,
-            extra: `Level 5 scaling: HP ${lvl5.hp}  SPD ${lvl5.speed.toFixed(1)}`,
+            extra: extraText,
             icon: frames?.[0] ?? null,
             iconFrames: frames,
             kind: 'enemy',

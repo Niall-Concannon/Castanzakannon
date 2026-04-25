@@ -12,8 +12,33 @@ function spawnEnemy(type) {
 
 // Picks a random enemy type for normal waves.
 function pickRandomEnemyType() {
-    const types = ['basic', 'fast', 'tank'];
-    return types[Math.floor(Math.random() * types.length)];
+    const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
+    const baseSniperWeights = {
+        1: 0.07,
+        2: 0.14,
+        3: 0.22,
+        4: 0.3,
+        5: 0.38,
+    };
+    const waveBonus = Math.min(0.14, Math.max(0, currentWave - 1) * 0.03);
+    const sniperWeight = (baseSniperWeights[level] ?? 0.07) + waveBonus;
+    const weights = {
+        basic: 1.15,
+        fast: 0.95,
+        tank: 0.6,
+        sniper: sniperWeight,
+    };
+
+    let totalWeight = 0;
+    for (const weight of Object.values(weights)) totalWeight += weight;
+    let roll = Math.random() * totalWeight;
+
+    for (const [type, weight] of Object.entries(weights)) {
+        roll -= weight;
+        if (roll <= 0) return type;
+    }
+
+    return 'basic';
 }
 
 // Finds a safe spawn point away from the player.
@@ -70,6 +95,18 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
     e.path = [];
     e.pathTimer = Math.floor(Math.random() * 30);
     e.offscreenFrames = 0;
+    e.chargeFrames = 0;
+    e.cooldownFrames = 0;
+    e.shootAnimFrames = 0;
+    if (type === 'sniper') {
+        e.projectileDamage = variantStats.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE;
+        e.sniperChargeFrames = Math.max(20, variantStats.chargeFrames ?? SNIPER_CHARGE_FRAMES);
+        e.sniperCooldownFrames = Math.max(20, variantStats.cooldownFrames ?? SNIPER_COOLDOWN_FRAMES);
+    } else {
+        e.projectileDamage = 0;
+        e.sniperChargeFrames = SNIPER_CHARGE_FRAMES;
+        e.sniperCooldownFrames = SNIPER_COOLDOWN_FRAMES;
+    }
 }
 
 // Returns the outer recycle distance for offscreen enemies.
@@ -206,9 +243,56 @@ function updateEnemies() {
 
         const distToPlayer = Math.hypot(e.x - player.x, e.y - player.y);
         const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
-        const speedMult = distMult * sanSlowMult;
+        let speedMult = distMult * sanSlowMult;
+        let shouldMove = true;
 
-        const moved = moveEnemyToward(e, tx, ty, e.speed * speedMult);
+        if (e.type === 'sniper') {
+            if (e.shootAnimFrames > 0) e.shootAnimFrames--;
+            if (e.cooldownFrames > 0) e.cooldownFrames--;
+
+            const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.7);
+            const inAttackRange = distToPlayer >= SNIPER_MIN_RANGE && distToPlayer <= SNIPER_RANGE;
+
+            if (distToPlayer < SNIPER_MIN_RANGE) {
+                tx = e.x - (player.x - e.x);
+                ty = e.y - (player.y - e.y);
+                e.chargeFrames = 0;
+            } else if (!inAttackRange || !hasSight) {
+                tx = player.x;
+                ty = player.y;
+                e.chargeFrames = 0;
+            } else {
+                shouldMove = false;
+                speedMult = 0;
+
+                if (e.cooldownFrames <= 0) {
+                    e.chargeFrames++;
+                    if (e.chargeFrames >= e.sniperChargeFrames) {
+                        const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                        const sx = e.x + Math.cos(angle) * (e.size + 10);
+                        const sy = e.y + Math.sin(angle) * (e.size + 10);
+                        enemyProjectiles.push({
+                            x: sx,
+                            y: sy,
+                            prevX: sx,
+                            prevY: sy,
+                            velocityX: Math.cos(angle) * SNIPER_PROJECTILE_SPEED,
+                            velocityY: Math.sin(angle) * SNIPER_PROJECTILE_SPEED,
+                            size: SNIPER_PROJECTILE_SIZE,
+                            framesLeft: SNIPER_PROJECTILE_FRAMES,
+                            projectileType: 'sniper',
+                            damage: e.projectileDamage,
+                        });
+
+                        e.chargeFrames = 0;
+                        e.cooldownFrames = e.sniperCooldownFrames;
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                    }
+                }
+            }
+        }
+
+        const moved = !shouldMove || moveEnemyToward(e, tx, ty, e.speed * speedMult);
         if (!moved) {
 
             e.path = [];
@@ -235,7 +319,9 @@ function updateEnemies() {
         e.animTimer--;
         if (e.animTimer <= 0) {
             const frames = getEnemySpriteFrames(e.type);
-            const frameCount = Math.max(1, frames.length);
+            const frameCount = e.type === 'sniper'
+                ? Math.max(1, Math.min(3, frames.length))
+                : Math.max(1, frames.length);
             e.animFrame = (e.animFrame + 1) % frameCount;
             e.animTimer = ENEMY_TYPES[e.type].animSpeed;
         }
@@ -324,6 +410,8 @@ function updateTumorTurrets() {
                 velocityY: Math.sin(angle) * TUMOR_PROJECTILE_SPEED,
                 size: TUMOR_PROJECTILE_SIZE,
                 framesLeft: TUMOR_PROJECTILE_FRAMES,
+                projectileType: 'tumor',
+                damage: TUMOR_PROJECTILE_DAMAGE,
             });
 
             t.chargeFrames = 0;
@@ -348,7 +436,13 @@ function drawEnemies() {
         const sc  = toScreen(rx, ry);
         const sz  = e.size * 2;
         const frames = e.isBoss ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
-        const sprite = frames[e.animFrame % Math.max(1, frames.length)] ?? frames[0];
+        const walkFrameCount = e.type === 'sniper'
+            ? Math.max(1, Math.min(3, frames.length))
+            : Math.max(1, frames.length);
+        const walkSprite = frames[e.animFrame % walkFrameCount] ?? frames[0];
+        const sprite = e.type === 'sniper' && e.shootAnimFrames > 0 && frames.length >= 4
+            ? frames[3]
+            : walkSprite;
 
         ctx.save();
         ctx.globalAlpha = alpha;

@@ -186,7 +186,7 @@ function updateEnemyProjectiles() {
 
         if (segmentCircleHit(oldX, oldY, p.x, p.y, player.x, player.y, player.size + p.size)) {
             if (player.invulnTimer <= 0) {
-                applyPlayerDamage(TUMOR_PROJECTILE_DAMAGE);
+                applyPlayerDamage(p.damage ?? TUMOR_PROJECTILE_DAMAGE);
                 player.invulnTimer = 60;
             }
             enemyProjectiles.splice(i, 1);
@@ -200,10 +200,11 @@ function drawEnemyProjectiles() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
+        const sprite = p.projectileType === 'sniper' ? sniperProjectileSprite : enemyProjectileSprite;
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
-        ctx.drawImage(enemyProjectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        ctx.drawImage(sprite, -p.size, -p.size, p.size * 2, p.size * 2);
         ctx.restore();
     }
 }

@@ -90,6 +90,15 @@ const TUMOR_PROJECTILE_SPEED = 6;
 const TUMOR_PROJECTILE_SIZE = 16;
 const TUMOR_PROJECTILE_DAMAGE = 12;
 const TUMOR_PROJECTILE_FRAMES = 170;
+const SNIPER_RANGE = 620;
+const SNIPER_MIN_RANGE = 300;
+const SNIPER_CHARGE_FRAMES = 62;
+const SNIPER_COOLDOWN_FRAMES = 68;
+const SNIPER_SHOOT_ANIM_FRAMES = 10;
+const SNIPER_PROJECTILE_SPEED = 8.2;
+const SNIPER_PROJECTILE_SIZE = 11;
+const SNIPER_PROJECTILE_DAMAGE = 8;
+const SNIPER_PROJECTILE_FRAMES = 170;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 
@@ -223,6 +232,7 @@ const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: '#00ff00', animSpeed: 10 },
     fast:  { hp: 2, size: 12, speed: 3.5, color: '#ffff00', animSpeed: 6  },
     tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
+    sniper:{ hp: 3, size: 18, speed: 1.55, color: '#ff8a2b', animSpeed: 9 },
 };
 
 
@@ -230,11 +240,11 @@ const ENEMY_TYPES = {
 
 const ENEMY_VARIANT_STATS = {
 
-    base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 } },
-    a:    { basic: { hp: 4, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 10, speed: 1.3 } },
-    b:    { basic: { hp: 5, speed: 2.4 },    fast: { hp: 3, speed: 4.1 },   tank: { hp: 12, speed: 1.4 } },
-    c:    { basic: { hp: 6, speed: 2.6 },    fast: { hp: 4, speed: 4.4 },   tank: { hp: 14, speed: 1.5 } },
-    d:    { basic: { hp: 7, speed: 2.8 },    fast: { hp: 4, speed: 4.7 },   tank: { hp: 16, speed: 1.6 } },
+    base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 },  sniper: { hp: 3, speed: 1.55, projectileDamage: 8, chargeFrames: 62, cooldownFrames: 68 } },
+    a:    { basic: { hp: 4, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 10, speed: 1.3 }, sniper: { hp: 4, speed: 1.7, projectileDamage: 10, chargeFrames: 58, cooldownFrames: 62 } },
+    b:    { basic: { hp: 5, speed: 2.4 },    fast: { hp: 3, speed: 4.1 },   tank: { hp: 12, speed: 1.4 }, sniper: { hp: 5, speed: 1.9, projectileDamage: 12, chargeFrames: 54, cooldownFrames: 56 } },
+    c:    { basic: { hp: 6, speed: 2.6 },    fast: { hp: 4, speed: 4.4 },   tank: { hp: 14, speed: 1.5 }, sniper: { hp: 6, speed: 2.05, projectileDamage: 14, chargeFrames: 50, cooldownFrames: 50 } },
+    d:    { basic: { hp: 7, speed: 2.8 },    fast: { hp: 4, speed: 4.7 },   tank: { hp: 16, speed: 1.6 }, sniper: { hp: 7, speed: 2.2, projectileDamage: 16, chargeFrames: 46, cooldownFrames: 46 } },
 };
 
 
@@ -884,6 +894,11 @@ const enemyProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/tumor_projectile_placeholder.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
 ]);
+const sniperProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/projectile_sniper.png',
+    'assets/sprites/projectiles/tumor_projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
 const tumorIdleSprite = imgWithFallback([
     'assets/sprites/enemies/base/tumor_idle.png',
     'assets/sprites/levels/level5/egg_wall.png',
@@ -924,6 +939,7 @@ const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
     fast:  ['assets/sprites/enemies/base/enemy_fast_frame1.png',  'assets/sprites/enemies/base/enemy_fast_frame2.png',  'assets/sprites/enemies/base/enemy_fast_frame3.png' ],
     tank:  ['assets/sprites/enemies/base/enemy_tank_frame1.png',  'assets/sprites/enemies/base/enemy_tank_frame2.png',  'assets/sprites/enemies/base/enemy_tank_frame3.png' ],
+    sniper:['assets/sprites/enemies/base/enemy_sniper_frame1.png','assets/sprites/enemies/base/enemy_sniper_frame2.png','assets/sprites/enemies/base/enemy_sniper_frame3.png','assets/sprites/enemies/base/enemy_sniper_frame4.png'],
 };
 
 const ENEMY_LEVEL_VARIANTS = {
