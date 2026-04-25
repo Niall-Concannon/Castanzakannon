@@ -243,21 +243,135 @@ function drawMinimap() {
     ctx.restore();
 }
 
+// Returns layout rects for the pause menu panel and its elements.
+function getPauseMenuLayout() {
+    const panelW = Math.min(420, Math.floor(canvas.width * 0.52));
+    const panelH = Math.min(380, Math.floor(canvas.height * 0.62));
+    const panelX = Math.floor(canvas.width  / 2 - panelW / 2);
+    const panelY = Math.floor(canvas.height / 2 - panelH / 2);
+    const sliderW = Math.floor(panelW * 0.72);
+    const sliderX = Math.floor(canvas.width / 2 - sliderW / 2);
+    const row1Y = panelY + Math.floor(panelH * 0.33);   // Music label baseline
+    const row2Y = panelY + Math.floor(panelH * 0.54);   // SFX label baseline
+    const btnW  = Math.floor(panelW * 0.48);
+    const btnH  = 42;
+    const btnGap = 14;
+    const btnY  = panelY + panelH - btnH - 22;
+    return {
+        panel:       { x: panelX, y: panelY, w: panelW, h: panelH },
+        musicLabel:  { x: sliderX, y: row1Y },
+        musicSlider: { x: sliderX, y: row1Y + 18, w: sliderW, h: 8 },
+        sfxLabel:    { x: sliderX, y: row2Y },
+        sfxSlider:   { x: sliderX, y: row2Y + 18, w: sliderW, h: 8 },
+        resumeBtn:   { x: Math.floor(canvas.width / 2 - btnW - btnGap / 2), y: btnY, w: btnW, h: btnH },
+        menuBtn:     { x: Math.floor(canvas.width / 2 + btnGap / 2),        y: btnY, w: btnW, h: btnH },
+    };
+}
+
 // Draw Pause Overlay keeps the game logic moving.
 function drawPauseOverlay() {
+    const lay = getPauseMenuLayout();
+    const p   = lay.panel;
+    const cx  = canvas.width / 2;
+
+    // Dim background
     ctx.save();
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.textAlign = 'center';
+
+    // Panel background + border
+    ctx.fillStyle = 'rgba(8,8,18,0.96)';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x, p.y, p.w, p.h);
+
+    // Title
+    ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px Arial';
-    ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 16);
-    ctx.font = '16px Arial';
-    ctx.fillText('Press Escape to resume', canvas.width / 2, canvas.height / 2 + 20);
+    ctx.font        = 'bold 36px Arial';
+    ctx.fillStyle   = '#ffffff';
+    ctx.shadowColor = '#aabbff';
+    ctx.shadowBlur  = 18;
+    ctx.fillText('PAUSED', cx, p.y + 44);
+    ctx.shadowBlur = 0;
+
+    // Subtitle hint
+    ctx.font      = '13px Arial';
+    ctx.fillStyle = 'rgba(180,200,255,0.65)';
+    ctx.fillText('Esc to resume  ·  Audio Settings', cx, p.y + 74);
+
+    // ── Music Volume ──
+    const sliderHandleR = 7;
+    const musicNorm = musicVolume;
+    const sfxNorm   = sfxVolume;
+
+    ctx.textAlign   = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font        = '15px Arial';
+    ctx.fillStyle   = '#d8eaff';
+    ctx.fillText('Music Volume', lay.musicLabel.x, lay.musicLabel.y);
+    ctx.textAlign   = 'right';
+    ctx.fillStyle   = '#8ab4e8';
+    ctx.fillText(Math.round(musicNorm * 100) + '%', lay.musicLabel.x + lay.musicSlider.w, lay.musicLabel.y);
+
+    _drawPauseSlider(lay.musicSlider.x, lay.musicSlider.y, lay.musicSlider.w, musicNorm, sliderHandleR);
+
+    // ── SFX Volume ──
+    ctx.textAlign   = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font        = '15px Arial';
+    ctx.fillStyle   = '#d8eaff';
+    ctx.fillText('Game Audio Volume', lay.sfxLabel.x, lay.sfxLabel.y);
+    ctx.textAlign   = 'right';
+    ctx.fillStyle   = '#8ab4e8';
+    ctx.fillText(Math.round(sfxNorm * 100) + '%', lay.sfxLabel.x + lay.sfxSlider.w, lay.sfxLabel.y);
+
+    _drawPauseSlider(lay.sfxSlider.x, lay.sfxSlider.y, lay.sfxSlider.w, sfxNorm, sliderHandleR);
+
+    // ── Buttons ──
+    _drawPauseButton(lay.resumeBtn, 'Resume', mouseX, mouseY, '#1a3a1a', '#2ecc71');
+    _drawPauseButton(lay.menuBtn,   'Main Menu', mouseX, mouseY, '#2a1a1a', '#e05555');
+
     ctx.restore();
+}
+
+function _drawPauseSlider(x, y, w, norm, hr) {
+    const hx = x + norm * w;
+    // Track background
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x, y - 2, w, 4);
+    // Filled portion
+    ctx.fillStyle = '#4a9eff';
+    ctx.fillRect(x, y - 3, norm * w, 6);
+    // Handle
+    ctx.beginPath();
+    ctx.arc(hx, y, hr, 0, Math.PI * 2);
+    ctx.fillStyle = '#4a9eff';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function _drawPauseButton(btn, label, mx, my) {
+    const hover = mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
+    const bgColor = label === 'Resume'
+        ? (hover ? '#2ecc71' : 'rgba(46,204,113,0.18)')
+        : (hover ? '#e05555' : 'rgba(224,85,85,0.18)');
+    const borderColor = label === 'Resume' ? '#2ecc71' : '#e05555';
+
+    ctx.fillStyle   = bgColor;
+    ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth   = 1.5;
+    ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
+
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = `${hover ? 'bold ' : ''}16px Arial`;
+    ctx.fillStyle    = hover ? '#ffffff' : borderColor;
+    ctx.fillText(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
 }
 
 // Draw Visibility Mask keeps the game logic moving.

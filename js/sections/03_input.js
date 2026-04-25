@@ -71,6 +71,7 @@ window.addEventListener('mousemove', e  => {
     mouseY = e.clientY;
     updateMapConfigSliders();
     updateAudioConfigSliders();
+    updatePauseMenuSliders();
 });
 window.addEventListener('mouseup',   () => { mouseDown = false; });
 window.addEventListener('wheel', e => {
@@ -134,6 +135,28 @@ window.addEventListener('mousedown', e => {
     }
 
     mouseDown = true;
+
+    // Pause menu clicks (Resume / Main Menu / sliders)
+    if (gamePaused && gameState === 'playing') {
+        const lay = getPauseMenuLayout();
+        const rb  = lay.resumeBtn;
+        const mb  = lay.menuBtn;
+
+        if (mouseX >= rb.x && mouseX <= rb.x + rb.w && mouseY >= rb.y && mouseY <= rb.y + rb.h) {
+            gamePaused = false;
+            playUiClick();
+            return;
+        }
+        if (mouseX >= mb.x && mouseX <= mb.x + mb.w && mouseY >= mb.y && mouseY <= mb.y + mb.h) {
+            gamePaused = false;
+            gameState  = 'menu';
+            menuPage   = 'main';
+            playUiClick();
+            return;
+        }
+        // Still allow slider dragging (handled by updatePauseMenuSliders on mousemove)
+        return;
+    }
 
     if (gameState === 'menu') {
         if (menuPage === 'main') {
@@ -373,3 +396,20 @@ function updateAudioConfigSliders() {
     }
 }
 
+// Handles slider dragging inside the pause menu.
+function updatePauseMenuSliders() {
+    if (!gamePaused || gameState !== 'playing' || !mouseDown) return;
+
+    const lay = getPauseMenuLayout();
+    const hr  = 7;
+    const ms  = lay.musicSlider;
+    const ss  = lay.sfxSlider;
+
+    if (mouseY >= ms.y - hr && mouseY <= ms.y + hr &&
+        mouseX >= ms.x - hr && mouseX <= ms.x + ms.w + hr) {
+        setMusicVolume(Math.max(0, Math.min(1, (mouseX - ms.x) / ms.w)));
+    } else if (mouseY >= ss.y - hr && mouseY <= ss.y + hr &&
+               mouseX >= ss.x - hr && mouseX <= ss.x + ss.w + hr) {
+        setSfxVolume(Math.max(0, Math.min(1, (mouseX - ss.x) / ss.w)));
+    }
+}
