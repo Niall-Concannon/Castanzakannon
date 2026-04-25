@@ -104,13 +104,14 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
         e.sniperCooldownFrames = Math.max(20, variantStats.cooldownFrames ?? SNIPER_COOLDOWN_FRAMES);
     } else if (type === 'void_sniper') {
         e.projectileDamage = VOID_MAIN_PROJECTILE_DAMAGE + Math.max(0, currentArenaLevel - 1) * 2;
-        e.sniperChargeFrames = Math.max(18, SNIPER_CHARGE_FRAMES - currentArenaLevel * 2);
-        e.sniperCooldownFrames = Math.max(20, SNIPER_COOLDOWN_FRAMES - currentArenaLevel * 2);
+        e.sniperChargeFrames = Math.max(10, SNIPER_CHARGE_FRAMES - currentArenaLevel * 6);
+        e.sniperCooldownFrames = Math.max(12, SNIPER_COOLDOWN_FRAMES - currentArenaLevel * 6);
         e.voidAttackTimer = 0;
-        e.voidBurstCooldown = 140;
-        e.voidSpikeCooldown = 100;
-        e.voidWaveCooldown = 195;
-        e.voidSkullCooldown = 160;
+        e.voidBurstCooldown = 82;
+        e.voidSpikeCooldown = 66;
+        e.voidWaveCooldown = 120;
+        e.voidSkullCooldown = 90;
+        e.voidDashCooldown = 92;
     } else {
         e.projectileDamage = 0;
         e.sniperChargeFrames = SNIPER_CHARGE_FRAMES;
@@ -282,6 +283,7 @@ function updateEnemies() {
             if (e.voidSpikeCooldown > 0) e.voidSpikeCooldown--;
             if (e.voidWaveCooldown > 0) e.voidWaveCooldown--;
             if (e.voidSkullCooldown > 0) e.voidSkullCooldown--;
+            if (e.voidDashCooldown > 0) e.voidDashCooldown--;
 
             const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.8);
             const idealMin = 340;
@@ -291,27 +293,49 @@ function updateEnemies() {
                 tx = e.x - (player.x - e.x);
                 ty = e.y - (player.y - e.y);
                 shouldMove = true;
-                speedMult = 1.25 * sanSlowMult;
+                speedMult = 1.52 * sanSlowMult;
                 e.chargeFrames = 0;
             } else if (distToPlayer > idealMax || !hasSight) {
                 tx = player.x;
                 ty = player.y;
                 shouldMove = true;
-                speedMult = 1.15 * sanSlowMult;
+                speedMult = 1.48 * sanSlowMult;
                 e.chargeFrames = 0;
             } else {
                 shouldMove = false;
                 speedMult = 0;
             }
 
+            if (e.voidDashCooldown <= 0 && hasSight) {
+                const toPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+                const strafe = Math.random() < 0.5 ? Math.PI * 0.6 : -Math.PI * 0.6;
+                const dashAngle = toPlayer + strafe;
+                const dashDistance = 150 + currentArenaLevel * 24;
+                const nx = e.x + Math.cos(dashAngle) * dashDistance;
+                const ny = e.y + Math.sin(dashAngle) * dashDistance;
+                if (!wallCollision(nx, ny, e.wallSize)) {
+                    e.x = nx;
+                    e.y = ny;
+                } else {
+                    const fallbackX = e.x - Math.cos(toPlayer) * (dashDistance * 0.6);
+                    const fallbackY = e.y - Math.sin(toPlayer) * (dashDistance * 0.6);
+                    if (!wallCollision(fallbackX, fallbackY, e.wallSize)) {
+                        e.x = fallbackX;
+                        e.y = fallbackY;
+                    }
+                }
+                e.voidDashCooldown = Math.max(30, 82 - currentArenaLevel * 7);
+                e.shootAnimFrames = Math.max(e.shootAnimFrames ?? 0, 6);
+            }
+
             if (hasSight && e.cooldownFrames <= 0) {
                 e.chargeFrames++;
-                const levelScale = 1 + (Math.max(1, currentArenaLevel) - 1) * 0.08;
-                if (e.chargeFrames >= Math.max(18, e.sniperChargeFrames - 8)) {
+                const levelScale = 1 + (Math.max(1, currentArenaLevel) - 1) * 0.11;
+                if (e.chargeFrames >= Math.max(8, e.sniperChargeFrames - 10)) {
                     const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
                     const roll = Math.random();
 
-                    if (e.voidWaveCooldown <= 0 && roll > 0.78) {
+                    if (e.voidWaveCooldown <= 0 && roll > 0.7) {
                         enemyProjectiles.push({
                             x: player.x,
                             y: player.y,
@@ -327,12 +351,12 @@ function updateEnemies() {
                             waveMaxRadius: VOID_WAVE_AOE_MAX_RADIUS,
                             waveAnimTimer: 0,
                         });
-                        e.voidWaveCooldown = Math.max(85, 205 - currentArenaLevel * 16);
-                        e.cooldownFrames = Math.max(24, e.sniperCooldownFrames - 8);
+                        e.voidWaveCooldown = Math.max(48, 126 - currentArenaLevel * 12);
+                        e.cooldownFrames = Math.max(10, e.sniperCooldownFrames - 12);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 6;
-                    } else if (e.voidSpikeCooldown <= 0 && roll > 0.52) {
-                        const pellets = 7;
-                        const spread = 0.6;
+                    } else if (e.voidSpikeCooldown <= 0 && roll > 0.4) {
+                        const pellets = 9;
+                        const spread = 0.9;
                         for (let si = 0; si < pellets; si++) {
                             const t = pellets === 1 ? 0 : si / (pellets - 1);
                             const angle = baseAngle + (t - 0.5) * spread;
@@ -347,11 +371,11 @@ function updateEnemies() {
                                 voidSpikeProjectileSprite
                             );
                         }
-                        e.voidSpikeCooldown = Math.max(55, 118 - currentArenaLevel * 10);
-                        e.cooldownFrames = Math.max(26, e.sniperCooldownFrames - 6);
+                        e.voidSpikeCooldown = Math.max(28, 74 - currentArenaLevel * 7);
+                        e.cooldownFrames = Math.max(9, e.sniperCooldownFrames - 13);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 4;
-                    } else if (e.voidSkullCooldown <= 0 && roll > 0.3) {
-                        const skullCount = Math.min(2 + Math.floor(currentArenaLevel / 2), 4);
+                    } else if (e.voidSkullCooldown <= 0 && roll > 0.2) {
+                        const skullCount = Math.min(3 + Math.floor(currentArenaLevel / 2), 6);
                         for (let si = 0; si < skullCount; si++) {
                             const angle = baseAngle + (si - (skullCount - 1) / 2) * 0.24;
                             fireVoidBossProjectile(
@@ -363,39 +387,49 @@ function updateEnemies() {
                                 Math.round(VOID_SKULL_PROJECTILE_DAMAGE * levelScale),
                                 VOID_SKULL_PROJECTILE_FRAMES,
                                 voidSkullProjectileSprite,
-                                { homingStrength: 0.06 + currentArenaLevel * 0.005 }
+                                { homingStrength: 0.1 + currentArenaLevel * 0.01 }
                             );
                         }
-                        e.voidSkullCooldown = Math.max(70, 165 - currentArenaLevel * 14);
-                        e.cooldownFrames = Math.max(22, e.sniperCooldownFrames - 10);
+                        e.voidSkullCooldown = Math.max(42, 96 - currentArenaLevel * 9);
+                        e.cooldownFrames = Math.max(8, e.sniperCooldownFrames - 14);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 2;
-                    } else if (e.voidBurstCooldown <= 0 && roll > 0.18) {
-                        fireVoidBossProjectile(
-                            e,
-                            baseAngle,
-                            'void_burst',
-                            VOID_BURST_PROJECTILE_SPEED * levelScale,
-                            VOID_BURST_PROJECTILE_SIZE,
-                            Math.round(VOID_BURST_PROJECTILE_DAMAGE * levelScale),
-                            VOID_BURST_PROJECTILE_FRAMES,
-                            voidBurstProjectileSprite,
-                            { appliesDashLock: true }
-                        );
-                        e.voidBurstCooldown = Math.max(80, 150 - currentArenaLevel * 12);
-                        e.cooldownFrames = Math.max(24, e.sniperCooldownFrames - 8);
+                    } else if (e.voidBurstCooldown <= 0 && roll > 0.1) {
+                        const burstCount = 7;
+                        const burstSpread = 0.72;
+                        for (let bi = 0; bi < burstCount; bi++) {
+                            const t = bi / (burstCount - 1);
+                            const bAngle = baseAngle + (t - 0.5) * burstSpread;
+                            const speedVariance = 1 + (Math.abs(t - 0.5) * 0.3);
+                            fireVoidBossProjectile(
+                                e,
+                                bAngle,
+                                'void_burst',
+                                VOID_BURST_PROJECTILE_SPEED * levelScale * speedVariance,
+                                VOID_BURST_PROJECTILE_SIZE,
+                                Math.round(VOID_BURST_PROJECTILE_DAMAGE * levelScale),
+                                VOID_BURST_PROJECTILE_FRAMES,
+                                voidBurstProjectileSprite,
+                                { appliesDashLock: true }
+                            );
+                        }
+                        screenShake = Math.max(screenShake, 14);
+                        e.voidBurstCooldown = Math.max(36, 76 - currentArenaLevel * 7);
+                        e.cooldownFrames = Math.max(9, e.sniperCooldownFrames - 12);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 4;
                     } else {
-                        fireVoidBossProjectile(
-                            e,
-                            baseAngle,
-                            'void_main',
-                            VOID_MAIN_PROJECTILE_SPEED * levelScale,
-                            VOID_MAIN_PROJECTILE_SIZE,
-                            Math.round((e.projectileDamage ?? VOID_MAIN_PROJECTILE_DAMAGE) * levelScale),
-                            VOID_MAIN_PROJECTILE_FRAMES,
-                            voidProjectileSprite
-                        );
-                        e.cooldownFrames = e.sniperCooldownFrames;
+                        for (let mi = -1; mi <= 1; mi++) {
+                            fireVoidBossProjectile(
+                                e,
+                                baseAngle + mi * 0.08,
+                                'void_main',
+                                VOID_MAIN_PROJECTILE_SPEED * levelScale,
+                                VOID_MAIN_PROJECTILE_SIZE,
+                                Math.round((e.projectileDamage ?? VOID_MAIN_PROJECTILE_DAMAGE) * levelScale),
+                                VOID_MAIN_PROJECTILE_FRAMES,
+                                voidProjectileSprite
+                            );
+                        }
+                        e.cooldownFrames = Math.max(8, e.sniperCooldownFrames - 12);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
                     }
 

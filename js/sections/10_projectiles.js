@@ -249,7 +249,17 @@ function drawEnemyProjectiles() {
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
-        ctx.drawImage(sprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        if (p.projectileType === 'void_burst') {
+            const pulse = 0.75 + Math.sin((p.framesLeft ?? 0) * 0.28) * 0.25;
+            ctx.shadowColor = '#b060ff';
+            ctx.shadowBlur = 28 * pulse;
+            ctx.globalAlpha = 0.92;
+            const s = p.size * (1 + pulse * 0.18);
+            ctx.drawImage(sprite, -s, -s, s * 2, s * 2);
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.drawImage(sprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        }
         ctx.restore();
     }
 }

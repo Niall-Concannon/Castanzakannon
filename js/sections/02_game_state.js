@@ -622,8 +622,8 @@ function spawnVoidBossEnemy() {
     const enemy = { alive: true };
     recycleEnemy(enemy, 'void_sniper');
     const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
-    const hpScale = [0, 1.0, 1.18, 1.4, 1.65, 1.95][level] ?? 1.0;
-    const speedScale = [0, 1.0, 1.06, 1.12, 1.2, 1.28][level] ?? 1.0;
+    const hpScale = [0, 1.22, 1.5, 1.85, 2.28, 2.85][level] ?? 1.22;
+    const speedScale = [0, 1.08, 1.16, 1.24, 1.34, 1.46][level] ?? 1.08;
     enemy.x = (MAP_W * TILE) * 0.5;
     enemy.y = (MAP_H * TILE) * 0.5 - TILE * 9;
     enemy.prevX = enemy.x;
@@ -638,10 +638,11 @@ function spawnVoidBossEnemy() {
     enemy.isVoidEncounterEnemy = true;
     enemy.bossName = 'Void Sniper';
     enemy.voidAttackTimer = 0;
-    enemy.voidBurstCooldown = 150;
-    enemy.voidSpikeCooldown = 120;
-    enemy.voidWaveCooldown = 210;
-    enemy.voidSkullCooldown = 170;
+    enemy.voidBurstCooldown = 78;
+    enemy.voidSpikeCooldown = 62;
+    enemy.voidWaveCooldown = 110;
+    enemy.voidSkullCooldown = 84;
+    enemy.voidDashCooldown = 95;
     enemies.push(enemy);
 }
 

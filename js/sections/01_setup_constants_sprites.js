@@ -108,23 +108,23 @@ const VOID_BOSS_XP_REWARDS = {
     5: 420,
 };
 const VOID_BURST_DASH_LOCK_FRAMES = 480;
-const VOID_MAIN_PROJECTILE_SPEED = 8.6;
+const VOID_MAIN_PROJECTILE_SPEED = 10.2;
 const VOID_MAIN_PROJECTILE_SIZE = 12;
-const VOID_MAIN_PROJECTILE_DAMAGE = 11;
+const VOID_MAIN_PROJECTILE_DAMAGE = 15;
 const VOID_MAIN_PROJECTILE_FRAMES = 180;
-const VOID_BURST_PROJECTILE_SPEED = 12.2;
-const VOID_BURST_PROJECTILE_SIZE = 12;
-const VOID_BURST_PROJECTILE_DAMAGE = 14;
-const VOID_BURST_PROJECTILE_FRAMES = 120;
-const VOID_SPIKE_PROJECTILE_SPEED = 7.8;
+const VOID_BURST_PROJECTILE_SPEED = 14.8;
+const VOID_BURST_PROJECTILE_SIZE = 20;
+const VOID_BURST_PROJECTILE_DAMAGE = 19;
+const VOID_BURST_PROJECTILE_FRAMES = 140;
+const VOID_SPIKE_PROJECTILE_SPEED = 9.4;
 const VOID_SPIKE_PROJECTILE_SIZE = 12;
-const VOID_SPIKE_PROJECTILE_DAMAGE = 9;
+const VOID_SPIKE_PROJECTILE_DAMAGE = 12;
 const VOID_SPIKE_PROJECTILE_FRAMES = 95;
-const VOID_SKULL_PROJECTILE_SPEED = 3.2;
+const VOID_SKULL_PROJECTILE_SPEED = 4.2;
 const VOID_SKULL_PROJECTILE_SIZE = 14;
-const VOID_SKULL_PROJECTILE_DAMAGE = 8;
+const VOID_SKULL_PROJECTILE_DAMAGE = 11;
 const VOID_SKULL_PROJECTILE_FRAMES = 210;
-const VOID_WAVE_AOE_DAMAGE = 16;
+const VOID_WAVE_AOE_DAMAGE = 24;
 const VOID_WAVE_AOE_MAX_RADIUS = 170;
 const VOID_WAVE_AOE_FRAMES = 54;
 const DASH_SPEED    = 16;
@@ -261,7 +261,7 @@ const ENEMY_TYPES = {
     fast:  { hp: 2, size: 12, speed: 3.5, color: '#ffff00', animSpeed: 6  },
     tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
     sniper:{ hp: 3, size: 18, speed: 1.55, color: '#ff8a2b', animSpeed: 9 },
-    void_sniper: { hp: 70, size: 34, speed: 1.9, color: '#8f5dff', animSpeed: 8 },
+    void_sniper: { hp: 84, size: 34, speed: 2.25, color: '#8f5dff', animSpeed: 8 },
 };
 
 
