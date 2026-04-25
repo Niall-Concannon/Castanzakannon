@@ -282,6 +282,7 @@ function updateEnemies() {
                             framesLeft: SNIPER_PROJECTILE_FRAMES,
                             projectileType: 'sniper',
                             damage: e.projectileDamage,
+                            sprite: getSniperProjectileSpriteForLevel(),
                         });
 
                         e.chargeFrames = 0;

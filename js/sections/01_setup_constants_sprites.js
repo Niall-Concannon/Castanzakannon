@@ -899,6 +899,18 @@ const sniperProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/tumor_projectile_placeholder.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
 ]);
+const sniperProjectileSprites = {
+    base: imgWithFallback(['assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    a: imgWithFallback(['assets/sprites/projectiles/projectile_a_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    b: imgWithFallback(['assets/sprites/projectiles/projectile_b_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    c: imgWithFallback(['assets/sprites/projectiles/projectile_c_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    d: imgWithFallback(['assets/sprites/projectiles/projectile_d_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+};
+
+function getSniperProjectileSpriteForLevel() {
+    const variant = getEnemyVariantForLevel(currentArenaLevel);
+    return sniperProjectileSprites[variant] ?? sniperProjectileSprites.base;
+}
 const tumorIdleSprite = imgWithFallback([
     'assets/sprites/enemies/base/tumor_idle.png',
     'assets/sprites/levels/level5/egg_wall.png',

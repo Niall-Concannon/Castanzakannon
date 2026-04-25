@@ -200,7 +200,7 @@ function drawEnemyProjectiles() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
-        const sprite = p.projectileType === 'sniper' ? sniperProjectileSprite : enemyProjectileSprite;
+        const sprite = p.projectileType === 'sniper' ? (p.sprite ?? sniperProjectileSprite) : enemyProjectileSprite;
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
