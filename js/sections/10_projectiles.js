@@ -175,11 +175,31 @@ function updateEnemyProjectiles() {
         const p = enemyProjectiles[i];
         const oldX = p.x;
         const oldY = p.y;
+
+        if (p.projectileType === 'void_skull') {
+            const aim = Math.atan2(player.y - p.y, player.x - p.x);
+            const speed = Math.hypot(p.velocityX, p.velocityY);
+            const steer = p.homingStrength ?? 0.06;
+            p.velocityX += (Math.cos(aim) * speed - p.velocityX) * steer;
+            p.velocityY += (Math.sin(aim) * speed - p.velocityY) * steer;
+        }
+
+        if (p.projectileType === 'void_wave_aoe') {
+            const maxRadius = p.waveMaxRadius ?? VOID_WAVE_AOE_MAX_RADIUS;
+            const lifeUsed = Math.max(0, VOID_WAVE_AOE_FRAMES - p.framesLeft);
+            const progress = Math.max(0, Math.min(1, lifeUsed / Math.max(1, VOID_WAVE_AOE_FRAMES)));
+            p.size = 18 + maxRadius * progress;
+            p.waveAnimTimer = (p.waveAnimTimer ?? 0) + 1;
+            p.velocityX = 0;
+            p.velocityY = 0;
+        }
+
         p.x += p.velocityX;
         p.y += p.velocityY;
         p.framesLeft--;
 
-        if (wallCollision(p.x, p.y, p.size) || p.framesLeft <= 0) {
+        const ignoreWalls = p.projectileType === 'void_wave_aoe';
+        if ((!ignoreWalls && wallCollision(p.x, p.y, p.size)) || p.framesLeft <= 0) {
             enemyProjectiles.splice(i, 1);
             continue;
         }
@@ -188,8 +208,14 @@ function updateEnemyProjectiles() {
             if (player.invulnTimer <= 0) {
                 applyPlayerDamage(p.damage ?? TUMOR_PROJECTILE_DAMAGE);
                 player.invulnTimer = 60;
+                if (p.projectileType === 'void_burst' || p.appliesDashLock) {
+                    player.dashLockFrames = Math.max(player.dashLockFrames ?? 0, VOID_BURST_DASH_LOCK_FRAMES);
+                    player.dashCooldown = Math.max(player.dashCooldown ?? 0, player.dashRechargeFrames ?? 120);
+                }
             }
-            enemyProjectiles.splice(i, 1);
+            if (p.projectileType !== 'void_wave_aoe') {
+                enemyProjectiles.splice(i, 1);
+            }
         }
     }
 }
@@ -200,7 +226,26 @@ function drawEnemyProjectiles() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
-        const sprite = p.projectileType === 'sniper' ? (p.sprite ?? sniperProjectileSprite) : enemyProjectileSprite;
+
+        let sprite = enemyProjectileSprite;
+        if (p.projectileType === 'sniper') sprite = p.sprite ?? sniperProjectileSprite;
+        else if (p.projectileType === 'void_main') sprite = p.sprite ?? voidProjectileSprite;
+        else if (p.projectileType === 'void_burst') sprite = p.sprite ?? voidBurstProjectileSprite;
+        else if (p.projectileType === 'void_skull') sprite = p.sprite ?? voidSkullProjectileSprite;
+        else if (p.projectileType === 'void_spike') sprite = p.sprite ?? voidSpikeProjectileSprite;
+
+        if (p.projectileType === 'void_wave_aoe') {
+            const animIndex = Math.floor((p.waveAnimTimer ?? 0) / 4) % voidWaveAoeFrames.length;
+            const waveSprite = voidWaveAoeFrames[animIndex] ?? voidWaveAoeFrames[0];
+            ctx.save();
+            ctx.globalAlpha = 0.86;
+            ctx.translate(sc.x, sc.y);
+            const waveSize = p.size * 2;
+            ctx.drawImage(waveSprite, -waveSize, -waveSize, waveSize * 2, waveSize * 2);
+            ctx.restore();
+            continue;
+        }
+
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));

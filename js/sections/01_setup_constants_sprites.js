@@ -99,6 +99,34 @@ const SNIPER_PROJECTILE_SPEED = 8.2;
 const SNIPER_PROJECTILE_SIZE = 11;
 const SNIPER_PROJECTILE_DAMAGE = 8;
 const SNIPER_PROJECTILE_FRAMES = 170;
+const VOID_BOSS_TRIGGER_RADIUS = 34;
+const VOID_BOSS_XP_REWARDS = {
+    1: 120,
+    2: 180,
+    3: 250,
+    4: 330,
+    5: 420,
+};
+const VOID_BURST_DASH_LOCK_FRAMES = 480;
+const VOID_MAIN_PROJECTILE_SPEED = 8.6;
+const VOID_MAIN_PROJECTILE_SIZE = 12;
+const VOID_MAIN_PROJECTILE_DAMAGE = 11;
+const VOID_MAIN_PROJECTILE_FRAMES = 180;
+const VOID_BURST_PROJECTILE_SPEED = 12.2;
+const VOID_BURST_PROJECTILE_SIZE = 12;
+const VOID_BURST_PROJECTILE_DAMAGE = 14;
+const VOID_BURST_PROJECTILE_FRAMES = 120;
+const VOID_SPIKE_PROJECTILE_SPEED = 7.8;
+const VOID_SPIKE_PROJECTILE_SIZE = 12;
+const VOID_SPIKE_PROJECTILE_DAMAGE = 9;
+const VOID_SPIKE_PROJECTILE_FRAMES = 95;
+const VOID_SKULL_PROJECTILE_SPEED = 3.2;
+const VOID_SKULL_PROJECTILE_SIZE = 14;
+const VOID_SKULL_PROJECTILE_DAMAGE = 8;
+const VOID_SKULL_PROJECTILE_FRAMES = 210;
+const VOID_WAVE_AOE_DAMAGE = 16;
+const VOID_WAVE_AOE_MAX_RADIUS = 170;
+const VOID_WAVE_AOE_FRAMES = 54;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 
@@ -233,6 +261,7 @@ const ENEMY_TYPES = {
     fast:  { hp: 2, size: 12, speed: 3.5, color: '#ffff00', animSpeed: 6  },
     tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
     sniper:{ hp: 3, size: 18, speed: 1.55, color: '#ff8a2b', animSpeed: 9 },
+    void_sniper: { hp: 70, size: 34, speed: 1.9, color: '#8f5dff', animSpeed: 8 },
 };
 
 
@@ -907,6 +936,34 @@ const sniperProjectileSprites = {
     d: imgWithFallback(['assets/sprites/projectiles/projectile_d_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
 };
 
+const voidProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const voidBurstProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_proj_burst.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const voidSkullProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_proj_skull.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const voidSpikeProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_proj_spike.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const voidWaveAoeFrames = [
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+];
+
 function getSniperProjectileSpriteForLevel() {
     const variant = getEnemyVariantForLevel(currentArenaLevel);
     return sniperProjectileSprites[variant] ?? sniperProjectileSprites.base;
@@ -946,12 +1003,17 @@ const uniquePlaceholderSprite = imgWithFallback([
     'assets/sprites/pickups/unique_placeholder_green.png',
     'assets/sprites/pickups/item_placeholder_black.png',
 ]);
+const voidTotemSprite = imgWithFallback([
+    'assets/sprites/enemies/special/cyber_totem.png',
+    'assets/sprites/pickups/chest_placeholder_green.png',
+]);
 
 const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
     fast:  ['assets/sprites/enemies/base/enemy_fast_frame1.png',  'assets/sprites/enemies/base/enemy_fast_frame2.png',  'assets/sprites/enemies/base/enemy_fast_frame3.png' ],
     tank:  ['assets/sprites/enemies/base/enemy_tank_frame1.png',  'assets/sprites/enemies/base/enemy_tank_frame2.png',  'assets/sprites/enemies/base/enemy_tank_frame3.png' ],
     sniper:['assets/sprites/enemies/base/enemy_sniper_frame1.png','assets/sprites/enemies/base/enemy_sniper_frame2.png','assets/sprites/enemies/base/enemy_sniper_frame3.png','assets/sprites/enemies/base/enemy_sniper_frame4.png'],
+    void_sniper: ['assets/sprites/enemies/special/enemy_void_sniper_frame1.png','assets/sprites/enemies/special/enemy_void_sniper_frame2.png','assets/sprites/enemies/special/enemy_void_sniper_frame3.png','assets/sprites/enemies/special/enemy_void_sniper_frame4.png'],
 };
 
 const ENEMY_LEVEL_VARIANTS = {
@@ -1141,6 +1203,12 @@ const MAP_THEME_SPRITES = {
         sausageFace: imgWithFallback(['assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         eggWall: imgWithFallback(['assets/sprites/levels/level5/egg_wall.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         eggFace: imgWithFallback(['assets/sprites/levels/level5/egg_face.png', 'assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+    },
+    special: {
+        floor: imgWithFallback(['assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
 };
 

@@ -82,6 +82,13 @@ let railgunBeams = [];
 let screenShake = 0;
 let finalWaveBannerTimer = 0;
 let chests = [];
+let voidTotem = null;
+let voidEncounter = {
+    active: false,
+    state: 'inactive',
+    completedLevels: {},
+    returnContext: null,
+};
 
 
 
@@ -98,6 +105,7 @@ let player = {
     dashing: false, dashTime: 0,
     dashDirX: 0, dashDirY: 0,
     dashCooldown: 0, facing: 1,
+    dashLockFrames: 0,
     dashCharges: 1, dashMaxCharges: 1,
     dashDistanceMult: 1,
     dashPhasesWalls: false,
@@ -485,6 +493,211 @@ function applyPlayerDamage(baseDamage) {
     screenShake = 20;
 }
 
+// Clones plain data used in encounter save/restore.
+function clonePlain(value) {
+    if (value == null) return value;
+    return JSON.parse(JSON.stringify(value));
+}
+
+// Returns true when a level still needs its void totem fight.
+function shouldSpawnVoidTotemForLevel(level = currentArenaLevel) {
+    return !(voidEncounter.completedLevels?.[level]);
+}
+
+// Spawns one totem objective for the active level.
+function spawnVoidTotemForLevel() {
+    if (!shouldSpawnVoidTotemForLevel(currentArenaLevel) || voidEncounter.active) {
+        voidTotem = null;
+        return;
+    }
+
+    const cx = Math.floor(MAP_W / 2) * TILE;
+    const cy = Math.floor(MAP_H / 2) * TILE;
+    const candidates = [
+        { x: cx + TILE * 16, y: cy - TILE * 10 },
+        { x: cx - TILE * 17, y: cy + TILE * 9 },
+        { x: cx + TILE * 18, y: cy + TILE * 11 },
+        { x: cx - TILE * 15, y: cy - TILE * 12 },
+    ];
+
+    let chosen = null;
+    for (const pos of candidates) {
+        if (wallCollision(pos.x, pos.y, 20)) continue;
+        chosen = pos;
+        break;
+    }
+
+    if (!chosen) {
+        const fallback = findNearestFreePosition(cx + TILE * 14, cy + TILE * 10, 20, 50);
+        chosen = fallback ?? { x: cx + TILE * 8, y: cy + TILE * 8 };
+    }
+
+    voidTotem = {
+        x: chosen.x,
+        y: chosen.y,
+        prevX: chosen.x,
+        prevY: chosen.y,
+        size: 22,
+        level: currentArenaLevel,
+        active: true,
+    };
+}
+
+// Returns true if the totem can currently be activated.
+function hasActiveVoidTotem() {
+    return !!voidTotem && voidTotem.active && !voidEncounter.active;
+}
+
+// Attempts to trigger the encounter when the player presses E.
+function tryActivateVoidTotem() {
+    if (gameState !== 'playing' || gamePaused) return false;
+    if (!hasActiveVoidTotem()) return false;
+    const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
+    if (dist > player.size + VOID_BOSS_TRIGGER_RADIUS) return false;
+    beginVoidEncounter();
+    return true;
+}
+
+// Returns true when the run is currently in the isolated void encounter.
+function isVoidEncounterActive() {
+    return !!voidEncounter.active;
+}
+
+// Starts the teleport flow into the void boss arena.
+function beginVoidEncounter() {
+    if (voidEncounter.active) return;
+
+    voidEncounter.active = true;
+    voidEncounter.state = 'transition_in';
+    gamePaused = true;
+
+    voidEncounter.returnContext = {
+        playerX: player.x,
+        playerY: player.y,
+        mapTiles: clonePlain(mapTiles),
+        navGrid: clonePlain(navGrid),
+        levelDecorations: clonePlain(levelDecorations),
+        currentMapThemeId,
+        currentMapTheme,
+        currentArenaLevel,
+        currentWave,
+        enemiesRemainingInWave,
+        enemiesToSpawn,
+        waveClearTimer,
+        waveSpawnDelayFrames,
+        enemySpawnBudget,
+        enemies: clonePlain(enemies),
+        pickups: clonePlain(pickups),
+        projectiles: clonePlain(projectiles),
+        enemyProjectiles: clonePlain(enemyProjectiles),
+        tumorTurrets: clonePlain(tumorTurrets),
+        chests: clonePlain(chests),
+    };
+
+    enemies = [];
+    pickups = [];
+    projectiles = [];
+    enemyProjectiles = [];
+    tumorTurrets = [];
+    chests = [];
+    voidTotem = null;
+
+    currentMapThemeId = 'special';
+    currentMapTheme = MAP_THEME_SPRITES.special ?? MAP_THEME_SPRITES[1];
+    generateVoidBossRoom();
+
+    player.x = (MAP_W * TILE) * 0.5;
+    player.y = (MAP_H * TILE) * 0.5 + TILE * 9;
+    player.prevX = player.x;
+    player.prevY = player.y;
+
+    spawnVoidBossEnemy();
+
+    voidEncounter.state = 'boss_fight';
+    gamePaused = false;
+}
+
+// Spawns the void sniper boss entity for the encounter.
+function spawnVoidBossEnemy() {
+    const enemy = { alive: true };
+    recycleEnemy(enemy, 'void_sniper');
+    const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
+    const hpScale = [0, 1.0, 1.18, 1.4, 1.65, 1.95][level] ?? 1.0;
+    const speedScale = [0, 1.0, 1.06, 1.12, 1.2, 1.28][level] ?? 1.0;
+    enemy.x = (MAP_W * TILE) * 0.5;
+    enemy.y = (MAP_H * TILE) * 0.5 - TILE * 9;
+    enemy.prevX = enemy.x;
+    enemy.prevY = enemy.y;
+    enemy.hp = Math.round((enemy.hp ?? ENEMY_TYPES.void_sniper.hp) * hpScale);
+    enemy.maxHp = enemy.hp;
+    enemy.speed = (enemy.speed ?? ENEMY_TYPES.void_sniper.speed) * speedScale;
+    enemy.size = ENEMY_TYPES.void_sniper.size;
+    enemy.wallSize = enemy.size * 0.8;
+    enemy.isBoss = true;
+    enemy.isVoidBoss = true;
+    enemy.isVoidEncounterEnemy = true;
+    enemy.bossName = 'Void Sniper';
+    enemy.voidAttackTimer = 0;
+    enemy.voidBurstCooldown = 150;
+    enemy.voidSpikeCooldown = 120;
+    enemy.voidWaveCooldown = 210;
+    enemy.voidSkullCooldown = 170;
+    enemies.push(enemy);
+}
+
+// Grants the configured void boss XP reward for the current level.
+function grantVoidBossXpReward() {
+    const reward = VOID_BOSS_XP_REWARDS[currentArenaLevel] ?? VOID_BOSS_XP_REWARDS[1];
+    player.xp += reward * player.xpGainMult;
+    xpBarFlash = 18;
+    while (player.xp >= player.xpToNextLevel) {
+        player.xp -= player.xpToNextLevel;
+        player.level++;
+        beginLevelUp();
+    }
+}
+
+// Completes the void encounter and restores the previous arena state.
+function completeVoidEncounterVictory() {
+    if (!voidEncounter.active || !voidEncounter.returnContext) return;
+
+    voidEncounter.state = 'transition_out';
+    gamePaused = true;
+
+    grantVoidBossXpReward();
+    voidEncounter.completedLevels[currentArenaLevel] = true;
+
+    const ctxSaved = voidEncounter.returnContext;
+    mapTiles = ctxSaved.mapTiles ?? [];
+    navGrid = ctxSaved.navGrid ?? [];
+    levelDecorations = ctxSaved.levelDecorations ?? [];
+    currentMapThemeId = ctxSaved.currentMapThemeId;
+    currentMapTheme = ctxSaved.currentMapTheme;
+    currentWave = ctxSaved.currentWave;
+    enemiesRemainingInWave = ctxSaved.enemiesRemainingInWave;
+    enemiesToSpawn = ctxSaved.enemiesToSpawn;
+    waveClearTimer = ctxSaved.waveClearTimer;
+    waveSpawnDelayFrames = ctxSaved.waveSpawnDelayFrames;
+    enemySpawnBudget = ctxSaved.enemySpawnBudget;
+    enemies = ctxSaved.enemies ?? [];
+    pickups = ctxSaved.pickups ?? [];
+    projectiles = ctxSaved.projectiles ?? [];
+    enemyProjectiles = ctxSaved.enemyProjectiles ?? [];
+    tumorTurrets = ctxSaved.tumorTurrets ?? [];
+    chests = ctxSaved.chests ?? [];
+
+    player.x = ctxSaved.playerX;
+    player.y = ctxSaved.playerY;
+    player.prevX = player.x;
+    player.prevY = player.y;
+
+    voidEncounter.returnContext = null;
+    voidEncounter.active = false;
+    voidEncounter.state = 'inactive';
+    voidTotem = null;
+    gamePaused = false;
+}
+
 // Get Player Xp Attract Radius keeps the game logic moving.
 function getPlayerXpAttractRadius() {
     return XP_ATTRACT_RADIUS * player.xpAttractMult;
@@ -570,7 +783,14 @@ function handleEnemyDefeat(e) {
     if (!e.alive) return;
 
     e.alive = false;
-    enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
+    if (!e.isVoidEncounterEnemy) {
+        enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
+    }
+
+    if (e.isVoidBoss) {
+        completeVoidEncounterVictory();
+        return;
+    }
 
     if (e.isBoss) {
         rewardBossLoot();

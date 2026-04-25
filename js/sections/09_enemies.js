@@ -73,7 +73,7 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
     const variantStats = ENEMY_VARIANT_STATS[variant]?.[type] || spec;
     const hp = variantStats.hp ?? spec.hp;
     const speed = variantStats.speed ?? spec.speed;
-    const wallSize = type === 'tank' ? spec.size * 0.8 : spec.size;
+    const wallSize = (type === 'tank' || type === 'void_sniper') ? spec.size * 0.8 : spec.size;
     const spawnPos = getEnemySpawnPosition(wallSize);
 
     e.x = spawnPos.x;
@@ -102,6 +102,15 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
         e.projectileDamage = variantStats.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE;
         e.sniperChargeFrames = Math.max(20, variantStats.chargeFrames ?? SNIPER_CHARGE_FRAMES);
         e.sniperCooldownFrames = Math.max(20, variantStats.cooldownFrames ?? SNIPER_COOLDOWN_FRAMES);
+    } else if (type === 'void_sniper') {
+        e.projectileDamage = VOID_MAIN_PROJECTILE_DAMAGE + Math.max(0, currentArenaLevel - 1) * 2;
+        e.sniperChargeFrames = Math.max(18, SNIPER_CHARGE_FRAMES - currentArenaLevel * 2);
+        e.sniperCooldownFrames = Math.max(20, SNIPER_COOLDOWN_FRAMES - currentArenaLevel * 2);
+        e.voidAttackTimer = 0;
+        e.voidBurstCooldown = 140;
+        e.voidSpikeCooldown = 100;
+        e.voidWaveCooldown = 195;
+        e.voidSkullCooldown = 160;
     } else {
         e.projectileDamage = 0;
         e.sniperChargeFrames = SNIPER_CHARGE_FRAMES;
@@ -189,6 +198,26 @@ function moveEnemyToward(e, tx, ty, step) {
     return true;
 }
 
+// Fires one void boss projectile with typed behavior fields.
+function fireVoidBossProjectile(enemy, angle, projectileType, speed, size, damage, life, sprite, extra = {}) {
+    const sx = enemy.x + Math.cos(angle) * (enemy.size + 14);
+    const sy = enemy.y + Math.sin(angle) * (enemy.size + 14);
+    enemyProjectiles.push({
+        x: sx,
+        y: sy,
+        prevX: sx,
+        prevY: sy,
+        velocityX: Math.cos(angle) * speed,
+        velocityY: Math.sin(angle) * speed,
+        size,
+        framesLeft: life,
+        projectileType,
+        damage,
+        sprite,
+        ...extra,
+    });
+}
+
 // Updates movement targeting and enemy state each frame.
 function updateEnemies() {
 
@@ -246,7 +275,134 @@ function updateEnemies() {
         let speedMult = distMult * sanSlowMult;
         let shouldMove = true;
 
-        if (e.type === 'sniper') {
+        if (e.type === 'void_sniper') {
+            if (e.shootAnimFrames > 0) e.shootAnimFrames--;
+            if (e.cooldownFrames > 0) e.cooldownFrames--;
+            if (e.voidBurstCooldown > 0) e.voidBurstCooldown--;
+            if (e.voidSpikeCooldown > 0) e.voidSpikeCooldown--;
+            if (e.voidWaveCooldown > 0) e.voidWaveCooldown--;
+            if (e.voidSkullCooldown > 0) e.voidSkullCooldown--;
+
+            const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.8);
+            const idealMin = 340;
+            const idealMax = 690;
+
+            if (distToPlayer < idealMin) {
+                tx = e.x - (player.x - e.x);
+                ty = e.y - (player.y - e.y);
+                shouldMove = true;
+                speedMult = 1.25 * sanSlowMult;
+                e.chargeFrames = 0;
+            } else if (distToPlayer > idealMax || !hasSight) {
+                tx = player.x;
+                ty = player.y;
+                shouldMove = true;
+                speedMult = 1.15 * sanSlowMult;
+                e.chargeFrames = 0;
+            } else {
+                shouldMove = false;
+                speedMult = 0;
+            }
+
+            if (hasSight && e.cooldownFrames <= 0) {
+                e.chargeFrames++;
+                const levelScale = 1 + (Math.max(1, currentArenaLevel) - 1) * 0.08;
+                if (e.chargeFrames >= Math.max(18, e.sniperChargeFrames - 8)) {
+                    const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
+                    const roll = Math.random();
+
+                    if (e.voidWaveCooldown <= 0 && roll > 0.78) {
+                        enemyProjectiles.push({
+                            x: player.x,
+                            y: player.y,
+                            prevX: player.x,
+                            prevY: player.y,
+                            velocityX: 0,
+                            velocityY: 0,
+                            size: 22,
+                            framesLeft: VOID_WAVE_AOE_FRAMES,
+                            projectileType: 'void_wave_aoe',
+                            damage: Math.round(VOID_WAVE_AOE_DAMAGE * levelScale),
+                            sprite: voidWaveAoeFrames[0],
+                            waveMaxRadius: VOID_WAVE_AOE_MAX_RADIUS,
+                            waveAnimTimer: 0,
+                        });
+                        e.voidWaveCooldown = Math.max(85, 205 - currentArenaLevel * 16);
+                        e.cooldownFrames = Math.max(24, e.sniperCooldownFrames - 8);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 6;
+                    } else if (e.voidSpikeCooldown <= 0 && roll > 0.52) {
+                        const pellets = 7;
+                        const spread = 0.6;
+                        for (let si = 0; si < pellets; si++) {
+                            const t = pellets === 1 ? 0 : si / (pellets - 1);
+                            const angle = baseAngle + (t - 0.5) * spread;
+                            fireVoidBossProjectile(
+                                e,
+                                angle,
+                                'void_spike',
+                                VOID_SPIKE_PROJECTILE_SPEED * levelScale,
+                                VOID_SPIKE_PROJECTILE_SIZE,
+                                Math.round(VOID_SPIKE_PROJECTILE_DAMAGE * levelScale),
+                                VOID_SPIKE_PROJECTILE_FRAMES,
+                                voidSpikeProjectileSprite
+                            );
+                        }
+                        e.voidSpikeCooldown = Math.max(55, 118 - currentArenaLevel * 10);
+                        e.cooldownFrames = Math.max(26, e.sniperCooldownFrames - 6);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 4;
+                    } else if (e.voidSkullCooldown <= 0 && roll > 0.3) {
+                        const skullCount = Math.min(2 + Math.floor(currentArenaLevel / 2), 4);
+                        for (let si = 0; si < skullCount; si++) {
+                            const angle = baseAngle + (si - (skullCount - 1) / 2) * 0.24;
+                            fireVoidBossProjectile(
+                                e,
+                                angle,
+                                'void_skull',
+                                VOID_SKULL_PROJECTILE_SPEED * (0.9 + currentArenaLevel * 0.08),
+                                VOID_SKULL_PROJECTILE_SIZE,
+                                Math.round(VOID_SKULL_PROJECTILE_DAMAGE * levelScale),
+                                VOID_SKULL_PROJECTILE_FRAMES,
+                                voidSkullProjectileSprite,
+                                { homingStrength: 0.06 + currentArenaLevel * 0.005 }
+                            );
+                        }
+                        e.voidSkullCooldown = Math.max(70, 165 - currentArenaLevel * 14);
+                        e.cooldownFrames = Math.max(22, e.sniperCooldownFrames - 10);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 2;
+                    } else if (e.voidBurstCooldown <= 0 && roll > 0.18) {
+                        fireVoidBossProjectile(
+                            e,
+                            baseAngle,
+                            'void_burst',
+                            VOID_BURST_PROJECTILE_SPEED * levelScale,
+                            VOID_BURST_PROJECTILE_SIZE,
+                            Math.round(VOID_BURST_PROJECTILE_DAMAGE * levelScale),
+                            VOID_BURST_PROJECTILE_FRAMES,
+                            voidBurstProjectileSprite,
+                            { appliesDashLock: true }
+                        );
+                        e.voidBurstCooldown = Math.max(80, 150 - currentArenaLevel * 12);
+                        e.cooldownFrames = Math.max(24, e.sniperCooldownFrames - 8);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 4;
+                    } else {
+                        fireVoidBossProjectile(
+                            e,
+                            baseAngle,
+                            'void_main',
+                            VOID_MAIN_PROJECTILE_SPEED * levelScale,
+                            VOID_MAIN_PROJECTILE_SIZE,
+                            Math.round((e.projectileDamage ?? VOID_MAIN_PROJECTILE_DAMAGE) * levelScale),
+                            VOID_MAIN_PROJECTILE_FRAMES,
+                            voidProjectileSprite
+                        );
+                        e.cooldownFrames = e.sniperCooldownFrames;
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                    }
+
+                    e.chargeFrames = 0;
+                }
+            }
+        } else if (e.type === 'sniper') {
             if (e.shootAnimFrames > 0) e.shootAnimFrames--;
             if (e.cooldownFrames > 0) e.cooldownFrames--;
 
@@ -320,7 +476,7 @@ function updateEnemies() {
         e.animTimer--;
         if (e.animTimer <= 0) {
             const frames = getEnemySpriteFrames(e.type);
-            const frameCount = e.type === 'sniper'
+            const frameCount = (e.type === 'sniper' || e.type === 'void_sniper')
                 ? Math.max(1, Math.min(3, frames.length))
                 : Math.max(1, frames.length);
             e.animFrame = (e.animFrame + 1) % frameCount;
@@ -436,12 +592,12 @@ function drawEnemies() {
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
         const sz  = e.size * 2;
-        const frames = e.isBoss ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
-        const walkFrameCount = e.type === 'sniper'
+        const frames = (e.isBoss && !e.isVoidBoss) ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
+        const walkFrameCount = (e.type === 'sniper' || e.type === 'void_sniper')
             ? Math.max(1, Math.min(3, frames.length))
             : Math.max(1, frames.length);
         const walkSprite = frames[e.animFrame % walkFrameCount] ?? frames[0];
-        const sprite = e.type === 'sniper' && e.shootAnimFrames > 0 && frames.length >= 4
+        const sprite = (e.type === 'sniper' || e.type === 'void_sniper') && e.shootAnimFrames > 0 && frames.length >= 4
             ? frames[3]
             : walkSprite;
 

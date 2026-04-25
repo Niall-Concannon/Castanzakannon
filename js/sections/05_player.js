@@ -79,6 +79,7 @@ function startGame() {
     player.dashPhasesWalls = chosen.dashPhasesWalls ?? false;
     player.dashRechargeFrames = Math.max(1, chosen.dashRechargeFrames ?? 120);
     player.dashCooldown = 0;
+    player.dashLockFrames = 0;
     player.hp    = player.maxHp;
     player.ammo  = AMMO_MAX;
     player.ammoRegenTimer = 0;
@@ -93,6 +94,11 @@ function startGame() {
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
+    voidEncounter.completedLevels = {};
+    voidEncounter.active = false;
+    voidEncounter.state = 'inactive';
+    voidEncounter.returnContext = null;
+    spawnVoidTotemForLevel();
     spawnDevModePowerupLine();
     playRandomMusicTrack();
     startWave(1);
@@ -222,6 +228,7 @@ function getAliveEnemyCount() {
 
 // Update Wave Spawner keeps the game logic moving.
 function updateWaveSpawner() {
+    if (isVoidEncounterActive()) return;
     if (waveSpawnDelayFrames > 0) {
         waveSpawnDelayFrames--;
         return;
@@ -241,6 +248,7 @@ function updateWaveSpawner() {
 
 // Update Wave Progression keeps the game logic moving.
 function updateWaveProgression() {
+    if (isVoidEncounterActive()) return;
     const alive = getAliveEnemyCount();
     if (enemiesRemainingInWave > 0 || enemiesToSpawn > 0 || alive > 0) {
         waveClearTimer = 0;
@@ -283,6 +291,7 @@ function updateWaveProgression() {
     player.prevY = player.y;
 
     spawnDevModePowerupLine();
+    spawnVoidTotemForLevel();
 
     startWave(1);
 }
@@ -294,7 +303,7 @@ function cleanupDeadEnemies() {
 
 // Player Dash keeps the game logic moving.
 function playerDash() {
-    if (player.dashing || player.dashCharges <= 0) return;
+    if (player.dashing || player.dashCharges <= 0 || (player.dashLockFrames ?? 0) > 0) return;
 
     let dirX = 0, dirY = 0;
     if (keys['w'] || keys['arrowup'])    dirY = -1;
@@ -467,7 +476,10 @@ function updatePlayer() {
         rescuePlayerFromWall();
     }
 
-    if (player.dashCharges < player.dashMaxCharges) {
+    if ((player.dashLockFrames ?? 0) > 0) {
+        player.dashLockFrames--;
+        if (player.dashCooldown < 2) player.dashCooldown = 2;
+    } else if (player.dashCharges < player.dashMaxCharges) {
         if (player.dashCooldown > 0) player.dashCooldown--;
         if (player.dashCooldown <= 0) {
             player.dashCharges++;

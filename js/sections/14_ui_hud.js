@@ -87,6 +87,18 @@ function drawUI() {
     ctx.fillText(`Time: ${minutes}:${seconds}`, canvas.width - 22, 88);
     ctx.restore();
 
+    if ((player.dashLockFrames ?? 0) > 0) {
+        const secs = Math.ceil((player.dashLockFrames * FIXED_STEP) / 1000);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#d9b8ff';
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 8;
+        ctx.fillText(`DASH LOCK ${secs}s`, canvas.width / 2, 34);
+        ctx.restore();
+    }
+
     drawVials();
     drawXpBar();
     drawAmmoBar();
@@ -97,6 +109,8 @@ function drawUI() {
     drawLootToast();
     drawAmmoPickupArrow();
     drawLastEnemyArrow();
+    drawVoidTotemArrow();
+    drawVoidTotemPrompt();
     drawCheatMenu();
     drawFinalWaveBanner()
 }

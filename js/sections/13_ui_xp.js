@@ -378,6 +378,100 @@ function drawAmmoPickupArrow() {
     ctx.restore();
 }
 
+// Draw Void Totem Arrow keeps the game logic moving.
+function drawVoidTotemArrow() {
+    if (!hasActiveVoidTotem()) return;
+
+    const playerX = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
+    const playerY = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
+    const totemX = (voidTotem.prevX ?? voidTotem.x) + (voidTotem.x - (voidTotem.prevX ?? voidTotem.x)) * renderAlpha;
+    const totemY = (voidTotem.prevY ?? voidTotem.y) + (voidTotem.y - (voidTotem.prevY ?? voidTotem.y)) * renderAlpha;
+
+    const playerScreen = toScreen(playerX, playerY);
+    const totemScreen = toScreen(totemX, totemY);
+    const dx = totemScreen.x - playerScreen.x;
+    const dy = totemScreen.y - playerScreen.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.001) return;
+
+    const ux = dx / dist;
+    const uy = dy / dist;
+    const angle = Math.atan2(uy, ux);
+    const edgeRadius = Math.min(canvas.width, canvas.height) * 0.39;
+    const margin = 44;
+
+    let ax = playerScreen.x + ux * edgeRadius;
+    let ay = playerScreen.y + uy * edgeRadius;
+    ax = Math.max(margin, Math.min(canvas.width - margin, ax));
+    ay = Math.max(margin, Math.min(canvas.height - margin, ay));
+
+    const pulse = 0.8 + 0.2 * Math.sin(frameCount * 0.18);
+
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.96;
+    ctx.shadowColor = '#b07cff';
+    ctx.shadowBlur = 16 * pulse;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.54)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#c9a6ff';
+    ctx.beginPath();
+    ctx.moveTo(19, 0);
+    ctx.lineTo(-11, -10);
+    ctx.lineTo(-11, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = '#ddc8ff';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('VOID TOTEM', ax, ay - 24);
+    ctx.restore();
+}
+
+// Draw Void Totem Prompt keeps the game logic moving.
+function drawVoidTotemPrompt() {
+    if (!hasActiveVoidTotem() || gamePaused) return;
+
+    const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
+    if (dist > player.size + VOID_BOSS_TRIGGER_RADIUS) return;
+
+    const pulse = 0.88 + 0.12 * Math.sin(frameCount * 0.2);
+    const boxW = 360;
+    const boxH = 44;
+    const x = canvas.width / 2 - boxW / 2;
+    const y = canvas.height - 130;
+
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = 'rgba(8,5,25,0.85)';
+    ctx.fillRect(x, y, boxW, boxH);
+    ctx.strokeStyle = 'rgba(195,150,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, boxW, boxH);
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = '#f1e5ff';
+    ctx.shadowColor = 'rgba(100,40,180,0.95)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('PRESS E TO ENTER VOID FIGHT', canvas.width / 2, y + 28);
+    ctx.restore();
+}
+
 // Draw Upgrade Hud keeps the game logic moving.
 function drawUpgradeHud() {
     const panelX = 20;

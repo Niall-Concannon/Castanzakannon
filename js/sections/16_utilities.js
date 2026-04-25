@@ -34,5 +34,6 @@ function savePrevPositions() {
     for (const t of tumorTurrets) { t.prevX = t.x; t.prevY = t.y; }
     for (const p of pickups)     { p.prevX = p.x; p.prevY = p.y; }
     for (const chest of chests)  { chest.prevX = chest.x; chest.prevY = chest.y; }
+    if (voidTotem) { voidTotem.prevX = voidTotem.x; voidTotem.prevY = voidTotem.y; }
 }
 

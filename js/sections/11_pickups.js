@@ -58,6 +58,41 @@ function drawChests() {
     }
 }
 
+// Draw Void Totem Objective keeps the game logic moving.
+function drawVoidTotemObjective() {
+    if (!hasActiveVoidTotem()) return;
+
+    const tx = (voidTotem.prevX ?? voidTotem.x) + (voidTotem.x - (voidTotem.prevX ?? voidTotem.x)) * renderAlpha;
+    const ty = (voidTotem.prevY ?? voidTotem.y) + (voidTotem.y - (voidTotem.prevY ?? voidTotem.y)) * renderAlpha;
+    const sc = toScreen(tx, ty);
+    const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.12);
+    const drawRadius = voidTotem.size * 1.55;
+
+    ctx.save();
+    const aura = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.1 * pulse);
+    aura.addColorStop(0, 'rgba(148,90,255,0.34)');
+    aura.addColorStop(0.45, 'rgba(105,40,210,0.2)');
+    aura.addColorStop(1, 'rgba(30,0,65,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, drawRadius * 3.1 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowColor = '#9f66ff';
+    ctx.shadowBlur = 18 * pulse;
+    ctx.drawImage(voidTotemSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial';
+    ctx.fillStyle = 'rgba(236,214,255,0.95)';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('VOID TOTEM', sc.x, sc.y - drawRadius - 12);
+    ctx.restore();
+}
+
 // Update Pickups keeps the game logic moving.
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {

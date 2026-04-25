@@ -44,6 +44,10 @@ window.addEventListener('keydown', e => {
         activateRailgunUlt();
     }
 
+    if (gameState === 'playing' && !gamePaused && e.key.toLowerCase() === 'e') {
+        tryActivateVoidTotem();
+    }
+
     if (gameState === 'playing' && devCheatMenuEnabled) {
         const lower = e.key.toLowerCase();
         if (lower === 'k') {
