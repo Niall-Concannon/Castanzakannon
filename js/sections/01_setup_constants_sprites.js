@@ -95,7 +95,7 @@ const SNIPER_MIN_RANGE = 300;
 const SNIPER_CHARGE_FRAMES = 62;
 const SNIPER_COOLDOWN_FRAMES = 68;
 const SNIPER_SHOOT_ANIM_FRAMES = 10;
-const SNIPER_PROJECTILE_SPEED = 8.2;
+const SNIPER_PROJECTILE_SPEED = 13.5;
 const SNIPER_PROJECTILE_SIZE = 11;
 const SNIPER_PROJECTILE_DAMAGE = 8;
 const SNIPER_PROJECTILE_FRAMES = 170;
@@ -962,6 +962,15 @@ const voidWaveAoeFrames = [
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+];
+
+const sniperTeleportFrames = [
+    img('assets/sprites/enemies/special/teleport_frame1.png'),
+    img('assets/sprites/enemies/special/teleport_frame2.png'),
+    img('assets/sprites/enemies/special/teleport_frame3.png'),
+    img('assets/sprites/enemies/special/teleport_frame4.png'),
+    img('assets/sprites/enemies/special/teleport_frame5.png'),
+    img('assets/sprites/enemies/special/teleport_frame6.png'),
 ];
 
 function getSniperProjectileSpriteForLevel() {

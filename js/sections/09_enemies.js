@@ -440,44 +440,108 @@ function updateEnemies() {
             if (e.shootAnimFrames > 0) e.shootAnimFrames--;
             if (e.cooldownFrames > 0) e.cooldownFrames--;
 
-            const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.7);
-            const inAttackRange = distToPlayer >= SNIPER_MIN_RANGE && distToPlayer <= SNIPER_RANGE;
+            if (e.teleportCooldown === undefined) e.teleportCooldown = 180 + Math.floor(Math.random() * 120);
+            if (!e.teleporting && e.teleportCooldown > 0) e.teleportCooldown--;
 
-            if (distToPlayer < SNIPER_MIN_RANGE) {
-                tx = e.x - (player.x - e.x);
-                ty = e.y - (player.y - e.y);
-                e.chargeFrames = 0;
-            } else if (!inAttackRange || !hasSight) {
-                tx = player.x;
-                ty = player.y;
-                e.chargeFrames = 0;
-            } else {
+            if (e.teleporting) {
                 shouldMove = false;
                 speedMult = 0;
-
-                if (e.cooldownFrames <= 0) {
-                    e.chargeFrames++;
-                    if (e.chargeFrames >= e.sniperChargeFrames) {
-                        const angle = Math.atan2(player.y - e.y, player.x - e.x);
-                        const sx = e.x + Math.cos(angle) * (e.size + 10);
-                        const sy = e.y + Math.sin(angle) * (e.size + 10);
+                e.teleportTimer = (e.teleportTimer ?? 0) + 1;
+                const framesPerCell = 4;
+                const totalFrames = sniperTeleportFrames.length * framesPerCell;
+                if (e.teleportPhase === 'out' && e.teleportTimer >= totalFrames) {
+                    const teleportDist = SNIPER_MIN_RANGE + Math.random() * (SNIPER_RANGE - SNIPER_MIN_RANGE - 60);
+                    const teleportAngle = Math.random() * Math.PI * 2;
+                    for (let attempt = 0; attempt < 16; attempt++) {
+                        const ang = teleportAngle + attempt * (Math.PI * 2 / 16);
+                        const cx = player.x + Math.cos(ang) * teleportDist;
+                        const cy = player.y + Math.sin(ang) * teleportDist;
+                        if (!wallCollision(cx, cy, e.wallSize)) {
+                            e.x = cx; e.y = cy; e.prevX = cx; e.prevY = cy;
+                            break;
+                        }
+                    }
+                    e.teleportPhase = 'in';
+                    e.teleportTimer = 0;
+                } else if (e.teleportPhase === 'in' && e.teleportTimer >= totalFrames) {
+                    e.teleporting = false;
+                    e.teleportPhase = null;
+                    e.teleportTimer = 0;
+                    e.stuckFrames = 0;
+                    e.fleeAngleBias = 0;
+                    e.chargeFrames = 0;
+                    e.teleportCooldown = 180 + Math.floor(Math.random() * 120);
+                    const shotgunPellets = 6;
+                    const shotgunSpread = 0.55;
+                    const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
+                    for (let pi = 0; pi < shotgunPellets; pi++) {
+                        const t = pi / (shotgunPellets - 1);
+                        const pelletAngle = baseAngle + (t - 0.5) * shotgunSpread;
                         enemyProjectiles.push({
-                            x: sx,
-                            y: sy,
-                            prevX: sx,
-                            prevY: sy,
-                            velocityX: Math.cos(angle) * SNIPER_PROJECTILE_SPEED,
-                            velocityY: Math.sin(angle) * SNIPER_PROJECTILE_SPEED,
+                            x: e.x + Math.cos(pelletAngle) * (e.size + 10),
+                            y: e.y + Math.sin(pelletAngle) * (e.size + 10),
+                            prevX: e.x, prevY: e.y,
+                            velocityX: Math.cos(pelletAngle) * SNIPER_PROJECTILE_SPEED,
+                            velocityY: Math.sin(pelletAngle) * SNIPER_PROJECTILE_SPEED,
                             size: SNIPER_PROJECTILE_SIZE,
                             framesLeft: SNIPER_PROJECTILE_FRAMES,
                             projectileType: 'sniper',
                             damage: e.projectileDamage,
                             sprite: getSniperProjectileSpriteForLevel(),
                         });
+                    }
+                    e.cooldownFrames = e.sniperCooldownFrames;
+                    e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                }
+            } else if (e.teleportCooldown <= 0) {
+                e.teleporting = true;
+                e.teleportPhase = 'out';
+                e.teleportTimer = 0;
+                shouldMove = false;
+                speedMult = 0;
+            } else {
+                const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.7);
+                const inAttackRange = distToPlayer >= SNIPER_MIN_RANGE && distToPlayer <= SNIPER_RANGE;
 
-                        e.chargeFrames = 0;
-                        e.cooldownFrames = e.sniperCooldownFrames;
-                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                if (distToPlayer < SNIPER_MIN_RANGE) {
+                    const fleeAngle = Math.atan2(e.y - player.y, e.x - player.x) + (e.fleeAngleBias ?? 0);
+                    tx = e.x + Math.cos(fleeAngle) * SNIPER_MIN_RANGE * 1.5;
+                    ty = e.y + Math.sin(fleeAngle) * SNIPER_MIN_RANGE * 1.5;
+                    e.chargeFrames = 0;
+                } else if (!inAttackRange || !hasSight) {
+                    e.fleeAngleBias = 0;
+                    tx = player.x;
+                    ty = player.y;
+                    e.chargeFrames = 0;
+                } else {
+                    e.fleeAngleBias = 0;
+                    shouldMove = false;
+                    speedMult = 0;
+
+                    if (e.cooldownFrames <= 0) {
+                        e.chargeFrames++;
+                        if (e.chargeFrames >= e.sniperChargeFrames) {
+                            const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                            const sx = e.x + Math.cos(angle) * (e.size + 10);
+                            const sy = e.y + Math.sin(angle) * (e.size + 10);
+                            enemyProjectiles.push({
+                                x: sx,
+                                y: sy,
+                                prevX: sx,
+                                prevY: sy,
+                                velocityX: Math.cos(angle) * SNIPER_PROJECTILE_SPEED,
+                                velocityY: Math.sin(angle) * SNIPER_PROJECTILE_SPEED,
+                                size: SNIPER_PROJECTILE_SIZE,
+                                framesLeft: SNIPER_PROJECTILE_FRAMES,
+                                projectileType: 'sniper',
+                                damage: e.projectileDamage,
+                                sprite: getSniperProjectileSpriteForLevel(),
+                            });
+
+                            e.chargeFrames = 0;
+                            e.cooldownFrames = e.sniperCooldownFrames;
+                            e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                        }
                     }
                 }
             }
@@ -485,9 +549,20 @@ function updateEnemies() {
 
         const moved = !shouldMove || moveEnemyToward(e, tx, ty, e.speed * speedMult);
         if (!moved) {
-
             e.path = [];
             e.pathTimer = 0;
+            if (e.type === 'sniper' && !e.teleporting) {
+                e.stuckFrames = (e.stuckFrames ?? 0) + 1;
+                if (e.stuckFrames >= 45) {
+                    e.teleporting = true;
+                    e.teleportPhase = 'out';
+                    e.teleportTimer = 0;
+                } else if (distToPlayer < SNIPER_MIN_RANGE) {
+                    e.fleeAngleBias = ((e.fleeAngleBias ?? 0) + (Math.random() < 0.5 ? 0.55 : -0.55));
+                }
+            }
+        } else if (e.type === 'sniper') {
+            e.stuckFrames = 0;
         }
 
 
@@ -625,7 +700,9 @@ function drawEnemies() {
         const rx  = (e.prevX ?? e.x) + (e.x - (e.prevX ?? e.x)) * renderAlpha;
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
-        const sz  = e.size * 2;
+        const isSniperType = e.type === 'sniper';
+        const drawScale = isSniperType ? 1.6 : 1.0;
+        const sz  = e.size * 2 * drawScale;
         const frames = (e.isBoss && !e.isVoidBoss) ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
         const walkFrameCount = (e.type === 'sniper' || e.type === 'void_sniper')
             ? Math.max(1, Math.min(3, frames.length))
@@ -636,16 +713,33 @@ function drawEnemies() {
             : walkSprite;
 
         ctx.save();
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = isSniperType && e.teleporting ? alpha * 0.3 : alpha;
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
 
+        const half = sz / 2;
         if (player.x < e.x) {
             ctx.scale(-1, 1);
-            ctx.drawImage(sprite, -(sc.x + e.size), sc.y - e.size, sz, sz);
+            ctx.drawImage(sprite, -(sc.x + half), sc.y - half, sz, sz);
         } else {
-            ctx.drawImage(sprite, sc.x - e.size, sc.y - e.size, sz, sz);
+            ctx.drawImage(sprite, sc.x - half, sc.y - half, sz, sz);
         }
         ctx.restore();
+
+        if (isSniperType && e.teleporting && sniperTeleportFrames.length > 0) {
+            const framesPerCell = 4;
+            const frameIdx = Math.min(
+                sniperTeleportFrames.length - 1,
+                Math.floor((e.teleportTimer ?? 0) / framesPerCell)
+            );
+            const tSprite = sniperTeleportFrames[
+                e.teleportPhase === 'in' ? sniperTeleportFrames.length - 1 - frameIdx : frameIdx
+            ];
+            const tSz = sz * 1.4;
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.92;
+            ctx.drawImage(tSprite, sc.x - tSz / 2, sc.y - tSz / 2, tSz, tSz);
+            ctx.restore();
+        }
 
         if (e.isBoss) {
             ctx.save();
