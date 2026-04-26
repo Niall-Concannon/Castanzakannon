@@ -87,7 +87,6 @@ function confirmWeaponAndStart() {
     player.dashCooldown = 0;
     player.dashLockFrames = 0;
     player.hp    = player.maxHp;
-    player.ammo  = player.weaponAmmoMax ?? AMMO_MAX;
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
     player.infiniteAmmoTimer = 0;
@@ -98,10 +97,11 @@ function confirmWeaponAndStart() {
     elapsedGameMs = 0;
     gamePaused   = false;
 
-    // Apply the chosen weapon loadout
-    const loadout = WEAPON_LOADOUTS[selectedWeaponIndex] ?? WEAPON_LOADOUTS[2];
+    // Apply the chosen weapon loadout (must happen before ammo init)
+    const loadout = WEAPON_LOADOUTS[selectedWeaponIndex] ?? WEAPON_LOADOUTS[0];
     loadout.apply(player);
-
+    player.ammo  = player.weaponAmmoMax ?? AMMO_MAX;
+    gameState    = 'playing';
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;

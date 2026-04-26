@@ -457,7 +457,17 @@ function updateEnemies() {
                         const cx = player.x + Math.cos(ang) * teleportDist;
                         const cy = player.y + Math.sin(ang) * teleportDist;
                         if (!wallCollision(cx, cy, e.wallSize)) {
-                            e.x = cx; e.y = cy; e.prevX = cx; e.prevY = cy;
+                            cx < TILE * 2 ||
+                            cx > MAP_W * TILE - TILE * 2 ||
+                            cy < TILE * 2 ||
+                            cy > MAP_H * TILE - TILE * 2
+                        } continue;
+
+                        if (!wallCollision(cx, cy, e.wallSize)) {
+                            e.x = cx;
+                            e.y = cy;
+                            e.prevX = cx;
+                            e.prevY = cy;
                             break;
                         }
                     }
