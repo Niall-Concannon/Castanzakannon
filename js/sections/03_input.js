@@ -22,6 +22,27 @@ window.addEventListener('keydown', e => {
         playUiClick();
     }
 
+    if (e.key === 'Escape' && gameState === 'weaponSelect') {
+        gameState = 'menu';
+        menuPage  = 'main';
+        playUiClick();
+        return;
+    }
+
+    if (gameState === 'weaponSelect') {
+        if (e.key === 'ArrowLeft'  || e.key.toLowerCase() === 'a') {
+            selectedWeaponIndex = (selectedWeaponIndex - 1 + WEAPON_LOADOUTS.length) % WEAPON_LOADOUTS.length;
+            playUiClick();
+        } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
+            selectedWeaponIndex = (selectedWeaponIndex + 1) % WEAPON_LOADOUTS.length;
+            playUiClick();
+        } else if (e.key === ' ' || e.key === 'Enter') {
+            playUiClick();
+            confirmWeaponAndStart();
+        }
+        return;
+    }
+
     if (e.key === 'Escape' && gameState === 'playing') {
         if (showCheatMenu) {
             showCheatMenu = false;
@@ -93,6 +114,8 @@ window.addEventListener('mousedown', e => {
         return;
     }
 
+    mouseDown = true;
+
     unlockAudioIfNeeded();
 
     if (gameState === 'splash') {
@@ -134,7 +157,31 @@ window.addEventListener('mousedown', e => {
         if (inPanel) return;
     }
 
-    mouseDown = true;
+    // Weapon select screen clicks
+    if (gameState === 'weaponSelect') {
+        const cards = getWeaponSelectCards();
+        for (let i = 0; i < cards.length; i++) {
+            const c = cards[i];
+            if (mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h) {
+                if (selectedWeaponIndex === i) {
+                    // Second click on already-selected card = confirm
+                    playUiClick();
+                    confirmWeaponAndStart();
+                } else {
+                    selectedWeaponIndex = i;
+                    playUiClick();
+                }
+                return;
+            }
+        }
+        const btn = getWeaponSelectConfirmButton();
+        if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+            playUiClick();
+            confirmWeaponAndStart();
+            return;
+        }
+        return;
+    }
 
     // Pause menu clicks (Resume / Main Menu / sliders)
     if (gamePaused && gameState === 'playing') {

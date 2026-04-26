@@ -174,6 +174,115 @@ const MENU_TEXT_COLORS = {
     loadoutHeader: '#90d7ff',
     systemHeader: '#ffd58c',
 };
+
+// ── Weapon Loadouts ─────────────────────────────────────────────────────────
+const WEAPON_LOADOUTS = [
+    {
+        id: 'assault_rifle',
+        name: 'Assault Rifle',
+        spritePath: 'assets/sprites/guns/gun_idle.png',
+        accentColor: '#4fc3f7',
+        tagline: 'Balanced all-rounder',
+        stats: {
+            'Damage':    '★★★☆☆',
+            'Fire Rate': '★★★☆☆',
+            'Ammo':      '★★★☆☆',
+            'Range':     '★★★☆☆',
+        },
+        description: 'The standard loadout. Solid in every category with no glaring weaknesses.',
+        apply(p) {
+            p.weaponType      = 'assault_rifle';
+            p.bulletDamage    = 1;
+            p.fireRateMult    = 1;
+            p.weaponSpread    = 0.10;
+            p.weaponPellets   = 1;
+            p.weaponSpeed     = 12;
+            p.weaponFrames    = 80;
+            p.weaponAmmoMax   = 120;
+            p.weaponAmmoRegen = 12;
+            p.weaponShotCost  = 1;
+        },
+    },
+    {
+        id: 'smg',
+        name: 'SMG',
+        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        accentColor: '#a5d6a7',
+        tagline: 'Rapid fire spray',
+        stats: {
+            'Damage':    '★★☆☆☆',
+            'Fire Rate': '★★★★★',
+            'Ammo':      '★★★★☆',
+            'Range':     '★★☆☆☆',
+        },
+        description: 'Blazing fire rate with decent ammo. Low damage per shot but shreds at close range.',
+        apply(p) {
+            p.weaponType      = 'smg';
+            p.bulletDamage    = 0.6;
+            p.fireRateMult    = 2.2;
+            p.weaponSpread    = 0.18;
+            p.weaponPellets   = 1;
+            p.weaponSpeed     = 11;
+            p.weaponFrames    = 60;
+            p.weaponAmmoMax   = 140;
+            p.weaponAmmoRegen = 7;
+            p.weaponShotCost  = 1;
+        },
+    },
+    {
+        id: 'shotgun',
+        name: 'Shotgun',
+        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        accentColor: '#ff7043',
+        tagline: 'Devastating close-range burst',
+        stats: {
+            'Damage':    '★★★★★',
+            'Fire Rate': '★★☆☆☆',
+            'Ammo':      '★★☆☆☆',
+            'Range':     '★★☆☆☆',
+        },
+        description: 'Fires a wide spread of pellets. Punishing up close, weak at range.',
+        apply(p) {
+            p.weaponType      = 'shotgun';
+            p.bulletDamage    = 1.1;
+            p.fireRateMult    = 0.5;
+            p.weaponSpread    = 0.55;
+            p.weaponPellets   = 7;
+            p.weaponSpeed     = 10;
+            p.weaponFrames    = 55;
+            p.weaponAmmoMax   = 80;
+            p.weaponAmmoRegen = 18;
+            p.weaponShotCost  = 5;
+        },
+    },
+    {
+        id: 'sniper',
+        name: 'Sniper Rifle',
+        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        accentColor: '#b39ddb',
+        tagline: 'High-power precision shot',
+        stats: {
+            'Damage':    '★★★★★',
+            'Fire Rate': '★☆☆☆☆',
+            'Ammo':      '★★★☆☆',
+            'Range':     '★★★★★',
+        },
+        description: 'Slow but deadly. Each shot hits hard and pierces the first enemy it strikes.',
+        apply(p) {
+            p.weaponType      = 'sniper';
+            p.bulletDamage    = 3.5;
+            p.fireRateMult    = 0.28;
+            p.weaponSpread    = 0.0;
+            p.weaponPellets   = 1;
+            p.weaponSpeed     = 18;
+            p.weaponFrames    = 160;
+            p.weaponAmmoMax   = 60;
+            p.weaponAmmoRegen = 20;
+            p.weaponShotCost  = 3;
+            p.projectilePierce = Math.max(p.projectilePierce ?? 0, 1);
+        },
+    },
+];
 const AUDIO_STORAGE_KEYS = {
     music: 'castanza_music_volume',
     sfx: 'castanza_sfx_volume',
@@ -921,6 +1030,12 @@ const gunSprites = {
     idle:  img('assets/sprites/guns/gun_idle.png'),
     shoot: img('assets/sprites/guns/gun_shoot.png'),
 };
+
+// Weapon select card sprites — loaded once at startup
+const weaponSelectSprites = WEAPON_LOADOUTS.map(w => imgWithFallback([
+    w.spritePath,
+    'assets/sprites/guns/gun_idle.png',
+]));
 
 const wallSprite         = img('assets/sprites/levels/level1/wall_placeholder.png');
 const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face_placeholder.png');
