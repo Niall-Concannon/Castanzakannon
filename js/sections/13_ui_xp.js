@@ -157,6 +157,14 @@ function drawAmmoBar() {
     } else {
         ctx.fillText(`${player.ammo} / ${ammoMax}`, bx + DW - 88, by + DH / 2 + 4);
     }
+
+    if (player.weaponType === 'sniper') {
+        const pierceNow = player.projectilePierce ?? 0;
+        const pierceCap = SNIPER_MAX_PROJECTILE_PIERCE ?? 10;
+        const progress = Math.floor(Math.max(0, Math.min(0.99, player.sniperAmmoPierceProgress ?? 0)) * 100);
+        ctx.fillStyle = 'rgba(255,245,180,0.95)';
+        ctx.fillText(`PIERCE ${pierceNow}/${pierceCap}  +${progress}%`, bx + 8, by + DH / 2 + 4);
+    }
     ctx.restore();
 }
 

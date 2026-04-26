@@ -57,7 +57,8 @@ function drawPlayer() {
     const gunScreenX = s.x + Math.cos(angle) * RAIL_RADIUS;
     const gunScreenY = s.y + Math.sin(angle) * RAIL_RADIUS;
     const isFiring   = mouseDown && player.shootCooldown > 0;
-    const gunSprite  = isFiring ? gunSprites.shoot : gunSprites.idle;
+    const weaponSprites = weaponGunSprites[player.weaponType] ?? weaponGunSprites.assault_rifle;
+    const gunSprite  = isFiring ? weaponSprites.shoot : weaponSprites.idle;
 
     ctx.save();
     if (flickering) ctx.globalAlpha = 0.35;

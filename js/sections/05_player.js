@@ -89,6 +89,10 @@ function confirmWeaponAndStart() {
     player.hp    = player.maxHp;
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
+    player.sniperReloadLocked = false;
+    player.sniperReloadTimer = 0;
+    player.sniperPingDelayTimer = -1;
+    player.sniperAmmoPierceProgress = 0;
     player.infiniteAmmoTimer = 0;
     player.healOverTimeTimer = 0;
     player.instakillTimer = 0;
@@ -344,15 +348,41 @@ function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
     const hasInfiniteAmmo = player.infiniteAmmoTimer > 0;
     const shotCost = player.weaponShotCost ?? AMMO_SHOT_COST;
+
+    if (!hasInfiniteAmmo && player.weaponType === 'sniper') {
+        const sniperAmmoMax = player.weaponAmmoMax ?? 8;
+        if (player.sniperReloadLocked) {
+            if (player.ammo >= sniperAmmoMax) {
+                player.sniperReloadLocked = false;
+                player.sniperReloadTimer = 0;
+            } else {
+                return;
+            }
+        }
+    }
+
     if (!hasInfiniteAmmo && player.ammo < shotCost) return;
 
     if (!hasInfiniteAmmo) {
         player.ammo = Math.max(0, player.ammo - shotCost);
+        if (player.weaponType === 'sniper' && player.ammo <= 0) {
+            player.sniperReloadLocked = true;
+            player.sniperReloadTimer = 0;
+            player.sniperPingDelayTimer = SNIPER_PING_DELAY_FRAMES;
+        }
     }
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
     player.shootCooldown = getPlayerShootCooldownFrames();
-    playLaserShot();
+    if (player.weaponType === 'sniper') {
+        playSniperShot();
+    } else if (player.weaponType === 'smg') {
+        playSmgShot();
+    } else if (player.weaponType === 'shotgun') {
+        playShotgunShot();
+    } else {
+        playLaserShot();
+    }
 
 
     const spread = (Math.random() - 0.5) * (player.weaponSpread ?? BULLET_SPREAD);
@@ -504,10 +534,51 @@ function updatePlayer() {
     }
     if (player.shootCooldown > 0) player.shootCooldown = Math.max(0, player.shootCooldown - 1);
     if (player.invulnTimer   > 0) player.invulnTimer--;
+
+    if ((player.sniperPingDelayTimer ?? -1) > 0) {
+        player.sniperPingDelayTimer--;
+        if (player.sniperPingDelayTimer === 0) {
+            playSniperPing();
+            player.sniperPingDelayTimer = -1;
+        }
+    }
+
     if (player.infiniteAmmoTimer > 0) {
         player.infiniteAmmoTimer--;
         player.ammoRegenTimer = 0;
         player.ammoNoShootFrames = 0;
+        player.sniperReloadTimer = 0;
+    } else if (player.weaponType === 'sniper') {
+        const sniperAmmoMax = player.weaponAmmoMax ?? 8;
+
+        if (player.sniperReloadLocked) {
+            player.ammoNoShootFrames++;
+            player.sniperReloadTimer = Math.max(0, player.sniperReloadTimer ?? 0) + 1;
+
+            if (player.sniperReloadTimer >= SNIPER_RELOAD_MIN_FRAMES) {
+                player.ammoRegenTimer++;
+                const baseInterval = player.weaponAmmoRegen ?? AMMO_REGEN_INTERVAL_FRAMES;
+                const regenInterval = Math.max(
+                    AMMO_REGEN_MIN_INTERVAL_FRAMES,
+                    Math.floor(baseInterval / player.ammoRegenMult),
+                );
+                if (player.ammoRegenTimer >= regenInterval) {
+                    player.ammo = Math.min(sniperAmmoMax, player.ammo + 1);
+                    player.ammoRegenTimer = 0;
+                }
+            } else {
+                player.ammoRegenTimer = 0;
+            }
+
+            if (player.ammo >= sniperAmmoMax) {
+                player.sniperReloadLocked = false;
+                player.sniperReloadTimer = 0;
+            }
+        } else {
+            player.ammoRegenTimer = 0;
+            player.ammoNoShootFrames++;
+            player.sniperReloadTimer = 0;
+        }
     } else if (player.ammo < (player.weaponAmmoMax ?? AMMO_MAX)) {
         player.ammoNoShootFrames++;
         player.ammoRegenTimer++;

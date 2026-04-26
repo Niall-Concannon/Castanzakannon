@@ -66,6 +66,14 @@ let currentMusicTrack = null;
 let lastMusicTrackIndex = -1;
 let laserShotPool = [];
 let laserShotPoolIndex = 0;
+let shotgunShotPool = [];
+let shotgunShotPoolIndex = 0;
+let smgShotPool = [];
+let smgShotPoolIndex = 0;
+let sniperShotPool = [];
+let sniperShotPoolIndex = 0;
+let sniperPingAudio = null;
+let sniperPingAudioLayer = null;
 let dashPool = [];
 let dashPoolIndex = 0;
 let ammoPickupPool = [];
@@ -114,6 +122,10 @@ let player = {
     shootCooldown: 0, weaponAngle: 0,
     hp: 100, maxHp: 100, invulnTimer: 0,
     ammo: AMMO_MAX, ammoRegenTimer: 0, ammoNoShootFrames: 0, infiniteAmmoTimer: 0,
+    sniperReloadLocked: false,
+    sniperReloadTimer: 0,
+    sniperPingDelayTimer: -1,
+    sniperAmmoPierceProgress: 0,
     healOverTimeTimer: 0,
     instakillTimer: 0,
     xpGainMult: 1,
@@ -178,6 +190,18 @@ function getUpgradeRarityWeight(rarity) {
 // Looks up the rarity weight for items.
 function getItemRarityWeight(rarity) {
     return ITEM_RARITY_WEIGHTS[rarity] ?? 0;
+}
+
+// Converts sniper ammo-related bonuses into tiny pierce progress increments.
+function grantSniperAmmoPierceBonus(progress = SNIPER_AMMO_PIERCE_PROGRESS_STEP) {
+    if (player.weaponType !== 'sniper') return false;
+
+    player.sniperAmmoPierceProgress = Math.max(0, (player.sniperAmmoPierceProgress ?? 0) + progress);
+    while (player.sniperAmmoPierceProgress >= 1) {
+        player.sniperAmmoPierceProgress -= 1;
+        player.projectilePierce = Math.min(SNIPER_MAX_PROJECTILE_PIERCE, (player.projectilePierce ?? 0) + 1);
+    }
+    return true;
 }
 
 // Chooses a UI colour for the given rarity.
@@ -808,7 +832,9 @@ function handleEnemyDefeat(e) {
     }
 
     if ((player.killAmmoFlat ?? 0) > 0) {
-        player.ammo = Math.min(AMMO_MAX, player.ammo + player.killAmmoFlat);
+        if (!grantSniperAmmoPierceBonus(player.killAmmoFlat * SNIPER_AMMO_PIERCE_PROGRESS_STEP)) {
+            player.ammo = Math.min(AMMO_MAX, player.ammo + player.killAmmoFlat);
+        }
     }
 
     if ((player.killShieldFlat ?? 0) > 0 && (player.shieldMax ?? 0) > 0) {
@@ -1043,6 +1069,11 @@ function scaledSfxVolume(multiplier = 1) {
 // Apply Sfx Volume keeps the game logic moving.
 function applySfxVolume() {
     for (const channel of laserShotPool) channel.volume = scaledSfxVolume(LASER_VOLUME_MULT);
+    for (const channel of shotgunShotPool) channel.volume = scaledSfxVolume(SHOTGUN_VOLUME_MULT);
+    for (const channel of smgShotPool) channel.volume = scaledSfxVolume(SMG_VOLUME_MULT);
+    for (const channel of sniperShotPool) channel.volume = scaledSfxVolume(SNIPER_VOLUME_MULT);
+    if (sniperPingAudio) sniperPingAudio.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
+    if (sniperPingAudioLayer) sniperPingAudioLayer.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
     for (const channel of dashPool) channel.volume = sfxVolume;
     for (const channel of ammoPickupPool) channel.volume = scaledSfxVolume(AMMO_PICKUP_VOLUME_MULT);
     for (const channel of healPickupPool) channel.volume = scaledSfxVolume(HEAL_PICKUP_VOLUME_MULT);
@@ -1128,6 +1159,47 @@ function initializeLaserShotPool() {
     laserShotPoolIndex = 0;
 }
 
+// Initialize Shotgun Shot Pool keeps the game logic moving.
+function initializeShotgunShotPool() {
+    shotgunShotPool = [];
+    for (let i = 0; i < SHOTGUN_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(SHOTGUN_SHOT_PATHS);
+        channel.volume = scaledSfxVolume(SHOTGUN_VOLUME_MULT);
+        shotgunShotPool.push(channel);
+    }
+    shotgunShotPoolIndex = 0;
+}
+
+// Initialize Smg Shot Pool keeps the game logic moving.
+function initializeSmgShotPool() {
+    smgShotPool = [];
+    for (let i = 0; i < SMG_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(SMG_SHOT_PATHS);
+        channel.volume = scaledSfxVolume(SMG_VOLUME_MULT);
+        smgShotPool.push(channel);
+    }
+    smgShotPoolIndex = 0;
+}
+
+// Initialize Sniper Shot Pool keeps the game logic moving.
+function initializeSniperShotPool() {
+    sniperShotPool = [];
+    for (let i = 0; i < SNIPER_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(SNIPER_SHOT_PATHS);
+        channel.volume = scaledSfxVolume(SNIPER_VOLUME_MULT);
+        sniperShotPool.push(channel);
+    }
+    sniperShotPoolIndex = 0;
+}
+
+// Initialize Sniper Ping Audio keeps the game logic moving.
+function initializeSniperPingAudio() {
+    sniperPingAudio = createAudioWithFallback(SNIPER_PING_PATHS);
+    sniperPingAudio.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
+    sniperPingAudioLayer = createAudioWithFallback(SNIPER_PING_PATHS);
+    sniperPingAudioLayer.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
+}
+
 // Initialize Dash Pool keeps the game logic moving.
 function initializeDashPool() {
     dashPool = [];
@@ -1202,6 +1274,58 @@ function playLaserShot() {
     laserShotPoolIndex = (laserShotPoolIndex + 1) % laserShotPool.length;
     channel.currentTime = 0;
     channel.play().catch(() => {
+
+    });
+}
+
+// Play Shotgun Shot keeps the game logic moving.
+function playShotgunShot() {
+    if (!audioUnlocked || !shotgunShotPool.length) return;
+
+    const channel = shotgunShotPool[shotgunShotPoolIndex];
+    shotgunShotPoolIndex = (shotgunShotPoolIndex + 1) % shotgunShotPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+
+    });
+}
+
+// Play Smg Shot keeps the game logic moving.
+function playSmgShot() {
+    if (!audioUnlocked || !smgShotPool.length) return;
+
+    const channel = smgShotPool[smgShotPoolIndex];
+    smgShotPoolIndex = (smgShotPoolIndex + 1) % smgShotPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+
+    });
+}
+
+// Play Sniper Shot keeps the game logic moving.
+function playSniperShot() {
+    if (!audioUnlocked || !sniperShotPool.length) return;
+
+    const channel = sniperShotPool[sniperShotPoolIndex];
+    sniperShotPoolIndex = (sniperShotPoolIndex + 1) % sniperShotPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {
+
+    });
+}
+
+// Play Sniper Ping keeps the game logic moving.
+function playSniperPing() {
+    if (!audioUnlocked || !sniperPingAudio || !sniperPingAudioLayer) return;
+    if (!sniperPingAudio.paused) return;
+    if (!sniperPingAudioLayer.paused) return;
+
+    sniperPingAudio.currentTime = 0;
+    sniperPingAudioLayer.currentTime = 0;
+    sniperPingAudio.play().catch(() => {
+
+    });
+    sniperPingAudioLayer.play().catch(() => {
 
     });
 }

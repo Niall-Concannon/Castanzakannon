@@ -111,6 +111,10 @@ setMusicVolume(musicVolume, { persist: false });
 setSfxVolume(sfxVolume, { persist: false });
 
 initializeLaserShotPool();
+initializeShotgunShotPool();
+initializeSmgShotPool();
+initializeSniperShotPool();
+initializeSniperPingAudio();
 initializeDashPool();
 initializeAmmoPickupPool();
 initializeHealPickupPool();

@@ -156,10 +156,12 @@ function updatePickups() {
                 }
             } else if (p.type === 'ammo') {
                 playAmmoPickupSound();
-                player.ammo = AMMO_MAX;
-                player.ammoRegenTimer = 0;
-                player.ammoNoShootFrames = 0;
-                player.infiniteAmmoTimer = AMMO_POWERUP_DURATION_FRAMES;
+                if (!grantSniperAmmoPierceBonus((p.value ?? AMMO_PICKUP_VALUE_MIN) * SNIPER_AMMO_PIERCE_PROGRESS_STEP)) {
+                    player.ammo = AMMO_MAX;
+                    player.ammoRegenTimer = 0;
+                    player.ammoNoShootFrames = 0;
+                    player.infiniteAmmoTimer = AMMO_POWERUP_DURATION_FRAMES;
+                }
             } else if (p.type === 'heal') {
                 playHealPickupSound();
                 player.healOverTimeTimer = HEAL_OVER_TIME_DURATION_FRAMES;

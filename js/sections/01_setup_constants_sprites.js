@@ -180,7 +180,7 @@ const WEAPON_LOADOUTS = [
     {
         id: 'assault_rifle',
         name: 'Assault Rifle',
-        spritePath: 'assets/sprites/guns/gun_idle.png',
+        spritePath: 'assets/sprites/guns/assault_rifle.png',
         accentColor: '#4fc3f7',
         tagline: 'Balanced all-rounder',
         stats: {
@@ -206,7 +206,7 @@ const WEAPON_LOADOUTS = [
     {
         id: 'smg',
         name: 'SMG',
-        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        spritePath: 'assets/sprites/guns/smg.png',
         accentColor: '#a5d6a7',
         tagline: 'Rapid fire spray',
         stats: {
@@ -232,7 +232,7 @@ const WEAPON_LOADOUTS = [
     {
         id: 'shotgun',
         name: 'Shotgun',
-        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        spritePath: 'assets/sprites/guns/shotgun.png',
         accentColor: '#ff7043',
         tagline: 'Devastating close-range burst',
         stats: {
@@ -258,7 +258,7 @@ const WEAPON_LOADOUTS = [
     {
         id: 'sniper',
         name: 'Sniper Rifle',
-        spritePath: 'assets/sprites/guns/weapon_placeholder.png',
+        spritePath: 'assets/sprites/guns/sniper.png',
         accentColor: '#b39ddb',
         tagline: 'High-power precision shot',
         stats: {
@@ -270,16 +270,16 @@ const WEAPON_LOADOUTS = [
         description: 'Slow but deadly. Each shot hits hard and pierces the first enemy it strikes.',
         apply(p) {
             p.weaponType      = 'sniper';
-            p.bulletDamage    = 3.5;
+            p.bulletDamage    = 5.0;
             p.fireRateMult    = 0.28;
             p.weaponSpread    = 0.0;
             p.weaponPellets   = 1;
             p.weaponSpeed     = 18;
             p.weaponFrames    = 160;
-            p.weaponAmmoMax   = 60;
-            p.weaponAmmoRegen = 20;
-            p.weaponShotCost  = 3;
-            p.projectilePierce = Math.max(p.projectilePierce ?? 0, 1);
+            p.weaponAmmoMax   = 8;
+            p.weaponAmmoRegen = 6;
+            p.weaponShotCost  = 1;
+            p.projectilePierce = Math.max(p.projectilePierce ?? 0, 3);
         },
     },
 ];
@@ -293,11 +293,46 @@ const MUSIC_TRACK_PATHS = [
     'assets/audio/music/Semantic+Satiation.mp3',
 ];
 const LASER_SHOT_PATHS = [
+    'assets/audio/sfx/freesound_community-single-gunshot-54-40780.mp3',
+    'freesound_community-single-gunshot-54-40780.mp3',
     'assets/audio/sfx/laser_ak.mp3',
     'laser_ak.mp3',
 ];
 const LASER_POOL_SIZE = 8;
 const LASER_VOLUME_MULT = 0.35;
+const SHOTGUN_SHOT_PATHS = [
+    'assets/audio/sfx/ElevenLabs_shotgun_fire_sfx_for_game.mp3',
+    'ElevenLabs_shotgun_fire_sfx_for_game.mp3',
+    'assets/audio/sfx/laser_ak.mp3',
+    'laser_ak.mp3',
+];
+const SHOTGUN_POOL_SIZE = 6;
+const SHOTGUN_VOLUME_MULT = 0.5;
+const SMG_SHOT_PATHS = [
+    'assets/audio/sfx/moniker_subriquet-gunshot_smg_shot_1-203471.mp3',
+    'moniker_subriquet-gunshot_smg_shot_1-203471.mp3',
+    'assets/audio/sfx/laser_ak.mp3',
+    'laser_ak.mp3',
+];
+const SMG_POOL_SIZE = 8;
+const SMG_VOLUME_MULT = 0.4;
+const SNIPER_SHOT_PATHS = [
+    'assets/audio/sfx/freesound_community-m1-garand-rifle-80192.mp3',
+    'freesound_community-m1-garand-rifle-80192.mp3',
+    'assets/audio/sfx/laser_ak.mp3',
+    'laser_ak.mp3',
+];
+const SNIPER_POOL_SIZE = 4;
+const SNIPER_VOLUME_MULT = 0.6;
+const SNIPER_PING_PATHS = [
+    'assets/audio/sfx/u_awm9pwrwxi-m1-garand-clip-ejection-sound-214386.mp3',
+    'u_awm9pwrwxi-m1-garand-clip-ejection-sound-214386.mp3',
+];
+const SNIPER_PING_VOLUME_MULT = 1.0;
+const SNIPER_PING_DELAY_FRAMES = Math.max(1, Math.round(200 / FIXED_STEP));
+const SNIPER_RELOAD_MIN_FRAMES = Math.round(3000 / FIXED_STEP);
+const SNIPER_AMMO_PIERCE_PROGRESS_STEP = 0.08;
+const SNIPER_MAX_PROJECTILE_PIERCE = 10;
 const DASH_PATHS = [
     'assets/audio/sfx/dash_glass3.mp3',
     'dash_glass3.mp3',
@@ -439,6 +474,7 @@ const LEVEL_UPGRADES = [
         title: 'Scavenger Rounds',
         detail: '+10% ammo regen speed',
         apply: () => {
+            if (grantSniperAmmoPierceBonus()) return;
             player.ammoRegenMult = Math.min(4.2, player.ammoRegenMult * 1.1);
         },
     },
@@ -595,7 +631,10 @@ const ITEM_DEFINITIONS = [
     {
         id: 'ammo_pouch', rarity: 'common', title: 'Ammo Pouch',
         detail: '+10% ammo regen speed', maxStacks: 10,
-        apply: () => { player.ammoRegenMult = Math.min(5, player.ammoRegenMult * 1.1); },
+        apply: () => {
+            if (grantSniperAmmoPierceBonus()) return;
+            player.ammoRegenMult = Math.min(5, player.ammoRegenMult * 1.1);
+        },
     },
     {
         id: 'paper_shield', rarity: 'common', title: 'Paper Shield',
@@ -754,6 +793,7 @@ const UNIQUE_ITEM_DEFINITIONS = [
         detail: 'Kills restore HP and ammo', maxStacks: 4,
         apply: () => {
             player.killHealFlat = Math.min(8, (player.killHealFlat ?? 0) + 2);
+            if (grantSniperAmmoPierceBonus()) return;
             player.killAmmoFlat = Math.min(6, (player.killAmmoFlat ?? 0) + 1);
         },
     },
@@ -843,6 +883,10 @@ const UNIQUE_ITEM_DEFINITIONS = [
         id: 'recycler_spine', rarity: 'epic', title: 'Recycler Spine',
         detail: 'Kills restore shield and extra ammo', maxStacks: 2,
         apply: () => {
+            if (grantSniperAmmoPierceBonus()) {
+                player.killShieldFlat = Math.min(3, (player.killShieldFlat ?? 0) + 1);
+                return;
+            }
             player.killAmmoFlat = Math.min(8, (player.killAmmoFlat ?? 0) + 2);
             player.killShieldFlat = Math.min(3, (player.killShieldFlat ?? 0) + 1);
         },
@@ -1026,15 +1070,29 @@ function getPlayerSprite(frame) {
     return fallbackPlayerSprites[frame] ?? fallbackPlayerSprites.idle;
 }
 
-const gunSprites = {
-    idle:  img('assets/sprites/guns/gun_idle.png'),
-    shoot: img('assets/sprites/guns/gun_shoot.png'),
+const weaponGunSprites = {
+    assault_rifle: {
+        idle:  img('assets/sprites/guns/assault_rifle.png'),
+        shoot: img('assets/sprites/guns/assault_rifleshoot.png'),
+    },
+    smg: {
+        idle:  img('assets/sprites/guns/smg.png'),
+        shoot: img('assets/sprites/guns/smgshoot.png'),
+    },
+    shotgun: {
+        idle:  img('assets/sprites/guns/shotgun.png'),
+        shoot: img('assets/sprites/guns/shotgunshoot.png'),
+    },
+    sniper: {
+        idle:  img('assets/sprites/guns/sniper.png'),
+        shoot: img('assets/sprites/guns/snipershoot.png'),
+    },
 };
 
 // Weapon select card sprites — loaded once at startup
 const weaponSelectSprites = WEAPON_LOADOUTS.map(w => imgWithFallback([
     w.spritePath,
-    'assets/sprites/guns/gun_idle.png',
+    'assets/sprites/guns/assault_rifle.png',
 ]));
 
 const wallSprite         = img('assets/sprites/levels/level1/wall_placeholder.png');
