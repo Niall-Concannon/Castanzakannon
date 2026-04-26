@@ -39,9 +39,10 @@ function gameLoop(timestamp) {
         requestAnimationFrame(gameLoop);
         return;
     }
-    if (gameState === 'menu')     { drawMenu();     requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'gameOver') { drawGameOver(); requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'win')      { drawWinScreen(); requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'menu')         { drawMenu();               requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'weaponSelect') { drawWeaponSelectScreen(); requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'gameOver')     { drawGameOver();           requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'win')          { drawWinScreen();          requestAnimationFrame(gameLoop); return; }
 
     if (gameState === 'playing' && !gamePaused) {
         elapsedGameMs += dt;

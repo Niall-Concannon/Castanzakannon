@@ -5,6 +5,12 @@
 
 // Start Game keeps the game logic moving.
 function startGame() {
+    // Go to weapon selection before actually starting
+    gameState = 'weaponSelect';
+    selectedWeaponIndex = 0; // default to Assault Rifle
+}
+
+function confirmWeaponAndStart() {
     showPerfGuide = false;
     showCheatMenu = false;
     currentArenaLevel = 1;
@@ -81,7 +87,7 @@ function startGame() {
     player.dashCooldown = 0;
     player.dashLockFrames = 0;
     player.hp    = player.maxHp;
-    player.ammo  = AMMO_MAX;
+    player.ammo  = player.weaponAmmoMax ?? AMMO_MAX;
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
     player.infiniteAmmoTimer = 0;
@@ -91,6 +97,11 @@ function startGame() {
     player.level = 1;
     elapsedGameMs = 0;
     gamePaused   = false;
+
+    // Apply the chosen weapon loadout
+    const loadout = WEAPON_LOADOUTS[selectedWeaponIndex] ?? WEAPON_LOADOUTS[2];
+    loadout.apply(player);
+
     gameState    = 'playing';
     lastTimestamp = 0;
     accumulator   = 0;
@@ -332,10 +343,11 @@ function playerDash() {
 function playerShoot() {
     if (!mouseDown || player.shootCooldown > 0) return;
     const hasInfiniteAmmo = player.infiniteAmmoTimer > 0;
-    if (!hasInfiniteAmmo && player.ammo < AMMO_SHOT_COST) return;
+    const shotCost = player.weaponShotCost ?? AMMO_SHOT_COST;
+    if (!hasInfiniteAmmo && player.ammo < shotCost) return;
 
     if (!hasInfiniteAmmo) {
-        player.ammo = Math.max(0, player.ammo - AMMO_SHOT_COST);
+        player.ammo = Math.max(0, player.ammo - shotCost);
     }
     player.ammoRegenTimer = 0;
     player.ammoNoShootFrames = 0;
@@ -343,29 +355,33 @@ function playerShoot() {
     playLaserShot();
 
 
-    const spread = (Math.random() - 0.5) * BULLET_SPREAD;
+    const spread = (Math.random() - 0.5) * (player.weaponSpread ?? BULLET_SPREAD);
     const angle  = player.weaponAngle + spread;
 
     const gunX = player.x + Math.cos(player.weaponAngle) * RAIL_RADIUS;
     const gunY = player.y + Math.sin(player.weaponAngle) * RAIL_RADIUS;
 
-
     const barrelTip = 22;
     const bx = gunX + Math.cos(angle) * barrelTip;
     const by = gunY + Math.sin(angle) * barrelTip;
 
-    const shotCount = Math.max(1, 1 + (player.extraShots ?? 0));
-    const spreadStep = shotCount > 1 ? 0.055 : 0;
+    const pellets   = player.weaponPellets ?? 1;
+    const shotCount = Math.max(1, pellets + (player.extraShots ?? 0));
+    const isShotgun = pellets > 1;
+    const spreadStep = isShotgun ? (player.weaponSpread ?? 0.55) / pellets
+                                 : (shotCount > 1 ? 0.055 : 0);
     const startOffset = -(shotCount - 1) * 0.5;
 
     for (let i = 0; i < shotCount; i++) {
-        const shotAngle = angle + (startOffset + i) * spreadStep;
+        const pelletAngle = isShotgun
+            ? player.weaponAngle + (Math.random() - 0.5) * (player.weaponSpread ?? 0.55)
+            : angle + (startOffset + i) * spreadStep;
         projectiles.push({
             x: bx, y: by, prevX: bx, prevY: by,
-            velocityX: Math.cos(shotAngle) * 12,
-            velocityY: Math.sin(shotAngle) * 12,
-            size: 5,
-            framesLeft: 80,
+            velocityX: Math.cos(pelletAngle) * (player.weaponSpeed ?? 12),
+            velocityY: Math.sin(pelletAngle) * (player.weaponSpeed ?? 12),
+            size: (player.weaponPellets ?? 1) > 1 ? 4 : 5,
+            framesLeft: player.weaponFrames ?? 80,
             piercesLeft: player.projectilePierce ?? 0,
             critChance: player.critChance ?? 0,
             critMult: player.critMult ?? 1.75,
@@ -492,16 +508,17 @@ function updatePlayer() {
         player.infiniteAmmoTimer--;
         player.ammoRegenTimer = 0;
         player.ammoNoShootFrames = 0;
-    } else if (player.ammo < AMMO_REGEN_STOP) {
+    } else if (player.ammo < (player.weaponAmmoMax ?? AMMO_MAX)) {
         player.ammoNoShootFrames++;
         player.ammoRegenTimer++;
         const idleSeconds = (player.ammoNoShootFrames * FIXED_STEP) / 1000;
+        const baseInterval = player.weaponAmmoRegen ?? AMMO_REGEN_INTERVAL_FRAMES;
         const regenInterval = Math.max(
             AMMO_REGEN_MIN_INTERVAL_FRAMES,
-            Math.floor((AMMO_REGEN_INTERVAL_FRAMES * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)) / player.ammoRegenMult),
+            Math.floor((baseInterval * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)) / player.ammoRegenMult),
         );
         if (player.ammoRegenTimer >= regenInterval) {
-            player.ammo = Math.min(AMMO_REGEN_STOP, player.ammo + 1);
+            player.ammo = Math.min(player.weaponAmmoMax ?? AMMO_MAX, player.ammo + 1);
             player.ammoRegenTimer = 0;
         }
     } else {

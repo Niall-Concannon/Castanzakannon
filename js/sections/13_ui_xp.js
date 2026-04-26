@@ -82,12 +82,13 @@ function drawAmmoBar() {
     const bx  = 22;
     const by  = canvas.height - DH - 58;
     const ammoPowerupActive = player.infiniteAmmoTimer > 0;
-    const displayedAmmo = ammoPowerupActive ? AMMO_MAX : player.ammo;
-    const xf  = Math.min(displayedAmmo / AMMO_MAX, 1);
+    const ammoMax = player.weaponAmmoMax ?? AMMO_MAX;
+    const displayedAmmo = ammoPowerupActive ? ammoMax : player.ammo;
+    const xf  = Math.min(displayedAmmo / ammoMax, 1);
     const fw  = Math.floor(xf * DW);
-    const capX = Math.floor((AMMO_REGEN_STOP / AMMO_MAX) * DW);
+    const capX = Math.floor((ammoMax / ammoMax) * DW); // full bar cap
     const t   = frameCount * 0.04;
-    const flash = ammoPowerupActive || player.ammo <= AMMO_REGEN_STOP;
+    const flash = ammoPowerupActive || player.ammo <= (ammoMax * 0.5);
     const pulse = flash ? 1.0 : 0.6 + 0.4 * Math.sin(t * 1.15);
     const shimmer = Math.sin(t * 1.7) * 0.5 + 0.5;
 
@@ -154,7 +155,7 @@ function drawAmmoBar() {
         const secsLeft = Math.ceil((player.infiniteAmmoTimer * FIXED_STEP) / 1000);
         ctx.fillText(`INF ${secsLeft}s`, bx + DW - 88, by + DH / 2 + 4);
     } else {
-        ctx.fillText(`${player.ammo} / ${AMMO_MAX}`, bx + DW - 88, by + DH / 2 + 4);
+        ctx.fillText(`${player.ammo} / ${ammoMax}`, bx + DW - 88, by + DH / 2 + 4);
     }
     ctx.restore();
 }

@@ -942,6 +942,201 @@ function getAudioConfigBackButton() {
 }
 
 // Draw Splash keeps the game logic moving.
+// ── Weapon Select Screen ──────────────────────────────────────────────────
+
+function getWeaponSelectCards() {
+    const count  = WEAPON_LOADOUTS.length;
+    const cardW  = Math.min(200, Math.floor((canvas.width * 0.82) / count));
+    const cardH  = Math.min(310, Math.floor(canvas.height * 0.54));
+    const gap    = Math.max(12, Math.floor(cardW * 0.09));
+    const totalW = count * cardW + (count - 1) * gap;
+    const startX = Math.floor(canvas.width / 2 - totalW / 2);
+    const startY = Math.floor(canvas.height / 2 - cardH / 2 + 24);
+    return WEAPON_LOADOUTS.map((_, i) => ({
+        x: startX + i * (cardW + gap),
+        y: startY,
+        w: cardW,
+        h: cardH,
+    }));
+}
+
+function getWeaponSelectConfirmButton() {
+    const w = 220, h = 48;
+    return { x: Math.floor(canvas.width / 2 - w / 2), y: Math.floor(canvas.height * 0.85), w, h };
+}
+
+function drawWeaponSelectScreen() {
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.96)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Subtle grid lines for atmosphere
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40)  { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+    for (let y = 0; y < canvas.height; y += 40)  { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+    // Title
+    ctx.save();
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font        = `bold 38px ${MENU_UI_FONT_FAMILY}`;
+    ctx.fillStyle   = MENU_TEXT_COLORS.title;
+    ctx.shadowColor = MENU_TEXT_COLORS.titleShadow;
+    ctx.shadowBlur  = 18;
+    ctx.fillText('CHOOSE YOUR WEAPON', canvas.width / 2, canvas.height * 0.12);
+    ctx.shadowBlur  = 0;
+    ctx.font        = `14px ${MENU_UI_FONT_FAMILY}`;
+    ctx.fillStyle   = 'rgba(180,210,255,0.55)';
+    ctx.fillText('Click a card to select  ·  Enter or Click Confirm to start', canvas.width / 2, canvas.height * 0.12 + 30);
+    ctx.restore();
+
+    const cards = getWeaponSelectCards();
+
+    for (let i = 0; i < WEAPON_LOADOUTS.length; i++) {
+        const w      = WEAPON_LOADOUTS[i];
+        const c      = cards[i];
+        const sel    = i === selectedWeaponIndex;
+        const hov    = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
+        const accent = w.accentColor;
+        const pulse  = 0.82 + 0.18 * Math.sin(frameCount * 0.07 + i * 1.2);
+
+        ctx.save();
+
+        // Card glow
+        if (sel) {
+            ctx.shadowColor = accent;
+            ctx.shadowBlur  = 28 * pulse;
+        } else if (hov) {
+            ctx.shadowColor = accent;
+            ctx.shadowBlur  = 12;
+        }
+
+        // Card background
+        ctx.fillStyle = sel ? `rgba(20,24,36,0.97)` : (hov ? `rgba(16,20,30,0.95)` : `rgba(10,12,20,0.92)`);
+        ctx.fillRect(c.x, c.y, c.w, c.h);
+
+        // Border
+        ctx.strokeStyle = sel ? accent : (hov ? `rgba(180,200,255,0.35)` : `rgba(80,90,120,0.4)`);
+        ctx.lineWidth   = sel ? 2.5 : 1.5;
+        ctx.strokeRect(c.x, c.y, c.w, c.h);
+        ctx.shadowBlur  = 0;
+
+        // Selected top bar
+        if (sel) {
+            ctx.fillStyle = accent;
+            ctx.fillRect(c.x, c.y, c.w, 4);
+        }
+
+        // Weapon sprite image — drawn with correct aspect ratio, centred in the image area
+        const areaW  = Math.floor(c.w * 0.80);
+        const areaH  = Math.floor(c.h * 0.22);
+        const areaX  = c.x + Math.floor((c.w - areaW) / 2);
+        const areaY  = c.y + Math.floor(c.h * 0.06);
+        const sprite = weaponSelectSprites[i];
+        if (sprite && sprite.complete && sprite.naturalWidth) {
+            const aspect = sprite.naturalWidth / sprite.naturalHeight;
+            let dw = areaW, dh = areaW / aspect;
+            if (dh > areaH) { dh = areaH; dw = areaH * aspect; }
+            const dx = areaX + Math.floor((areaW - dw) / 2);
+            const dy = areaY + Math.floor((areaH - dh) / 2);
+            ctx.save();
+            if (sel) { ctx.shadowColor = accent; ctx.shadowBlur = 14 * pulse; }
+            ctx.drawImage(sprite, dx, dy, dw, dh);
+            ctx.restore();
+        } else {
+            // No sprite — draw nothing (fallback gun_idle will load via imgWithFallback)
+        }
+
+        // Weapon name
+        const nameY = c.y + Math.floor(c.h * 0.36);
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font         = `bold ${Math.floor(c.w * 0.115)}px ${MENU_UI_FONT_FAMILY}`;
+        ctx.fillStyle    = sel ? accent : '#e1edf8';
+        ctx.fillText(w.name, c.x + c.w / 2, nameY);
+
+        // Tagline
+        ctx.font      = `${Math.floor(c.w * 0.075)}px ${MENU_UI_FONT_FAMILY}`;
+        ctx.fillStyle = 'rgba(160,185,220,0.7)';
+        ctx.fillText(w.tagline, c.x + c.w / 2, nameY + Math.floor(c.h * 0.075));
+
+        // Divider
+        const divY = c.y + Math.floor(c.h * 0.49);
+        ctx.strokeStyle = sel ? `${accent}55` : 'rgba(255,255,255,0.08)';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(c.x + 14, divY);
+        ctx.lineTo(c.x + c.w - 14, divY);
+        ctx.stroke();
+
+        // Stats
+        const statKeys = Object.keys(w.stats);
+        const statAreaH = c.h * 0.34;
+        const statH     = statAreaH / statKeys.length;
+        const statY0    = divY + 4;
+        for (let s = 0; s < statKeys.length; s++) {
+            const sy = statY0 + s * statH + statH * 0.5;
+            ctx.textAlign    = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font         = `${Math.floor(c.w * 0.072)}px ${MENU_UI_FONT_FAMILY}`;
+            ctx.fillStyle    = 'rgba(160,185,220,0.7)';
+            ctx.fillText(statKeys[s], c.x + 12, sy);
+            ctx.textAlign    = 'right';
+            ctx.font         = `${Math.floor(c.w * 0.08)}px serif`;
+            ctx.fillStyle    = sel ? accent : 'rgba(200,220,255,0.6)';
+            ctx.fillText(w.stats[statKeys[s]], c.x + c.w - 10, sy);
+        }
+
+        // Selected badge
+        if (sel) {
+            const badgeH = 20;
+            const badgeY = c.y + c.h - badgeH - 6;
+            ctx.fillStyle    = accent;
+            ctx.fillRect(c.x + 14, badgeY, c.w - 28, badgeH);
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font         = `bold ${Math.floor(c.w * 0.082)}px ${MENU_UI_FONT_FAMILY}`;
+            ctx.fillStyle    = '#000';
+            ctx.fillText('SELECTED', c.x + c.w / 2, badgeY + badgeH / 2);
+        }
+
+        ctx.restore();
+    }
+
+    // Confirm button
+    const btn       = getWeaponSelectConfirmButton();
+    const btnHov    = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
+    const selAccent = WEAPON_LOADOUTS[selectedWeaponIndex].accentColor;
+
+    ctx.save();
+    ctx.shadowColor = selAccent;
+    ctx.shadowBlur  = btnHov ? 22 : 10;
+    ctx.fillStyle   = btnHov ? selAccent : `rgba(20,24,36,0.97)`;
+    ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+    ctx.strokeStyle = selAccent;
+    ctx.lineWidth   = 2;
+    ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
+    ctx.shadowBlur  = 0;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = `bold 18px ${MENU_UI_FONT_FAMILY}`;
+    ctx.fillStyle    = btnHov ? '#000' : selAccent;
+    ctx.fillText('▶  Confirm & Start', btn.x + btn.w / 2, btn.y + btn.h / 2);
+    ctx.restore();
+
+    // Back hint
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = `13px ${MENU_UI_FONT_FAMILY}`;
+    ctx.fillStyle    = 'rgba(140,160,190,0.45)';
+    ctx.fillText('Esc — Back to Menu  ·  ← → Arrow Keys to navigate', canvas.width / 2, btn.y + btn.h + 22);
+    ctx.restore();
+
+    drawCursor();
+}
+
 function drawSplash() {
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);

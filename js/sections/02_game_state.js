@@ -16,6 +16,7 @@ let menuPage       = 'main';
 let encyclopediaTab = 'enemies';
 let encyclopediaRarityFilter = 'all';
 let encyclopediaScroll = 0;
+let selectedWeaponIndex = 0; // default: Assault Rifle
 let selectedCursor = 0;
 let selectedCharacter = 0;
 let characterHoverAnim = CHARACTER_LOADOUTS.map(() => 0);
