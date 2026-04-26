@@ -78,8 +78,12 @@ function spawnDevModePowerupLine() {
 function updateProjectiles() {
     updateRailgunBeams();
 
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-        const p = projectiles[i];
+    // Snapshot the array reference so that if completeVoidEncounterVictory replaces
+    // the global `projectiles` mid-loop (void boss killed by a projectile), the loop
+    // keeps a stable reference and won't read undefined entries from the new array.
+    const arr = projectiles;
+    for (let i = arr.length - 1; i >= 0; i--) {
+        const p = arr[i];
         const oldX = p.x;
         const oldY = p.y;
         p.x += p.velocityX;
@@ -87,7 +91,7 @@ function updateProjectiles() {
         p.framesLeft--;
 
         if (wallCollision(p.x, p.y, p.size) || p.framesLeft <= 0) {
-            projectiles.splice(i, 1);
+            arr.splice(i, 1);
             continue;
         }
 
@@ -102,13 +106,13 @@ function updateProjectiles() {
                 if ((p.piercesLeft ?? 0) > 0) {
                     p.piercesLeft--;
                 } else {
-                    projectiles.splice(i, 1);
+                    arr.splice(i, 1);
                 }
                 break;
             }
         }
 
-        if (!projectiles[i]) continue;
+        if (!arr[i]) continue;
 
         for (const e of enemies) {
             if (!e.alive) continue;
@@ -121,7 +125,7 @@ function updateProjectiles() {
                 if ((p.piercesLeft ?? 0) > 0) {
                     p.piercesLeft--;
                 } else {
-                    projectiles.splice(i, 1);
+                    arr.splice(i, 1);
                 }
                 break;
             }
