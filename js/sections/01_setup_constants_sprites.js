@@ -925,7 +925,13 @@ const gunSprites = {
 const wallSprite         = img('assets/sprites/levels/level1/wall_placeholder.png');
 const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face_placeholder.png');
 const cornerFaceSprite   = img('assets/sprites/levels/level1/wall_corner_face_placeholder.png');
-const floorSprite        = img('assets/sprites/levels/level1/floor_placeholder.png');
+const floorSprite        = img('assets/sprites/levels/level1/floor1.png');
+const floorVariants      = [
+    img('assets/sprites/levels/level1/floor1.png'),
+    img('assets/sprites/levels/level1/floor2.png'),
+    img('assets/sprites/levels/level1/floor3.png'),
+    img('assets/sprites/levels/level1/floor4.png'),
+];
 const projectileSprite   = img('assets/sprites/projectiles/projectile_placeholder.png');
 const enemyProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/tumor_projectile_placeholder.png',
@@ -1183,6 +1189,7 @@ const menuButtonSprites = {
 const MAP_THEME_SPRITES = {
     1: {
         floor: floorSprite,
+        floorVariants: floorVariants,
         wall: wallSprite,
         wallFace: wallFaceSprite,
         cornerFace: cornerFaceSprite,
@@ -1204,19 +1211,19 @@ const MAP_THEME_SPRITES = {
         ],
     },
     2: {
-        floor: imgWithFallback(['assets/sprites/levels/level2/floor_level2.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level2/floor_level2.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/level2/wall_level2.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level2/wall_face_level2.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level2/wall_corner_face_level2.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
     3: {
-        floor: imgWithFallback(['assets/sprites/levels/level3/floor_level3.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level3/floor_level3.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/level3/wall_level3.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
     4: {
-        floor: imgWithFallback(['assets/sprites/levels/level4/floor_level4.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level4/floor_level4.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/level4/wall_level4.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level4/wall_face_level4.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level4/wall_corner_face_level4.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
@@ -1228,7 +1235,7 @@ const MAP_THEME_SPRITES = {
         ],
     },
     5: {
-        floor: imgWithFallback(['assets/sprites/levels/level5/floor_level5.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/level5/floor_level5.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level5/wall_corner_face_level5.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
@@ -1238,7 +1245,7 @@ const MAP_THEME_SPRITES = {
         eggFace: imgWithFallback(['assets/sprites/levels/level5/egg_face.png', 'assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
     },
     special: {
-        floor: imgWithFallback(['assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor_placeholder.png']),
+        floor: imgWithFallback(['assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),

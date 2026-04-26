@@ -1106,13 +1106,26 @@ function drawLevelDecorations() {
     }
 }
 
-// Draw Map keeps the game logic moving.
+function getLevel1FloorVariantSprite(tileX, tileY) {
+    const variants = Array.isArray(currentMapTheme.floorVariants)
+        ? currentMapTheme.floorVariants
+        : [currentMapTheme.floor].filter(Boolean);
+
+    if (!variants.length) return currentMapTheme.floor;
+
+    const hash = ((tileX * 73856093) ^ (tileY * 19349663) ^ 0x9e3779b9) >>> 0;
+    return variants[hash % variants.length] ?? currentMapTheme.floor;
+}
+
 function drawMap() {
     for (let y = 0; y < MAP_H; y++) {
         for (let x = 0; x < MAP_W; x++) {
             const s = toScreen(x * TILE, y * TILE);
             if (s.x < -TILE || s.x > canvas.width || s.y < -TILE || s.y > canvas.height) continue;
-            drawMapSprite(currentMapTheme.floor, s.x, s.y, TILE, TILE);
+            const floorSprite = currentArenaLevel === 1
+                ? getLevel1FloorVariantSprite(x, y)
+                : currentMapTheme.floor;
+            drawMapSprite(floorSprite, s.x, s.y, TILE, TILE);
         }
     }
 
