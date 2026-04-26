@@ -146,6 +146,14 @@ const SPAWN_CLEAR_RADIUS = 4;
 const SPAWN_RING_INSET = 70;
 const ENEMY_OFFSCREEN_DESPAWN_FRAMES = 150;
 const ENEMY_OFFSCREEN_MARGIN = 120;
+const LEVEL1_POT_CLUSTER_COUNT = 45;
+const LEVEL1_POT_SINGLE_COUNT = 62;
+const LEVEL1_POT_BORDER_COUNT = 54;
+const LEVEL1_POT_MIN_GAP_TILES = 0;
+const LEVEL1_POT_SPAWN_BUFFER = SPAWN_CLEAR_RADIUS + 2;
+const LEVEL1_SKULL_CANDLE_COUNT = 18;
+const LEVEL1_SKULL_CANDLE_MIN_GAP_TILES = 6;
+const LEVEL1_SKULL_CANDLE_POT_MIN_GAP_TILES = 6;
 const LEVEL4_MUSHROOM_CLUSTER_COUNT = 20;
 const LEVEL4_MUSHROOM_SINGLE_COUNT = 45;
 const LEVEL4_MUSHROOM_MIN_GAP_TILES = 1;
@@ -1178,6 +1186,22 @@ const MAP_THEME_SPRITES = {
         wall: wallSprite,
         wallFace: wallFaceSprite,
         cornerFace: cornerFaceSprite,
+        pots: [
+            imgWithFallback(['assets/sprites/levels/level1/pot1_clay_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot2_urn_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot3_vase_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potD_sandy_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potE_orange_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potF_ochre_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        ],
+        skullCandles: [
+            imgWithFallback([
+                'assets/sprites/levels/level1/skull_candle_pixel.png',
+                'assets/sprites/levels/level1/skull_cangle_pixel.png',
+                'assets/sprites/levels/level1/skull_with_candle_pixel.png',
+                'assets/sprites/levels/level1/wall_placeholder.png',
+            ]),
+        ],
     },
     2: {
         floor: imgWithFallback(['assets/sprites/levels/level2/floor_level2.png', 'assets/sprites/levels/level1/floor_placeholder.png']),

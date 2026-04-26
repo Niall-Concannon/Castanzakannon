@@ -416,6 +416,33 @@ function drawVisibilityMask() {
         fogCtx.arc(ps.x, ps.y, lightRadius, 0, Math.PI * 2);
         fogCtx.fill();
     }
+
+    for (const deco of levelDecorations) {
+        if (deco.type !== 'skullCandle') continue;
+
+        const width = deco.drawWidth ?? 30;
+        const height = deco.drawHeight ?? 34;
+        const worldX = deco.x - width * 0.5;
+        const worldY = deco.y - height + TILE * 0.5;
+        const ds = toScreen(worldX, worldY);
+        const sx = Math.round(ds.x);
+        const sy = Math.round(ds.y);
+
+        if (sx > canvas.width + width || sx < -width || sy > canvas.height + height || sy < -height) continue;
+
+        const flameX = sx + width * 0.5;
+        const flameY = sy + height * 0.17;
+        const glowR = Math.max(26, Math.min(44, width * 1.3));
+        const candleLight = fogCtx.createRadialGradient(flameX, flameY, glowR * 0.16, flameX, flameY, glowR);
+        candleLight.addColorStop(0, 'rgba(0,0,0,0.48)');
+        candleLight.addColorStop(0.42, 'rgba(0,0,0,0.25)');
+        candleLight.addColorStop(1, 'rgba(0,0,0,0)');
+        fogCtx.fillStyle = candleLight;
+        fogCtx.beginPath();
+        fogCtx.arc(flameX, flameY, glowR, 0, Math.PI * 2);
+        fogCtx.fill();
+    }
+
     fogCtx.globalCompositeOperation = 'source-over';
     fogCtx.restore();
 

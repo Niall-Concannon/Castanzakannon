@@ -45,6 +45,11 @@ function generateMap() {
 
     clearSpawnArea();
 
+    if (currentArenaLevel === 1) {
+        placeLevel1Pots();
+        placeLevel1SkullCandles();
+    }
+
     if (currentArenaLevel === 4) {
         placeLevel4MushroomTrees();
     }
@@ -96,6 +101,231 @@ function isLevel4DecorationTileValid(tx, ty) {
     }
 
     return true;
+}
+
+// Is Level1 Pot Tile Valid keeps the game logic moving.
+function isLevel1PotTileValid(tx, ty) {
+    if (!isInteriorTile(tx, ty)) return false;
+    if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
+    if (!hasSolidOrEdgeWallWithin(tx, ty, 1)) return false;
+
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+    if (Math.abs(tx - cx) <= LEVEL1_POT_SPAWN_BUFFER && Math.abs(ty - cy) <= LEVEL1_POT_SPAWN_BUFFER) {
+        return false;
+    }
+
+    for (const deco of levelDecorations) {
+        const dx = deco.tx - tx;
+        const dy = deco.ty - ty;
+        if (Math.abs(dx) <= LEVEL1_POT_MIN_GAP_TILES && Math.abs(dy) <= LEVEL1_POT_MIN_GAP_TILES) return false;
+    }
+
+    return true;
+}
+
+// Try Place Level1 Pot keeps the game logic moving.
+function tryPlaceLevel1Pot(tx, ty) {
+    if (!isLevel1PotTileValid(tx, ty)) return false;
+
+    const potVariants = MAP_THEME_SPRITES[1]?.pots?.length || 1;
+    const variantIndex = Math.floor(Math.random() * potVariants);
+    const drawHeight = 34 + Math.floor(Math.random() * 10);
+    const drawWidth = 25 + Math.floor(Math.random() * 9);
+    const jitterX = Math.round((Math.random() - 0.5) * 12);
+    const jitterY = Math.round((Math.random() - 0.5) * 8);
+
+    levelDecorations.push({
+        type: 'pot',
+        variantIndex,
+        drawWidth,
+        drawHeight,
+        tx,
+        ty,
+        x: tx * TILE + TILE * 0.5 + jitterX,
+        y: ty * TILE + TILE * 0.5 + jitterY,
+    });
+
+    return true;
+}
+
+// Is Level1 Decoration Tile Open keeps the game logic moving.
+function isLevel1DecorationTileOpen(tx, ty) {
+    if (!isInteriorTile(tx, ty)) return false;
+    if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
+
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+    if (Math.abs(tx - cx) <= LEVEL1_POT_SPAWN_BUFFER && Math.abs(ty - cy) <= LEVEL1_POT_SPAWN_BUFFER) {
+        return false;
+    }
+
+    for (const deco of levelDecorations) {
+        if (deco.tx === tx && deco.ty === ty) return false;
+    }
+
+    return true;
+}
+
+// Has Nearby Decoration Type keeps the game logic moving.
+function hasNearbyDecorationType(tx, ty, type, gapTiles) {
+    for (const deco of levelDecorations) {
+        if (deco.type !== type) continue;
+        const dx = Math.abs(deco.tx - tx);
+        const dy = Math.abs(deco.ty - ty);
+        if (dx <= gapTiles && dy <= gapTiles) return true;
+    }
+    return false;
+}
+
+// Try Place Level1 Skull Candle keeps the game logic moving.
+function tryPlaceLevel1SkullCandle(tx, ty, potGap = LEVEL1_SKULL_CANDLE_POT_MIN_GAP_TILES, skullGap = LEVEL1_SKULL_CANDLE_MIN_GAP_TILES) {
+    if (!isLevel1DecorationTileOpen(tx, ty)) return false;
+    if (!hasSolidOrEdgeWallWithin(tx, ty, 2)) return false;
+    if (hasNearbyDecorationType(tx, ty, 'pot', potGap)) return false;
+    if (hasNearbyDecorationType(tx, ty, 'skullCandle', skullGap)) return false;
+
+    const skullVariants = MAP_THEME_SPRITES[1]?.skullCandles?.length || 1;
+    const variantIndex = Math.floor(Math.random() * skullVariants);
+    const drawHeight = 38 + Math.floor(Math.random() * 8);
+    const drawWidth = 30 + Math.floor(Math.random() * 8);
+    const jitterX = Math.round((Math.random() - 0.5) * 8);
+    const jitterY = Math.round((Math.random() - 0.5) * 6);
+
+    levelDecorations.push({
+        type: 'skullCandle',
+        variantIndex,
+        drawWidth,
+        drawHeight,
+        tx,
+        ty,
+        x: tx * TILE + TILE * 0.5 + jitterX,
+        y: ty * TILE + TILE * 0.5 + jitterY,
+    });
+
+    return true;
+}
+
+// Collect Level1 Skull Candle Candidates keeps the game logic moving.
+function collectLevel1SkullCandleCandidates(potGap) {
+    const candidates = [];
+    for (let ty = 2; ty < MAP_H - 2; ty++) {
+        for (let tx = 2; tx < MAP_W - 2; tx++) {
+            if (!isLevel1DecorationTileOpen(tx, ty)) continue;
+            if (!hasSolidOrEdgeWallWithin(tx, ty, 2)) continue;
+            if (hasNearbyDecorationType(tx, ty, 'pot', potGap)) continue;
+            candidates.push({ tx, ty });
+        }
+    }
+
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = candidates[i];
+        candidates[i] = candidates[j];
+        candidates[j] = temp;
+    }
+
+    return candidates;
+}
+
+// Place Level1 Skull Candles keeps the game logic moving.
+function placeLevel1SkullCandles() {
+    let placed = 0;
+
+    const strictPotGap = LEVEL1_SKULL_CANDLE_POT_MIN_GAP_TILES;
+    const strictSkullGap = LEVEL1_SKULL_CANDLE_MIN_GAP_TILES;
+    const relaxedPotGap = Math.max(4, strictPotGap - 2);
+    const relaxedSkullGap = Math.max(4, strictSkullGap - 1);
+
+    const passes = [
+        { potGap: strictPotGap, skullGap: strictSkullGap },
+        { potGap: relaxedPotGap, skullGap: relaxedSkullGap },
+    ];
+
+    for (const pass of passes) {
+        if (placed >= LEVEL1_SKULL_CANDLE_COUNT) break;
+        const candidates = collectLevel1SkullCandleCandidates(pass.potGap);
+        for (const c of candidates) {
+            if (placed >= LEVEL1_SKULL_CANDLE_COUNT) break;
+            if (tryPlaceLevel1SkullCandle(c.tx, c.ty, pass.potGap, pass.skullGap)) placed++;
+        }
+    }
+}
+
+// Collect Level1 Wall-Adjacent Pot Anchors keeps the game logic moving.
+function collectLevel1WallPotAnchors() {
+    const anchors = [];
+    for (let ty = 4; ty < MAP_H - 4; ty++) {
+        for (let tx = 4; tx < MAP_W - 4; tx++) {
+            if (!isLevel1PotTileValid(tx, ty)) continue;
+            anchors.push({ tx, ty });
+        }
+    }
+    return anchors;
+}
+
+// Collect Level1 Border Pot Anchors keeps the game logic moving.
+function collectLevel1BorderPotAnchors() {
+    const anchors = [];
+    for (let ty = 2; ty < MAP_H - 2; ty++) {
+        for (let tx = 2; tx < MAP_W - 2; tx++) {
+            const nearOuterBorder = tx <= 4 || tx >= MAP_W - 5 || ty <= 4 || ty >= MAP_H - 5;
+            if (!nearOuterBorder) continue;
+            if (!isLevel1PotTileValid(tx, ty)) continue;
+            anchors.push({ tx, ty });
+        }
+    }
+    return anchors;
+}
+
+// Place Level1 Pots keeps the game logic moving.
+function placeLevel1Pots() {
+    const anchors = collectLevel1WallPotAnchors();
+    const borderAnchors = collectLevel1BorderPotAnchors();
+    const primaryAnchors = anchors.length ? anchors : borderAnchors;
+    if (!primaryAnchors.length) return;
+
+    const clusterAttempts = LEVEL1_POT_CLUSTER_COUNT * 20;
+    let clustersPlaced = 0;
+
+    for (let i = 0; i < clusterAttempts && clustersPlaced < LEVEL1_POT_CLUSTER_COUNT; i++) {
+        const anchor = primaryAnchors[Math.floor(Math.random() * primaryAnchors.length)];
+        const cx = anchor.tx;
+        const cy = anchor.ty;
+        if (!isLevel1PotTileValid(cx, cy)) continue;
+
+        let plantedInCluster = 0;
+        const clusterSize = 6 + Math.floor(Math.random() * 7);
+        for (let j = 0; j < clusterSize; j++) {
+            const tx = cx + Math.floor(Math.random() * 5) - 2;
+            const ty = cy + Math.floor(Math.random() * 5) - 2;
+            if (tryPlaceLevel1Pot(tx, ty)) plantedInCluster++;
+        }
+
+        if (plantedInCluster > 0) clustersPlaced++;
+    }
+
+    const singleAttempts = LEVEL1_POT_SINGLE_COUNT * 16;
+    let singlesPlaced = 0;
+    for (let i = 0; i < singleAttempts && singlesPlaced < LEVEL1_POT_SINGLE_COUNT; i++) {
+        const anchor = primaryAnchors[Math.floor(Math.random() * primaryAnchors.length)];
+        const tx = anchor.tx + Math.floor(Math.random() * 3) - 1;
+        const ty = anchor.ty + Math.floor(Math.random() * 3) - 1;
+        if (tryPlaceLevel1Pot(tx, ty)) singlesPlaced++;
+    }
+
+    if (borderAnchors.length) {
+        const borderAttempts = LEVEL1_POT_BORDER_COUNT * 16;
+        let borderPlaced = 0;
+        for (let i = 0; i < borderAttempts && borderPlaced < LEVEL1_POT_BORDER_COUNT; i++) {
+            const anchor = borderAnchors[Math.floor(Math.random() * borderAnchors.length)];
+            const tx = anchor.tx + Math.floor(Math.random() * 3) - 1;
+            const ty = anchor.ty + Math.floor(Math.random() * 3) - 1;
+            if (tryPlaceLevel1Pot(tx, ty)) borderPlaced++;
+        }
+    }
+
+    levelDecorations.sort((a, b) => a.y - b.y);
 }
 
 // Try Place Level4 Mushroom Tree keeps the game logic moving.
@@ -287,6 +517,17 @@ function hasSolidTileWithin(tx, ty, radius) {
         for (let x = tx - radius; x <= tx + radius; x++) {
             if (!isInteriorTile(x, y)) continue;
             if (mapTiles[y][x] !== TILE_FLOOR) return true;
+        }
+    }
+    return false;
+}
+
+// Has Solid Or Edge Wall Within keeps the game logic moving.
+function hasSolidOrEdgeWallWithin(tx, ty, radius) {
+    for (let y = ty - radius; y <= ty + radius; y++) {
+        for (let x = tx - radius; x <= tx + radius; x++) {
+            if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) continue;
+            if (isSolidTileAt(x, y)) return true;
         }
     }
     return false;
@@ -824,16 +1065,23 @@ function drawMapSprite(sprite, x, y, w, h) {
 function drawLevelDecorations() {
     if (!levelDecorations.length) return;
 
+    const pots = currentMapTheme.pots;
+    const skullCandles = currentMapTheme.skullCandles;
     const mushrooms = currentMapTheme.mushroomTrees;
-    if (!mushrooms || !mushrooms.length) return;
+    if ((!pots || !pots.length) && (!skullCandles || !skullCandles.length) && (!mushrooms || !mushrooms.length)) return;
 
     for (const deco of levelDecorations) {
-        if (deco.type !== 'mushroomTree') continue;
-        const sprite = mushrooms[deco.variantIndex % mushrooms.length];
+        let spriteSet = null;
+        if (deco.type === 'pot') spriteSet = pots;
+        else if (deco.type === 'skullCandle') spriteSet = skullCandles;
+        else if (deco.type === 'mushroomTree') spriteSet = mushrooms;
+        else continue;
+        if (!spriteSet || !spriteSet.length) continue;
+        const sprite = spriteSet[deco.variantIndex % spriteSet.length];
         if (!sprite) continue;
 
         const width = deco.drawWidth ?? (deco.wallTall === 3 ? 90 : 72);
-        const height = deco.drawHeight ?? (deco.wallTall * TILE);
+        const height = deco.drawHeight ?? (deco.wallTall ? deco.wallTall * TILE : 44);
         const worldX = deco.x - width * 0.5;
         const worldY = deco.y - height + TILE * 0.5;
         const s = toScreen(worldX, worldY);
@@ -842,6 +1090,19 @@ function drawLevelDecorations() {
 
         if (sx > canvas.width + width || sx < -width || sy > canvas.height + height || sy < -height) continue;
         drawMapSprite(sprite, sx, sy, width, height);
+
+        if (deco.type === 'skullCandle') {
+            const flameX = sx + width * 0.5;
+            const flameY = sy + height * 0.16;
+            const glowR = Math.max(14, Math.min(22, width * 0.62));
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = 'rgba(255, 150, 55, 0.34)';
+            ctx.beginPath();
+            ctx.arc(flameX, flameY, glowR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
     }
 }
 
