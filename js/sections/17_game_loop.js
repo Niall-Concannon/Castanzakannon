@@ -26,8 +26,9 @@ function gameLoop(timestamp) {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (gameState === 'splash')   { drawSplash();   requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'splash')   { cloudAuthToggleButton.style.display = 'none'; drawSplash();   requestAnimationFrame(gameLoop); return; }
     if (gameState === 'splashTransition') {
+        cloudAuthToggleButton.style.display = 'none';
         splashFadeTimerMs = Math.min(SPLASH_FADE_DURATION_MS, splashFadeTimerMs + dt);
         const half = SPLASH_FADE_DURATION_MS / 2;
         let fadeAlpha;
@@ -48,10 +49,10 @@ function gameLoop(timestamp) {
         requestAnimationFrame(gameLoop);
         return;
     }
-    if (gameState === 'menu')         { drawMenu();               requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'weaponSelect') { drawWeaponSelectScreen(); requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'gameOver')     { drawGameOver();           requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'win')          { drawWinScreen();          requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'menu')         { cloudAuthToggleButton.style.display = menuPage === 'main' ? 'flex' : 'none'; drawMenu();               requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'weaponSelect') { cloudAuthToggleButton.style.display = 'none'; drawWeaponSelectScreen(); requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'gameOver')     { cloudAuthToggleButton.style.display = 'none'; drawGameOver();           requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'win')          { cloudAuthToggleButton.style.display = 'none'; drawWinScreen();          requestAnimationFrame(gameLoop); return; }
 
     if (gameState === 'playing' && !gamePaused) {
         elapsedGameMs += dt;
@@ -99,6 +100,9 @@ function gameLoop(timestamp) {
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
     if (typeof drawAchievementPopup === 'function') drawAchievementPopup();
+
+    // Settings button only visible on main menu
+    cloudAuthToggleButton.style.display = (gameState === 'menu' && menuPage === 'main') ? 'flex' : 'none';
     drawCursor();
 
     requestAnimationFrame(gameLoop);

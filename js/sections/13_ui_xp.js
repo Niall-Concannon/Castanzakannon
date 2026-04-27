@@ -427,6 +427,11 @@ function drawVoidTotemArrow() {
         const dist = Math.hypot(dx, dy);
         if (dist < 0.001) continue;
 
+        // Don't show arrow if the totem is already on screen
+        const onScreen = totemScreen.x >= 0 && totemScreen.x <= canvas.width &&
+                         totemScreen.y >= 0 && totemScreen.y <= canvas.height;
+        if (onScreen) continue;
+
         const ux = dx / dist;
         const uy = dy / dist;
         const angle = Math.atan2(uy, ux);
