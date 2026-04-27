@@ -64,6 +64,8 @@ let cloudSaveQueued = false;
 let cloudLastAutosaveAt = 0;
 let cloudLastAchievementSaveAt = 0;
 let cloudAchievementSaveTimer = null;
+let cloudDataHydrated = false;
+let cloudSavePendingAfterHydration = false;
 let cloudRunOutcomeSaved = false;
 let cloudStatusMessage = 'Cloud: not connected';
 let cloudSessionSyncPromise = null;
@@ -823,6 +825,10 @@ async function loadCloudData() {
 
 async function queueCloudSave(reason = 'manual') {
     if (!supabaseClient || !cloudUser) return;
+    if (!cloudDataHydrated) {
+        cloudSavePendingAfterHydration = true;
+        return;
+    }
     if (cloudSaveInFlight) {
         cloudSaveQueued = true;
         return;
@@ -947,11 +953,18 @@ async function handleSignedIn(session) {
 
     cloudSessionSyncUserId = user.id;
     cloudSessionSyncPromise = (async () => {
+        cloudDataHydrated = false;
+        cloudSavePendingAfterHydration = false;
         cloudUser = user;
 
         try {
             await ensureProfile();
             await loadCloudData();
+            cloudDataHydrated = true;
+            if (cloudSavePendingAfterHydration) {
+                cloudSavePendingAfterHydration = false;
+                queueCloudSave('post-sync');
+            }
             setCloudStatus('Cloud: synced');
         } catch (err) {
             setCloudStatus(`Cloud sync failed: ${err.message}`);
@@ -970,6 +983,8 @@ function handleSignedOut() {
     cloudSaveRowId = null;
     cloudProfileSyncBlocked = false;
     cloudProfileWarningShown = false;
+    cloudDataHydrated = false;
+    cloudSavePendingAfterHydration = false;
     if (cloudAchievementSaveTimer !== null) {
         clearTimeout(cloudAchievementSaveTimer);
         cloudAchievementSaveTimer = null;
@@ -1221,13 +1236,24 @@ function initializeCloudAuth() {
             tryLogin();
         }
     });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden' && cloudUser && supabaseClient) {
+            queueCloudSave('lifecycle-hidden');
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (cloudUser && supabaseClient) {
+            queueCloudSave('lifecycle-unload');
+        }
+    });
 }
 
 function tickCloudAutosave() {
     if (!cloudUser || !supabaseClient) return;
     const now = Date.now();
     if (now - cloudLastAutosaveAt < CLOUD_AUTOSAVE_INTERVAL_MS) return;
-    if (gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'win') return;
     queueCloudSave('autosave');
 }
 
