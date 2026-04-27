@@ -5,6 +5,54 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_FbxRRzWOsFiG1Oh_Q2YF7g_WfgFswvD
 const CLOUD_AUTH_EMAIL_DOMAIN = 'players.castanzakannon.local';
 const CLOUD_AUTOSAVE_INTERVAL_MS = 30000;
 const CHARACTER_UNLOCK_WAVE_REQUIREMENTS = [0, 5, 10, 15, 20];
+const ACHIEVEMENT_DEFINITIONS = [
+    { id: 'kills_25', title: 'First Bloodline', description: 'Defeat 25 enemies.', stat: 'totalKills', target: 25 },
+    { id: 'kills_50', title: 'Merciless', description: 'Defeat 50 enemies.', stat: 'totalKills', target: 50 },
+    { id: 'kills_100', title: 'Centurion', description: 'Defeat 100 enemies.', stat: 'totalKills', target: 100 },
+    { id: 'kills_250', title: 'War Machine', description: 'Defeat 250 enemies.', stat: 'totalKills', target: 250 },
+    { id: 'kills_500', title: 'Extinction Protocol', description: 'Defeat 500 enemies.', stat: 'totalKills', target: 500 },
+    { id: 'kills_1000', title: 'Grim Reaper', description: 'Defeat 1000 enemies.', stat: 'totalKills', target: 1000 },
+    { id: 'kills_2500', title: 'Planet Cleaner', description: 'Defeat 2500 enemies.', stat: 'totalKills', target: 2500 },
+    { id: 'void_boss_1', title: 'Voidbreaker', description: 'Defeat the Void Totem boss.', stat: 'voidBossKills', target: 1 },
+    { id: 'void_boss_3', title: 'Void Hunter', description: 'Defeat 3 Void Totem bosses.', stat: 'voidBossKills', target: 3 },
+    { id: 'void_boss_7', title: 'Void Nemesis', description: 'Defeat 7 Void Totem bosses.', stat: 'voidBossKills', target: 7 },
+    { id: 'necro_boss_1', title: 'Bone Silence', description: 'Defeat the Necro Totem boss.', stat: 'necromancerBossKills', target: 1 },
+    { id: 'necro_boss_3', title: 'Crypt Sweeper', description: 'Defeat 3 Necro Totem bosses.', stat: 'necromancerBossKills', target: 3 },
+    { id: 'necro_boss_7', title: 'Lich Eraser', description: 'Defeat 7 Necro Totem bosses.', stat: 'necromancerBossKills', target: 7 },
+    { id: 'wins_1', title: 'Champion', description: 'Win one full run.', stat: 'wins', target: 1 },
+    { id: 'wins_3', title: 'Seasoned Victor', description: 'Win 3 runs.', stat: 'wins', target: 3 },
+    { id: 'wins_10', title: 'Arena Conqueror', description: 'Win 10 runs.', stat: 'wins', target: 10 },
+    { id: 'runs_5', title: 'Field Tested', description: 'Complete 5 runs (win or lose).', stat: 'totalRuns', target: 5 },
+    { id: 'runs_20', title: 'Battle Hardened', description: 'Complete 20 runs (win or lose).', stat: 'totalRuns', target: 20 },
+    { id: 'defeats_5', title: 'Never Quit', description: 'Keep fighting through 5 defeats.', stat: 'defeats', target: 5 },
+    { id: 'wave_10', title: 'Wave Rider', description: 'Reach wave 10.', stat: 'bestWave', target: 10 },
+    { id: 'wave_20', title: 'Wave Crusher', description: 'Reach wave 20.', stat: 'bestWave', target: 20 },
+    { id: 'wave_30', title: 'Wave Emperor', description: 'Reach wave 30.', stat: 'bestWave', target: 30 },
+    { id: 'arena_3', title: 'Tier Climber', description: 'Reach Arena Level 3.', stat: 'bestArenaLevel', target: 3 },
+    { id: 'arena_5', title: 'Top Floor', description: 'Reach Arena Level 5.', stat: 'bestArenaLevel', target: 5 },
+    { id: 'level_10', title: 'Ascendant', description: 'Reach player level 10 in a run.', stat: 'bestPlayerLevel', target: 10 },
+    { id: 'level_20', title: 'Overclocked', description: 'Reach player level 20 in a run.', stat: 'bestPlayerLevel', target: 20 },
+    { id: 'speed_10', title: 'Velocity', description: 'Get at least +10% speed in a run.', stat: 'bestSpeedBonusPct', target: 10 },
+    { id: 'dash_extra', title: 'Blink Upgrade', description: 'Find an extra dash charge in a run.', stat: 'hasExtraDashPickup', target: 1 },
+    { id: 'lifesteal_found', title: 'Vampiric', description: 'Get lifesteal in a run.', stat: 'hasLifestealPickup', target: 1 },
+    { id: 'playtime_30m', title: 'On Patrol', description: 'Play for 30 total minutes.', stat: 'totalPlaySeconds', target: 1800 },
+    { id: 'playtime_2h', title: 'Shift Lead', description: 'Play for 2 total hours.', stat: 'totalPlaySeconds', target: 7200 },
+];
+
+const CHARACTER_SECONDARY_UNLOCK_RULES = {
+    chunkster: {
+        requiresLifesteal: true,
+    },
+    gambit: {
+        minPlayerLevel: 10,
+    },
+    dasher: {
+        requiresExtraDash: true,
+    },
+    ghost_runner: {
+        minSpeedBonusPct: 10,
+    },
+};
 
 let supabaseClient = null;
 let cloudAuthReady = false;
@@ -28,6 +76,25 @@ const cloudUnlockState = {
     bestWave: 1,
     bestArenaLevel: 1,
     keys: new Set(['character_1']),
+};
+
+const cloudUnlockProgressState = {
+    bestPlayerLevel: 1,
+    hasLifestealPickup: false,
+    hasExtraDashPickup: false,
+    bestSpeedBonusPct: 0,
+};
+
+const cloudAchievementState = {
+    totalKills: 0,
+    voidBossKills: 0,
+    necromancerBossKills: 0,
+    wins: 0,
+    totalRuns: 0,
+    defeats: 0,
+    totalPlaySeconds: 0,
+    unlocked: new Set(),
+    pendingPopups: [],
 };
 
 const cloudAuthPanel = document.createElement('section');
@@ -83,10 +150,16 @@ cloudSaveButton.id = 'cloudSaveButton';
 cloudSaveButton.type = 'button';
 cloudSaveButton.textContent = 'Save Now';
 
+const cloudResetProgressButton = document.createElement('button');
+cloudResetProgressButton.id = 'cloudResetProgressButton';
+cloudResetProgressButton.type = 'button';
+cloudResetProgressButton.textContent = 'Reset Progress';
+
 cloudAuthButtonRow.appendChild(cloudSignupButton);
 cloudAuthButtonRow.appendChild(cloudLoginButton);
 cloudAuthButtonRow.appendChild(cloudLogoutButton);
 cloudAuthButtonRow.appendChild(cloudSaveButton);
+cloudAuthButtonRow.appendChild(cloudResetProgressButton);
 
 cloudAuthPanel.appendChild(cloudAuthTitle);
 cloudAuthPanel.appendChild(cloudAuthStatus);
@@ -149,6 +222,101 @@ function getAbsoluteWaveProgress() {
     return Math.max(1, (Math.max(1, level) - 1) * WAVES_PER_LEVEL + Math.max(1, wave));
 }
 
+function normalizeCharacterRuleKey(name) {
+    return String(name ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+}
+
+function getCharacterUnlockRule(index) {
+    const waveRequirement = CHARACTER_UNLOCK_WAVE_REQUIREMENTS[index] ?? 0;
+    const loadout = CHARACTER_LOADOUTS[index] ?? null;
+    const ruleKey = normalizeCharacterRuleKey(loadout?.name);
+    const secondary = CHARACTER_SECONDARY_UNLOCK_RULES[ruleKey] ?? null;
+    return {
+        waveRequirement,
+        secondary,
+    };
+}
+
+function isSecondaryUnlockRequirementMet(rule) {
+    if (!rule) return true;
+    if (rule.requiresLifesteal && !cloudUnlockProgressState.hasLifestealPickup) return false;
+    if (rule.requiresExtraDash && !cloudUnlockProgressState.hasExtraDashPickup) return false;
+    if ((rule.minPlayerLevel ?? 0) > cloudUnlockProgressState.bestPlayerLevel) return false;
+    if ((rule.minSpeedBonusPct ?? 0) > cloudUnlockProgressState.bestSpeedBonusPct) return false;
+    return true;
+}
+
+function getSecondaryUnlockRequirementText(rule) {
+    if (!rule) return [];
+    const parts = [];
+    if (rule.requiresLifesteal) parts.push('Get lifesteal');
+    if (rule.requiresExtraDash) parts.push('Find an extra dash charge');
+    if ((rule.minPlayerLevel ?? 0) > 0) parts.push(`Reach player level ${rule.minPlayerLevel}`);
+    if ((rule.minSpeedBonusPct ?? 0) > 0) parts.push(`Get +${rule.minSpeedBonusPct}% speed`);
+    return parts;
+}
+
+function getCurrentSpeedBonusPercent() {
+    const baseSpeed = Number(getSelectedCharacter()?.speed ?? 0);
+    const currentSpeed = Number(player?.speed ?? 0);
+    if (baseSpeed <= 0 || currentSpeed <= 0) return 0;
+    return Math.max(0, Math.round(((currentSpeed / baseSpeed) - 1) * 100));
+}
+
+function updateUnlockProgressFromCurrentRun() {
+    if (!player) return false;
+    let changed = false;
+
+    const runLevel = Math.max(1, Number(player.level ?? 1) || 1);
+    if (runLevel > cloudUnlockProgressState.bestPlayerLevel) {
+        cloudUnlockProgressState.bestPlayerLevel = runLevel;
+        changed = true;
+    }
+
+    if (!cloudUnlockProgressState.hasLifestealPickup && (player.lifestealOnKill ?? 0) > 0.001) {
+        cloudUnlockProgressState.hasLifestealPickup = true;
+        changed = true;
+    }
+
+    const baseDashCharges = Math.max(1, Number(getSelectedCharacter()?.dashCharges ?? 1) || 1);
+    if (!cloudUnlockProgressState.hasExtraDashPickup && (player.dashMaxCharges ?? 1) > baseDashCharges) {
+        cloudUnlockProgressState.hasExtraDashPickup = true;
+        changed = true;
+    }
+
+    const speedBonusPct = getCurrentSpeedBonusPercent();
+    if (speedBonusPct > cloudUnlockProgressState.bestSpeedBonusPct) {
+        cloudUnlockProgressState.bestSpeedBonusPct = speedBonusPct;
+        changed = true;
+    }
+
+    return changed;
+}
+
+function serializeUnlockProgressState() {
+    return {
+        bestPlayerLevel: Math.max(1, Math.floor(Number(cloudUnlockProgressState.bestPlayerLevel ?? 1) || 1)),
+        hasLifestealPickup: !!cloudUnlockProgressState.hasLifestealPickup,
+        hasExtraDashPickup: !!cloudUnlockProgressState.hasExtraDashPickup,
+        bestSpeedBonusPct: Math.max(0, Math.floor(Number(cloudUnlockProgressState.bestSpeedBonusPct ?? 0) || 0)),
+    };
+}
+
+function applyLoadedUnlockProgress(raw) {
+    const data = raw && typeof raw === 'object' ? raw : {};
+    cloudUnlockProgressState.bestPlayerLevel = Math.max(1, Number(data.bestPlayerLevel ?? 1) || 1);
+    cloudUnlockProgressState.hasLifestealPickup = !!data.hasLifestealPickup;
+    cloudUnlockProgressState.hasExtraDashPickup = !!data.hasExtraDashPickup;
+    cloudUnlockProgressState.bestSpeedBonusPct = Math.max(0, Number(data.bestSpeedBonusPct ?? 0) || 0);
+}
+
+function resetUnlockProgressState() {
+    cloudUnlockProgressState.bestPlayerLevel = 1;
+    cloudUnlockProgressState.hasLifestealPickup = false;
+    cloudUnlockProgressState.hasExtraDashPickup = false;
+    cloudUnlockProgressState.bestSpeedBonusPct = 0;
+}
+
 function isCharacterUnlocked(index) {
     if (index <= 0) return true;
     const unlockKey = `character_${index + 1}`;
@@ -156,9 +324,31 @@ function isCharacterUnlocked(index) {
 }
 
 function getCharacterUnlockRequirementText(index) {
-    const waveRequirement = CHARACTER_UNLOCK_WAVE_REQUIREMENTS[index] ?? 0;
-    if (waveRequirement <= 0) return 'Starter';
-    return `Reach wave ${waveRequirement}`;
+    const { waveRequirement, secondary } = getCharacterUnlockRule(index);
+    const parts = [];
+    if (waveRequirement > 0) {
+        parts.push(`Reach wave ${waveRequirement}`);
+    }
+    parts.push(...getSecondaryUnlockRequirementText(secondary));
+    if (parts.length === 0) return 'Starter';
+    return parts.join(' + ');
+}
+
+function getCharacterUnlockRequirementLines(index, maxLines = 2) {
+    const text = getCharacterUnlockRequirementText(index);
+    const chunks = text.split(' + ').filter(Boolean);
+    if (chunks.length <= maxLines) return chunks;
+
+    const lines = [];
+    for (let i = 0; i < chunks.length; i++) {
+        if (i < maxLines - 1) {
+            lines.push(chunks[i]);
+            continue;
+        }
+        lines.push(chunks.slice(i).join(' + '));
+        break;
+    }
+    return lines;
 }
 
 function normalizeSelectedCharacter() {
@@ -173,9 +363,11 @@ function unlockCharactersFromProgress() {
     cloudUnlockState.keys.add('character_1');
 
     for (let i = 1; i < CHARACTER_UNLOCK_WAVE_REQUIREMENTS.length; i++) {
-        const waveRequirement = CHARACTER_UNLOCK_WAVE_REQUIREMENTS[i] ?? 0;
+        const { waveRequirement, secondary } = getCharacterUnlockRule(i);
         const unlockKey = `character_${i + 1}`;
-        if (cloudUnlockState.bestWave >= waveRequirement && !cloudUnlockState.keys.has(unlockKey)) {
+        const waveRequirementMet = cloudUnlockState.bestWave >= waveRequirement;
+        const secondaryRequirementMet = isSecondaryUnlockRequirementMet(secondary);
+        if (waveRequirementMet && secondaryRequirementMet && !cloudUnlockState.keys.has(unlockKey)) {
             cloudUnlockState.keys.add(unlockKey);
             newlyUnlocked.push(unlockKey);
         }
@@ -183,6 +375,166 @@ function unlockCharactersFromProgress() {
 
     normalizeSelectedCharacter();
     return newlyUnlocked;
+}
+
+function getAchievementProgressValue(def) {
+    let rawValue = cloudAchievementState?.[def.stat] ?? 0;
+    // Baseline values for these stats start at 1, but achievements should start at 0 progress.
+    if (def.stat === 'bestWave') rawValue = Math.max(0, (cloudUnlockState.bestWave ?? 1) - 1);
+    if (def.stat === 'bestArenaLevel') rawValue = Math.max(0, (cloudUnlockState.bestArenaLevel ?? 1) - 1);
+    if (def.stat === 'bestPlayerLevel') rawValue = Math.max(0, (cloudUnlockProgressState.bestPlayerLevel ?? 1) - 1);
+    if (def.stat === 'bestSpeedBonusPct') rawValue = cloudUnlockProgressState.bestSpeedBonusPct;
+    if (def.stat === 'hasExtraDashPickup') rawValue = cloudUnlockProgressState.hasExtraDashPickup ? 1 : 0;
+    if (def.stat === 'hasLifestealPickup') rawValue = cloudUnlockProgressState.hasLifestealPickup ? 1 : 0;
+    const value = Number(rawValue ?? 0);
+    return Math.max(0, Number.isNaN(value) ? 0 : value);
+}
+
+function evaluateAchievements({ queuePopup = false } = {}) {
+    const newlyUnlocked = [];
+    for (const def of ACHIEVEMENT_DEFINITIONS) {
+        const progress = getAchievementProgressValue(def);
+        if (progress < def.target) continue;
+        if (cloudAchievementState.unlocked.has(def.id)) continue;
+        cloudAchievementState.unlocked.add(def.id);
+        newlyUnlocked.push(def);
+    }
+
+    if (queuePopup && newlyUnlocked.length > 0) {
+        for (const def of newlyUnlocked) {
+            cloudAchievementState.pendingPopups.push({
+                title: def.title,
+                description: def.description,
+                expiresAt: Date.now() + 3000,
+            });
+        }
+    }
+
+    return newlyUnlocked;
+}
+
+function getAchievementEntries() {
+    return ACHIEVEMENT_DEFINITIONS.map(def => {
+        const current = getAchievementProgressValue(def);
+        const target = def.target;
+        const unlocked = cloudAchievementState.unlocked.has(def.id);
+        const ratio = target > 0 ? Math.min(1, current / target) : 1;
+        return {
+            id: def.id,
+            title: def.title,
+            detail: def.description,
+            current,
+            target,
+            ratio,
+            unlocked,
+            kind: 'achievement',
+            rarity: unlocked ? 'legendary' : 'common',
+        };
+    });
+}
+
+function serializeAchievementState() {
+    return {
+        totalKills: Math.max(0, Math.floor(cloudAchievementState.totalKills ?? 0)),
+        voidBossKills: Math.max(0, Math.floor(cloudAchievementState.voidBossKills ?? 0)),
+        necromancerBossKills: Math.max(0, Math.floor(cloudAchievementState.necromancerBossKills ?? 0)),
+        wins: Math.max(0, Math.floor(cloudAchievementState.wins ?? 0)),
+        totalRuns: Math.max(0, Math.floor(cloudAchievementState.totalRuns ?? 0)),
+        defeats: Math.max(0, Math.floor(cloudAchievementState.defeats ?? 0)),
+        totalPlaySeconds: Math.max(0, Math.floor(cloudAchievementState.totalPlaySeconds ?? 0)),
+        unlocked: Array.from(cloudAchievementState.unlocked),
+    };
+}
+
+function applyLoadedAchievements(raw) {
+    const data = raw && typeof raw === 'object' ? raw : {};
+    cloudAchievementState.totalKills = Math.max(0, Number(data.totalKills ?? 0) || 0);
+    cloudAchievementState.voidBossKills = Math.max(0, Number(data.voidBossKills ?? 0) || 0);
+    cloudAchievementState.necromancerBossKills = Math.max(0, Number(data.necromancerBossKills ?? 0) || 0);
+    cloudAchievementState.wins = Math.max(0, Number(data.wins ?? 0) || 0);
+    cloudAchievementState.totalRuns = Math.max(0, Number(data.totalRuns ?? 0) || 0);
+    cloudAchievementState.defeats = Math.max(0, Number(data.defeats ?? 0) || 0);
+    cloudAchievementState.totalPlaySeconds = Math.max(0, Number(data.totalPlaySeconds ?? 0) || 0);
+
+    cloudAchievementState.unlocked = new Set();
+    for (const id of data.unlocked ?? []) {
+        if (typeof id === 'string') cloudAchievementState.unlocked.add(id);
+    }
+
+    evaluateAchievements({ queuePopup: false });
+}
+
+function resetAchievementProgress() {
+    cloudAchievementState.totalKills = 0;
+    cloudAchievementState.voidBossKills = 0;
+    cloudAchievementState.necromancerBossKills = 0;
+    cloudAchievementState.wins = 0;
+    cloudAchievementState.totalRuns = 0;
+    cloudAchievementState.defeats = 0;
+    cloudAchievementState.totalPlaySeconds = 0;
+    cloudAchievementState.unlocked = new Set();
+    cloudAchievementState.pendingPopups = [];
+}
+
+function registerAchievementEnemyKill(amount = 1) {
+    const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+    if (safeAmount <= 0) return;
+    cloudAchievementState.totalKills += safeAmount;
+    evaluateAchievements({ queuePopup: true });
+}
+
+function registerAchievementBossKill(type) {
+    if (type === 'void') {
+        cloudAchievementState.voidBossKills += 1;
+    } else if (type === 'necromancer') {
+        cloudAchievementState.necromancerBossKills += 1;
+    }
+    evaluateAchievements({ queuePopup: true });
+}
+
+function registerAchievementRunOutcome(result) {
+    cloudAchievementState.totalRuns += 1;
+    cloudAchievementState.totalPlaySeconds += Math.max(0, Math.round((elapsedGameMs ?? 0) / 1000));
+    if (result === 'win') {
+        cloudAchievementState.wins += 1;
+    } else if (result === 'defeat') {
+        cloudAchievementState.defeats += 1;
+    }
+    evaluateAchievements({ queuePopup: true });
+}
+
+function drawAchievementPopup() {
+    if (typeof ctx === 'undefined') return;
+    const now = Date.now();
+    cloudAchievementState.pendingPopups = cloudAchievementState.pendingPopups.filter(p => p.expiresAt > now);
+    if (cloudAchievementState.pendingPopups.length === 0) return;
+
+    const popup = cloudAchievementState.pendingPopups[0];
+    const width = Math.min(360, canvas.width - 28);
+    const height = 74;
+    const x = canvas.width - width - 14;
+    const y = 14;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.84)';
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeStyle = 'rgba(255,255,255,0.66)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    ctx.fillStyle = '#ffe066';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 15px Arial';
+    ctx.fillText('Achievement Unlocked', x + 12, y + 24);
+
+    ctx.fillStyle = '#f1f1f1';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(popup.title, x + 12, y + 44);
+
+    ctx.fillStyle = '#ccd3da';
+    ctx.font = '12px Arial';
+    ctx.fillText(popup.description, x + 12, y + 62);
+    ctx.restore();
 }
 
 async function persistUnlockKey(unlockKey) {
@@ -221,6 +573,8 @@ function serializeCloudSavePayload() {
         playerLevel: typeof player?.level === 'number' ? player.level : 1,
         playerXp: typeof player?.xp === 'number' ? player.xp : 0,
         lastLevelDied: typeof lastLevelDied === 'number' ? lastLevelDied : 1,
+        unlockProgress: serializeUnlockProgressState(),
+        achievements: serializeAchievementState(),
     };
 
     const progression = {
@@ -251,6 +605,7 @@ function updateCloudProgressMilestones() {
     const absoluteWave = getAbsoluteWaveProgress();
     const prevBestWave = cloudUnlockState.bestWave;
     const prevBestArena = cloudUnlockState.bestArenaLevel;
+    const unlockProgressChanged = updateUnlockProgressFromCurrentRun();
 
     cloudUnlockState.bestWave = Math.max(cloudUnlockState.bestWave, absoluteWave);
     cloudUnlockState.bestArenaLevel = Math.max(cloudUnlockState.bestArenaLevel, currentArenaLevel);
@@ -260,8 +615,12 @@ function updateCloudProgressMilestones() {
         persistUnlockKeys(newlyUnlocked);
     }
 
-    if ((cloudUnlockState.bestWave !== prevBestWave || cloudUnlockState.bestArenaLevel !== prevBestArena) && cloudUser) {
+    if ((cloudUnlockState.bestWave !== prevBestWave || cloudUnlockState.bestArenaLevel !== prevBestArena || unlockProgressChanged) && cloudUser) {
         queueCloudSave('milestone');
+    }
+
+    if (unlockProgressChanged || cloudUnlockState.bestWave !== prevBestWave || cloudUnlockState.bestArenaLevel !== prevBestArena) {
+        evaluateAchievements({ queuePopup: true });
     }
 }
 
@@ -289,6 +648,7 @@ function syncAuthPanel() {
     cloudLoginButton.disabled = signedIn || !cloudAuthReady;
     cloudLogoutButton.disabled = !signedIn || !cloudAuthReady;
     cloudSaveButton.disabled = !signedIn || !cloudAuthReady;
+    cloudResetProgressButton.disabled = !signedIn || !cloudAuthReady;
 
     cloudDisplayNameInput.disabled = !signedIn;
 
@@ -376,6 +736,14 @@ function applyLoadedStats(stats) {
         selectedCharacter = Math.max(0, Math.min(CHARACTER_LOADOUTS.length - 1, stats.selectedCharacter));
     }
 
+    if (stats.unlockProgress) {
+        applyLoadedUnlockProgress(stats.unlockProgress);
+    }
+
+    if (stats.achievements) {
+        applyLoadedAchievements(stats.achievements);
+    }
+
     normalizeSelectedCharacter();
 }
 
@@ -421,13 +789,13 @@ async function loadCloudData() {
         cloudUnlockState.bestArenaLevel = Math.max(1, Number.isNaN(savedBestArena) ? 1 : savedBestArena);
     }
 
+    if (saveRow?.settings) applyLoadedSettings(saveRow.settings);
+    if (saveRow?.stats) applyLoadedStats(saveRow.stats);
+
     const newlyUnlocked = unlockCharactersFromProgress();
     if (newlyUnlocked.length > 0) {
         await persistUnlockKeys(newlyUnlocked);
     }
-
-    if (saveRow?.settings) applyLoadedSettings(saveRow.settings);
-    if (saveRow?.stats) applyLoadedStats(saveRow.stats);
 }
 
 async function queueCloudSave(reason = 'manual') {
@@ -523,6 +891,7 @@ async function registerCloudRunOutcome(result) {
     cloudRunOutcomeSaved = true;
 
     updateCloudProgressMilestones();
+    registerAchievementRunOutcome(result);
 
     if (!supabaseClient || !cloudUser) return;
 
@@ -581,8 +950,64 @@ function handleSignedOut() {
     cloudUnlockState.bestWave = 1;
     cloudUnlockState.bestArenaLevel = 1;
     cloudUnlockState.keys = new Set(['character_1']);
+    resetUnlockProgressState();
+    resetAchievementProgress();
     normalizeSelectedCharacter();
     setCloudStatus('Cloud: signed out');
+}
+
+async function tryResetCloudProgress() {
+    if (!supabaseClient || !cloudUser) {
+        setCloudStatus('Login required before reset');
+        return;
+    }
+
+    if (gameState !== 'menu' && gameState !== 'gameOver' && gameState !== 'win') {
+        setCloudStatus('Reset available only in menu/game over/win screens');
+        return;
+    }
+
+    const confirmed = window.confirm('Reset all cloud progress for this account? This cannot be undone.');
+    if (!confirmed) return;
+
+    setCloudStatus('Resetting cloud progress...');
+
+    try {
+        const userId = cloudUser.id;
+
+        const { error: unlockError } = await withCloudTimeout(
+            supabaseClient.from('unlocks').delete().eq('user_id', userId),
+            'unlock reset',
+        );
+        if (unlockError) throw unlockError;
+
+        const { error: saveError } = await withCloudTimeout(
+            supabaseClient.from('saves').delete().eq('user_id', userId),
+            'save reset',
+        );
+        if (saveError) throw saveError;
+
+        const { error: historyError } = await withCloudTimeout(
+            supabaseClient.from('run_history').delete().eq('user_id', userId),
+            'history reset',
+        );
+        if (historyError) throw historyError;
+
+        cloudSaveRowId = null;
+        cloudUnlockState.bestWave = 1;
+        cloudUnlockState.bestArenaLevel = 1;
+        cloudUnlockState.keys = new Set(['character_1']);
+        resetUnlockProgressState();
+        selectedCharacter = 0;
+        lastLevelDied = 1;
+        resetAchievementProgress();
+        normalizeSelectedCharacter();
+
+        await queueCloudSave('reset');
+        setCloudStatus('Cloud: progress reset complete');
+    } catch (err) {
+        setCloudStatus(`Reset failed: ${String(err?.message ?? 'unknown error')}`);
+    }
 }
 
 async function trySignup() {
@@ -747,6 +1172,10 @@ function initializeCloudAuth() {
         await queueCloudSave('manual');
     });
 
+    cloudResetProgressButton.addEventListener('click', async () => {
+        await tryResetCloudProgress();
+    });
+
     cloudDisplayNameInput.addEventListener('change', () => {
         if (cloudUser) {
             queueCloudSave('profile');
@@ -791,7 +1220,13 @@ window.syncAuthPanel = syncAuthPanel;
 window.updateCloudProgressMilestones = updateCloudProgressMilestones;
 window.isCharacterUnlocked = isCharacterUnlocked;
 window.getCharacterUnlockRequirementText = getCharacterUnlockRequirementText;
+window.getCharacterUnlockRequirementLines = getCharacterUnlockRequirementLines;
 window.registerCloudRunOutcome = registerCloudRunOutcome;
+window.registerAchievementEnemyKill = registerAchievementEnemyKill;
+window.registerAchievementBossKill = registerAchievementBossKill;
+window.getAchievementEntries = getAchievementEntries;
+window.drawAchievementPopup = drawAchievementPopup;
+window.resetAchievementProgress = resetAchievementProgress;
 window.resetCloudRunState = resetCloudRunState;
 window.queueCloudSave = queueCloudSave;
 window.tickCloudAutosave = tickCloudAutosave;

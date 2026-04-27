@@ -98,6 +98,7 @@ function gameLoop(timestamp) {
     drawUI();
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
+    if (typeof drawAchievementPopup === 'function') drawAchievementPopup();
     drawCursor();
 
     requestAnimationFrame(gameLoop);

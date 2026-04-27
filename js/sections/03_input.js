@@ -367,7 +367,7 @@ window.addEventListener('mousedown', e => {
         } else if (menuPage === 'encyclopedia') {
             const back = getEncyclopediaBackButton();
             const tabs = getEncyclopediaTabButtons();
-            const filterButton = getEncyclopediaFilterButtonAt(mouseX, mouseY);
+            const filterButton = encyclopediaTab === 'achievements' ? null : getEncyclopediaFilterButtonAt(mouseX, mouseY);
             if (filterButton) {
                 playUiClick();
                 encyclopediaRarityFilter = filterButton.rarity;
@@ -382,6 +382,10 @@ window.addEventListener('mousedown', e => {
             } else if (mouseX >= tabs.items.x && mouseX <= tabs.items.x + tabs.items.w && mouseY >= tabs.items.y && mouseY <= tabs.items.y + tabs.items.h) {
                 playUiClick();
                 encyclopediaTab = 'items';
+                encyclopediaScroll = 0;
+            } else if (mouseX >= tabs.achievements.x && mouseX <= tabs.achievements.x + tabs.achievements.w && mouseY >= tabs.achievements.y && mouseY <= tabs.achievements.y + tabs.achievements.h) {
+                playUiClick();
+                encyclopediaTab = 'achievements';
                 encyclopediaScroll = 0;
             }
         }
