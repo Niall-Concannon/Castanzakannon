@@ -35,5 +35,6 @@ function savePrevPositions() {
     for (const p of pickups)     { p.prevX = p.x; p.prevY = p.y; }
     for (const chest of chests)  { chest.prevX = chest.x; chest.prevY = chest.y; }
     if (voidTotem) { voidTotem.prevX = voidTotem.x; voidTotem.prevY = voidTotem.y; }
+    if (necromancerTotem) { necromancerTotem.prevX = necromancerTotem.x; necromancerTotem.prevY = necromancerTotem.y; }
 }
 

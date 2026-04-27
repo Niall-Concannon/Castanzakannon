@@ -113,7 +113,12 @@ function confirmWeaponAndStart() {
     voidEncounter.active = false;
     voidEncounter.state = 'inactive';
     voidEncounter.returnContext = null;
+    necromancerEncounter.completedLevels = {};
+    necromancerEncounter.active = false;
+    necromancerEncounter.state = 'inactive';
+    necromancerEncounter.returnContext = null;
     spawnVoidTotemForLevel();
+    spawnNecromancerTotemForLevel();
     spawnDevModePowerupLine();
     playRandomMusicTrack();
     startWave(1);
@@ -243,7 +248,7 @@ function getAliveEnemyCount() {
 
 // Update Wave Spawner keeps the game logic moving.
 function updateWaveSpawner() {
-    if (isVoidEncounterActive()) return;
+    if (isAnyBossEncounterActive()) return;
     if (waveSpawnDelayFrames > 0) {
         waveSpawnDelayFrames--;
         return;
@@ -263,7 +268,7 @@ function updateWaveSpawner() {
 
 // Update Wave Progression keeps the game logic moving.
 function updateWaveProgression() {
-    if (isVoidEncounterActive()) return;
+    if (isAnyBossEncounterActive()) return;
     const alive = getAliveEnemyCount();
     if (enemiesRemainingInWave > 0 || enemiesToSpawn > 0 || alive > 0) {
         waveClearTimer = 0;
@@ -307,6 +312,7 @@ function updateWaveProgression() {
 
     spawnDevModePowerupLine();
     spawnVoidTotemForLevel();
+    spawnNecromancerTotemForLevel();
 
     startWave(1);
 }

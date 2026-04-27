@@ -73,7 +73,7 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
     const variantStats = ENEMY_VARIANT_STATS[variant]?.[type] || spec;
     const hp = variantStats.hp ?? spec.hp;
     const speed = variantStats.speed ?? spec.speed;
-    const wallSize = (type === 'tank' || type === 'void_sniper') ? spec.size * 0.8 : spec.size;
+    const wallSize = (type === 'tank' || type === 'void_sniper' || type === 'necromancer') ? spec.size * 0.8 : spec.size;
     const spawnPos = getEnemySpawnPosition(wallSize);
 
     e.x = spawnPos.x;
@@ -112,6 +112,20 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
         e.voidWaveCooldown = 120;
         e.voidSkullCooldown = 90;
         e.voidDashCooldown = 92;
+    } else if (type === 'necromancer') {
+        e.projectileDamage = NECROMANCER_BOLT_PROJECTILE_DAMAGE + Math.max(0, currentArenaLevel - 1) * 2;
+        e.sniperChargeFrames = Math.max(12, SNIPER_CHARGE_FRAMES - currentArenaLevel * 4);
+        e.sniperCooldownFrames = Math.max(12, SNIPER_COOLDOWN_FRAMES - currentArenaLevel * 4);
+        e.necromancerSummonTimer = 0;
+        e.necromancerSummonCooldown = 132;
+        e.necromancerVolleyCooldown = 76;
+        e.necromancerOrbCooldown = 118;
+        e.necromancerRiftCooldown = 90;
+        e.necromancerMoveAngle = Math.random() * Math.PI * 2;
+        e.necromancerMoveTimer = 0;
+        e.necromancerBehavior = 'strafe';
+        e.necromancerBehaviorTimer = 0;
+        e.necromancerAuraCooldown = 95;
     } else {
         e.projectileDamage = 0;
         e.sniperChargeFrames = SNIPER_CHARGE_FRAMES;
@@ -219,6 +233,165 @@ function fireVoidBossProjectile(enemy, angle, projectileType, speed, size, damag
     });
 }
 
+// Returns the max number of one necromancer minion type allowed on screen.
+function getNecromancerMinionCap(type) {
+    const scaledBonus = Math.max(0, currentArenaLevel - 1) * 2;
+    if (type !== 'sniper' && type !== 'tank') return 0;
+    if (type === 'tank') return 7 + scaledBonus;
+    return 10 + scaledBonus;
+}
+
+// Counts alive necromancer minions for one type.
+function getAliveNecromancerMinionCount(type) {
+    let count = 0;
+    for (const e of enemies) {
+        if (!e.alive || !e.isNecromancerMinion) continue;
+        if (e.type !== type) continue;
+        count++;
+    }
+    return count;
+}
+
+// Counts all alive necromancer minions regardless of type.
+function getAliveNecromancerMinionTotal() {
+    let count = 0;
+    for (const e of enemies) {
+        if (!e.alive || !e.isNecromancerMinion) continue;
+        count++;
+    }
+    return count;
+}
+
+// Chooses a summon type that is still under its on-screen cap.
+function pickNecromancerSummonType() {
+    const totalCap = 15;
+    if (getAliveNecromancerMinionTotal() >= totalCap) return null;
+
+    const summonWeights = {
+        sniper: 1,
+        tank: 0.45,
+    };
+    const summonTypes = Object.keys(summonWeights);
+    const available = summonTypes.filter(type => getAliveNecromancerMinionCount(type) < getNecromancerMinionCap(type));
+    if (available.length === 0) return null;
+
+    let totalWeight = 0;
+    for (const type of available) totalWeight += summonWeights[type] ?? 0;
+    if (totalWeight <= 0) return available[Math.floor(Math.random() * available.length)] ?? null;
+
+    let roll = Math.random() * totalWeight;
+    for (const type of available) {
+        roll -= summonWeights[type] ?? 0;
+        if (roll <= 0) return type;
+    }
+
+    return available[available.length - 1] ?? null;
+}
+
+// Returns the active necromancer boss if one is alive.
+function getActiveNecromancerBoss() {
+    for (const e of enemies) {
+        if (!e.alive) continue;
+        if (e.isNecromancerBoss) return e;
+    }
+    return null;
+}
+
+// Builds a spread target around the player so necromancer snipers avoid clustering.
+function getNecromancerSniperSpreadTarget(sniper) {
+    let repelX = 0;
+    let repelY = 0;
+    for (const e of enemies) {
+        if (!e.alive || e === sniper) continue;
+        if (!e.isNecromancerMinion || e.type !== 'sniper') continue;
+        const dx = sniper.x - e.x;
+        const dy = sniper.y - e.y;
+        const d = Math.hypot(dx, dy);
+        if (d <= 0.001 || d > 360) continue;
+        const weight = (360 - d) / 360;
+        repelX += (dx / d) * weight;
+        repelY += (dy / d) * weight;
+    }
+
+    const toPlayer = Math.atan2(player.y - sniper.y, player.x - sniper.x);
+    const sideBias = (sniper.orbitDir ?? (Math.random() < 0.5 ? -1 : 1)) * (Math.PI * 0.55);
+    const spreadAngle = toPlayer + sideBias;
+    const baseX = player.x + Math.cos(spreadAngle) * 430;
+    const baseY = player.y + Math.sin(spreadAngle) * 430;
+
+    return {
+        x: baseX + repelX * 260,
+        y: baseY + repelY * 260,
+    };
+}
+
+// Returns an orbit target around the active necromancer boss for tank minions.
+function getNecromancerTankOrbitTarget(tank, boss) {
+    if (tank.orbitAngle === undefined) tank.orbitAngle = Math.random() * Math.PI * 2;
+    if (tank.orbitDir === undefined) tank.orbitDir = Math.random() < 0.5 ? -1 : 1;
+    if (tank.orbitRadius === undefined) tank.orbitRadius = 165 + Math.random() * 85;
+
+    tank.orbitAngle += tank.orbitDir * (0.075 + currentArenaLevel * 0.009);
+    tank.orbitRadius = Math.max(145, Math.min(280, tank.orbitRadius));
+
+    const frontAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
+    const frontArcHalf = 1.15;
+    const frontOffset = Math.sin(tank.orbitAngle) * frontArcHalf;
+    const orbitAngle = frontAngle + frontOffset;
+
+    return {
+        x: boss.x + Math.cos(orbitAngle) * tank.orbitRadius,
+        y: boss.y + Math.sin(orbitAngle) * tank.orbitRadius,
+    };
+}
+
+// Spawns one encounter summon that does not drop XP.
+function spawnNecromancerSummon(centerX, centerY) {
+    const type = pickNecromancerSummonType();
+    if (!type) return false;
+    const summon = { alive: true };
+    recycleEnemy(summon, type);
+
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 80 + Math.random() * 80;
+    const sx = centerX + Math.cos(angle) * radius;
+    const sy = centerY + Math.sin(angle) * radius;
+    if (!wallCollision(sx, sy, summon.wallSize ?? summon.size)) {
+        summon.x = sx;
+        summon.y = sy;
+        summon.prevX = sx;
+        summon.prevY = sy;
+    }
+
+    summon.isVoidEncounterEnemy = true;
+    summon.isBossEncounterEnemy = false;
+    summon.isNecromancerMinion = true;
+    summon.necromancerMinionKind = type;
+    summon.noXpDrop = true;
+    if (type === 'tank') {
+        summon.size = Math.round(summon.size * 1.35);
+        summon.wallSize = Math.round(summon.wallSize * 1.3);
+        summon.hp = Math.max(8, Math.round(summon.hp * 2.6));
+    } else {
+        summon.hp = Math.max(3, Math.round(summon.hp * 0.8));
+    }
+    summon.maxHp = summon.hp;
+    summon.speed *= type === 'tank' ? 1.9 : 1.08;
+
+    if (type === 'tank' && wallCollision(summon.x, summon.y, summon.wallSize ?? summon.size)) {
+        const safeSpot = findNearestFreePosition(summon.x, summon.y, summon.wallSize ?? summon.size, 36);
+        if (safeSpot) {
+            summon.x = safeSpot.x;
+            summon.y = safeSpot.y;
+            summon.prevX = safeSpot.x;
+            summon.prevY = safeSpot.y;
+        }
+    }
+
+    enemies.push(summon);
+    return true;
+}
+
 // Updates movement targeting and enemy state each frame.
 function updateEnemies() {
 
@@ -275,6 +448,17 @@ function updateEnemies() {
         const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
         let speedMult = distMult * sanSlowMult;
         let shouldMove = true;
+
+        if (e.isNecromancerMinion && e.type === 'tank') {
+            const boss = getActiveNecromancerBoss();
+            if (boss) {
+                const target = getNecromancerTankOrbitTarget(e, boss);
+                tx = target.x;
+                ty = target.y;
+                shouldMove = true;
+                speedMult = 1.45 * sanSlowMult;
+            }
+        }
 
         if (e.type === 'void_sniper') {
             if (e.shootAnimFrames > 0) e.shootAnimFrames--;
@@ -436,9 +620,217 @@ function updateEnemies() {
                     e.chargeFrames = 0;
                 }
             }
+        } else if (e.type === 'necromancer') {
+            if (e.shootAnimFrames > 0) e.shootAnimFrames--;
+            if (e.cooldownFrames > 0) e.cooldownFrames--;
+            if (e.necromancerSummonCooldown > 0) e.necromancerSummonCooldown--;
+            if (e.necromancerVolleyCooldown > 0) e.necromancerVolleyCooldown--;
+            if (e.necromancerOrbCooldown > 0) e.necromancerOrbCooldown--;
+            if (e.necromancerRiftCooldown > 0) e.necromancerRiftCooldown--;
+
+            if (e.necromancerBehaviorTimer === undefined) e.necromancerBehaviorTimer = 0;
+            if (!e.necromancerBehavior) e.necromancerBehavior = 'strafe';
+            if (e.necromancerAuraCooldown === undefined) e.necromancerAuraCooldown = 95;
+
+            const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.75);
+            const idealMin = 220;
+            const idealMax = 780;
+
+            if (e.necromancerAuraCooldown > 0) {
+                e.necromancerAuraCooldown--;
+            } else {
+                const auraRadius = 230 + currentArenaLevel * 18;
+                const auraHeal = Math.max(1, Math.floor(currentArenaLevel * 0.6));
+                for (const ally of enemies) {
+                    if (!ally.alive) continue;
+                    if (ally === e || !ally.isNecromancerMinion) continue;
+                    const distToAlly = Math.hypot(ally.x - e.x, ally.y - e.y);
+                    if (distToAlly > auraRadius) continue;
+                    ally.hp = Math.min(ally.maxHp, ally.hp + auraHeal);
+                    ally.hpBarTimer = Math.max(ally.hpBarTimer ?? 0, 25);
+                }
+                e.hpBarTimer = Math.max(e.hpBarTimer ?? 0, 25);
+                e.necromancerAuraCooldown = Math.max(70, 108 - currentArenaLevel * 4);
+            }
+
+            e.necromancerMoveTimer = (e.necromancerMoveTimer ?? 0) + 1;
+            if (e.necromancerMoveTimer >= 28) {
+                e.necromancerMoveTimer = 0;
+                const toward = Math.atan2(player.y - e.y, player.x - e.x);
+                const wobble = (Math.random() - 0.5) * 1.1;
+                e.necromancerMoveAngle = toward + Math.PI * 0.5 + wobble;
+            }
+
+            e.necromancerBehaviorTimer = (e.necromancerBehaviorTimer ?? 0) - 1;
+            if (e.necromancerBehaviorTimer <= 0) {
+                const modeRoll = Math.random();
+                if (modeRoll < 0.36) e.necromancerBehavior = 'retreat';
+                else if (modeRoll < 0.72) e.necromancerBehavior = 'chase';
+                else e.necromancerBehavior = 'strafe';
+                e.necromancerBehaviorTimer = 40 + Math.floor(Math.random() * 40);
+            }
+
+            if (distToPlayer < idealMin) {
+                tx = e.x - (player.x - e.x) * 0.85;
+                ty = e.y - (player.y - e.y) * 0.85;
+                shouldMove = true;
+                speedMult = 1.92 * sanSlowMult;
+                e.chargeFrames = 0;
+            } else if (distToPlayer > idealMax || !hasSight) {
+                tx = player.x + Math.cos(e.necromancerMoveAngle ?? 0) * 120;
+                ty = player.y + Math.sin(e.necromancerMoveAngle ?? 0) * 120;
+                shouldMove = true;
+                speedMult = 1.88 * sanSlowMult;
+                e.chargeFrames = 0;
+            } else {
+                const toward = Math.atan2(player.y - e.y, player.x - e.x);
+                if (e.necromancerBehavior === 'retreat') {
+                    tx = e.x - Math.cos(toward) * 210;
+                    ty = e.y - Math.sin(toward) * 210;
+                    speedMult = 1.74 * sanSlowMult;
+                } else if (e.necromancerBehavior === 'chase') {
+                    tx = player.x;
+                    ty = player.y;
+                    speedMult = 1.68 * sanSlowMult;
+                } else {
+                    tx = player.x + Math.cos(e.necromancerMoveAngle ?? 0) * 170;
+                    ty = player.y + Math.sin(e.necromancerMoveAngle ?? 0) * 170;
+                    speedMult = 1.48 * sanSlowMult;
+                }
+                shouldMove = true;
+            }
+
+            if (hasSight && e.cooldownFrames <= 0) {
+                e.chargeFrames++;
+                const levelScale = 1 + (Math.max(1, currentArenaLevel) - 1) * 0.1;
+                if (e.chargeFrames >= Math.max(4, e.sniperChargeFrames - 18)) {
+                    const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
+                    const roll = Math.random();
+
+                    if (e.necromancerSummonCooldown <= 0 && roll > 0.56) {
+                        const summonCount = Math.min(6 + currentArenaLevel, 12);
+                        for (let si = 0; si < summonCount; si++) {
+                            if (!spawnNecromancerSummon(e.x, e.y)) break;
+                        }
+                        e.necromancerSummonCooldown = Math.max(52, 96 - currentArenaLevel * 4);
+                        e.cooldownFrames = Math.max(7, e.sniperCooldownFrames - 14);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 3;
+                    } else if (e.necromancerOrbCooldown <= 0 && roll > 0.34) {
+                        const ring = 10;
+                        for (let oi = 0; oi < ring; oi++) {
+                            const angle = baseAngle + (Math.PI * 2 * oi) / ring;
+                            fireVoidBossProjectile(
+                                e,
+                                angle,
+                                'necro_orb',
+                                NECROMANCER_ORB_PROJECTILE_SPEED * (0.94 + currentArenaLevel * 0.05),
+                                NECROMANCER_ORB_PROJECTILE_SIZE,
+                                Math.round(NECROMANCER_ORB_PROJECTILE_DAMAGE * levelScale),
+                                NECROMANCER_ORB_PROJECTILE_FRAMES,
+                                necromancerBurstProjectileSprite,
+                                { homingStrength: 0.035 + currentArenaLevel * 0.004 }
+                            );
+                        }
+                        e.necromancerOrbCooldown = Math.max(28, 68 - currentArenaLevel * 5);
+                        e.cooldownFrames = Math.max(5, e.sniperCooldownFrames - 18);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 5;
+                    } else if (e.necromancerRiftCooldown <= 0 && roll > 0.12) {
+                        const lanes = 8;
+                        const spread = 1.2;
+                        for (let ri = 0; ri < lanes; ri++) {
+                            const t = lanes === 1 ? 0 : ri / (lanes - 1);
+                            const angle = baseAngle + (t - 0.5) * spread;
+                            fireVoidBossProjectile(
+                                e,
+                                angle,
+                                'necro_rift',
+                                NECROMANCER_RIFT_PROJECTILE_SPEED * levelScale,
+                                NECROMANCER_RIFT_PROJECTILE_SIZE,
+                                Math.round(NECROMANCER_RIFT_PROJECTILE_DAMAGE * levelScale),
+                                NECROMANCER_RIFT_PROJECTILE_FRAMES,
+                                necromancerSpikeProjectileSprite,
+                                { appliesDashLock: true }
+                            );
+                        }
+                        e.necromancerRiftCooldown = Math.max(24, 58 - currentArenaLevel * 4);
+                        e.cooldownFrames = Math.max(5, e.sniperCooldownFrames - 19);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 2;
+                    } else {
+                        const volley = 7;
+                        const spread = 0.92;
+                        for (let vi = 0; vi < volley; vi++) {
+                            const t = volley === 1 ? 0 : vi / (volley - 1);
+                            const angle = baseAngle + (t - 0.5) * spread;
+                            fireVoidBossProjectile(
+                                e,
+                                angle,
+                                'necro_bolt',
+                                NECROMANCER_BOLT_PROJECTILE_SPEED * levelScale,
+                                NECROMANCER_BOLT_PROJECTILE_SIZE,
+                                Math.round((e.projectileDamage ?? NECROMANCER_BOLT_PROJECTILE_DAMAGE) * levelScale),
+                                NECROMANCER_BOLT_PROJECTILE_FRAMES,
+                                necromancerProjectileSprite
+                            );
+                        }
+                        e.necromancerVolleyCooldown = Math.max(22, 48 - currentArenaLevel * 3);
+                        e.cooldownFrames = Math.max(4, e.sniperCooldownFrames - 20);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                    }
+
+                    e.chargeFrames = 0;
+                }
+            }
         } else if (e.type === 'sniper') {
             if (e.shootAnimFrames > 0) e.shootAnimFrames--;
             if (e.cooldownFrames > 0) e.cooldownFrames--;
+
+            if (e.isNecromancerMinion) {
+                const hasSight = hasLineOfSight(e.x, e.y, player.x, player.y, e.wallSize * 0.7);
+                const spreadTarget = getNecromancerSniperSpreadTarget(e);
+                const spreadDist = Math.hypot(e.x - spreadTarget.x, e.y - spreadTarget.y);
+
+                if (distToPlayer < SNIPER_MIN_RANGE * 0.72) {
+                    const retreatAngle = Math.atan2(e.y - player.y, e.x - player.x);
+                    tx = e.x + Math.cos(retreatAngle) * 210 + (spreadTarget.x - e.x) * 0.3;
+                    ty = e.y + Math.sin(retreatAngle) * 210 + (spreadTarget.y - e.y) * 0.3;
+                    shouldMove = true;
+                    speedMult = 1.62 * sanSlowMult;
+                    e.chargeFrames = 0;
+                } else {
+                    tx = spreadTarget.x;
+                    ty = spreadTarget.y;
+                    shouldMove = spreadDist > 24;
+                    speedMult = 1.24 * sanSlowMult;
+                }
+
+                if (hasSight && e.cooldownFrames <= 0 && distToPlayer <= SNIPER_RANGE * 1.35) {
+                    e.chargeFrames++;
+                    if (e.chargeFrames >= Math.max(10, e.sniperChargeFrames - 12)) {
+                        const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                        const sx = e.x + Math.cos(angle) * (e.size + 10);
+                        const sy = e.y + Math.sin(angle) * (e.size + 10);
+                        enemyProjectiles.push({
+                            x: sx,
+                            y: sy,
+                            prevX: sx,
+                            prevY: sy,
+                            velocityX: Math.cos(angle) * SNIPER_PROJECTILE_SPEED,
+                            velocityY: Math.sin(angle) * SNIPER_PROJECTILE_SPEED,
+                            size: SNIPER_PROJECTILE_SIZE,
+                            framesLeft: SNIPER_PROJECTILE_FRAMES,
+                            projectileType: 'sniper',
+                            damage: e.projectileDamage,
+                            sprite: getSniperProjectileSpriteForLevel(),
+                        });
+
+                        e.chargeFrames = 0;
+                        e.cooldownFrames = Math.max(14, e.sniperCooldownFrames - 8);
+                        e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES;
+                    }
+                } else if (!hasSight) {
+                    e.chargeFrames = 0;
+                }
+            } else {
 
             if (e.teleportCooldown === undefined) e.teleportCooldown = 180 + Math.floor(Math.random() * 120);
             if (!e.teleporting && e.teleportCooldown > 0) e.teleportCooldown--;
@@ -555,13 +947,14 @@ function updateEnemies() {
                     }
                 }
             }
+            }
         }
 
         const moved = !shouldMove || moveEnemyToward(e, tx, ty, e.speed * speedMult);
         if (!moved) {
             e.path = [];
             e.pathTimer = 0;
-            if (e.type === 'sniper' && !e.teleporting) {
+            if (e.type === 'sniper' && !e.isNecromancerMinion && !e.teleporting) {
                 e.stuckFrames = (e.stuckFrames ?? 0) + 1;
                 if (e.stuckFrames >= 45) {
                     e.teleporting = true;
@@ -570,8 +963,10 @@ function updateEnemies() {
                 } else if (distToPlayer < SNIPER_MIN_RANGE) {
                     e.fleeAngleBias = ((e.fleeAngleBias ?? 0) + (Math.random() < 0.5 ? 0.55 : -0.55));
                 }
+            } else if (e.type === 'necromancer') {
+                e.necromancerMoveAngle = (e.necromancerMoveAngle ?? 0) + (Math.random() < 0.5 ? 0.55 : -0.55);
             }
-        } else if (e.type === 'sniper') {
+        } else if (e.type === 'sniper' && !e.isNecromancerMinion) {
             e.stuckFrames = 0;
         }
 
@@ -595,7 +990,7 @@ function updateEnemies() {
         e.animTimer--;
         if (e.animTimer <= 0) {
             const frames = getEnemySpriteFrames(e.type);
-            const frameCount = (e.type === 'sniper' || e.type === 'void_sniper')
+            const frameCount = (e.type === 'sniper' || e.type === 'void_sniper' || e.type === 'necromancer')
                 ? Math.max(1, Math.min(3, frames.length))
                 : Math.max(1, frames.length);
             e.animFrame = (e.animFrame + 1) % frameCount;
@@ -713,18 +1108,49 @@ function drawEnemies() {
         const isSniperType = e.type === 'sniper';
         const drawScale = isSniperType ? 1.6 : 1.0;
         const sz  = e.size * 2 * drawScale;
-        const frames = (e.isBoss && !e.isVoidBoss) ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
-        const walkFrameCount = (e.type === 'sniper' || e.type === 'void_sniper')
+        const frames = e.isNecromancerMinion
+            ? (NECROMANCER_MINION_SPRITES[e.necromancerMinionKind] ?? getEnemySpriteFrames(e.type))
+            : e.isNecromancerBoss
+            ? NECROMANCER_BOSS_SPRITE_FRAMES
+            : (e.isBoss && !e.isVoidBoss) ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
+        const walkFrameCount = (e.type === 'sniper' || e.type === 'void_sniper' || e.type === 'necromancer')
             ? Math.max(1, Math.min(3, frames.length))
             : Math.max(1, frames.length);
         const walkSprite = frames[e.animFrame % walkFrameCount] ?? frames[0];
-        const sprite = (e.type === 'sniper' || e.type === 'void_sniper') && e.shootAnimFrames > 0 && frames.length >= 4
+        const sprite = (e.type === 'sniper' || e.type === 'void_sniper' || e.type === 'necromancer') && e.shootAnimFrames > 0 && frames.length >= 4
             ? frames[3]
             : walkSprite;
+
+        if (e.isNecromancerBoss) {
+            const auraRadius = 230 + currentArenaLevel * 18;
+            const auraCycle = ((e.necromancerAuraCooldown ?? 0) % 32) / 32;
+            const auraPulse = 1 + Math.sin(auraCycle * Math.PI * 2) * 0.05;
+            const auraDrawRadius = auraRadius * auraPulse;
+            const auraDrawSize = auraDrawRadius * 2;
+
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.42;
+            ctx.drawImage(
+                necromancerAuraOutlineSprite,
+                sc.x - auraDrawSize / 2,
+                sc.y - auraDrawSize / 2,
+                auraDrawSize,
+                auraDrawSize
+            );
+            ctx.strokeStyle = 'rgba(90,255,154,0.9)';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = 'rgba(60,255,120,0.45)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, auraDrawRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         ctx.save();
         ctx.globalAlpha = isSniperType && e.teleporting ? alpha * 0.3 : alpha;
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
+        else if (e.type === 'necromancer' || e.isNecromancerMinion) ctx.filter = 'hue-rotate(115deg) saturate(1.25)';
 
         const half = sz / 2;
         if (player.x < e.x) {

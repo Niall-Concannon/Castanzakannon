@@ -58,39 +58,60 @@ function drawChests() {
     }
 }
 
-// Draw Void Totem Objective keeps the game logic moving.
-function drawVoidTotemObjective() {
-    if (!hasActiveVoidTotem()) return;
+function drawBossTotemObjective(totem, sprite, label, auraColor, glowColor) {
+    if (!totem || !totem.active) return;
 
-    const tx = (voidTotem.prevX ?? voidTotem.x) + (voidTotem.x - (voidTotem.prevX ?? voidTotem.x)) * renderAlpha;
-    const ty = (voidTotem.prevY ?? voidTotem.y) + (voidTotem.y - (voidTotem.prevY ?? voidTotem.y)) * renderAlpha;
+    const tx = (totem.prevX ?? totem.x) + (totem.x - (totem.prevX ?? totem.x)) * renderAlpha;
+    const ty = (totem.prevY ?? totem.y) + (totem.y - (totem.prevY ?? totem.y)) * renderAlpha;
     const sc = toScreen(tx, ty);
     const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.12);
-    const drawRadius = voidTotem.size * 1.55;
+    const drawRadius = totem.size * 1.55;
 
     ctx.save();
     const aura = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.1 * pulse);
-    aura.addColorStop(0, 'rgba(148,90,255,0.34)');
-    aura.addColorStop(0.45, 'rgba(105,40,210,0.2)');
-    aura.addColorStop(1, 'rgba(30,0,65,0)');
+    aura.addColorStop(0, auraColor[0]);
+    aura.addColorStop(0.45, auraColor[1]);
+    aura.addColorStop(1, auraColor[2]);
     ctx.fillStyle = aura;
     ctx.beginPath();
     ctx.arc(sc.x, sc.y, drawRadius * 3.1 * pulse, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.shadowColor = '#9f66ff';
+    ctx.shadowColor = glowColor;
     ctx.shadowBlur = 18 * pulse;
-    ctx.drawImage(voidTotemSprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
+    ctx.drawImage(sprite, sc.x - drawRadius, sc.y - drawRadius, drawRadius * 2, drawRadius * 2);
     ctx.restore();
 
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = 'rgba(236,214,255,0.95)';
+    ctx.fillStyle = auraColor[3];
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 6;
-    ctx.fillText('VOID TOTEM', sc.x, sc.y - drawRadius - 12);
+    ctx.fillText(label, sc.x, sc.y - drawRadius - 12);
     ctx.restore();
+}
+
+// Draw Void Totem Objective keeps the game logic moving.
+function drawVoidTotemObjective() {
+    drawBossTotemObjective(
+        voidTotem,
+        voidTotemSprite,
+        'VOID TOTEM',
+        ['rgba(148,90,255,0.34)', 'rgba(105,40,210,0.2)', 'rgba(30,0,65,0)', 'rgba(236,214,255,0.95)'],
+        '#9f66ff'
+    );
+}
+
+// Draw Necromancer Totem Objective keeps the game logic moving.
+function drawNecromancerTotemObjective() {
+    drawBossTotemObjective(
+        necromancerTotem,
+        necromancerTotemSprite,
+        'NECRO TOTEM',
+        ['rgba(85,230,155,0.32)', 'rgba(50,180,110,0.18)', 'rgba(0,58,38,0)', 'rgba(215,255,230,0.95)'],
+        '#5df0a0'
+    );
 }
 
 // Update Pickups keeps the game logic moving.

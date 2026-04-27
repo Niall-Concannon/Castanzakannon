@@ -389,74 +389,111 @@ function drawAmmoPickupArrow() {
 
 // Draw Void Totem Arrow keeps the game logic moving.
 function drawVoidTotemArrow() {
-    if (!hasActiveVoidTotem()) return;
+    const targets = [];
+    if (hasActiveVoidTotem()) {
+        targets.push({
+            totem: voidTotem,
+            glow: '#b07cff',
+            arrow: '#c9a6ff',
+            text: '#ddc8ff',
+            label: 'VOID TOTEM',
+        });
+    }
+    if (hasActiveNecromancerTotem()) {
+        targets.push({
+            totem: necromancerTotem,
+            glow: '#5fe3ad',
+            arrow: '#8bf6cb',
+            text: '#c9ffe4',
+            label: 'NECRO TOTEM',
+        });
+    }
+    if (targets.length === 0) return;
 
     const playerX = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
     const playerY = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
-    const totemX = (voidTotem.prevX ?? voidTotem.x) + (voidTotem.x - (voidTotem.prevX ?? voidTotem.x)) * renderAlpha;
-    const totemY = (voidTotem.prevY ?? voidTotem.y) + (voidTotem.y - (voidTotem.prevY ?? voidTotem.y)) * renderAlpha;
-
     const playerScreen = toScreen(playerX, playerY);
-    const totemScreen = toScreen(totemX, totemY);
-    const dx = totemScreen.x - playerScreen.x;
-    const dy = totemScreen.y - playerScreen.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 0.001) return;
-
-    const ux = dx / dist;
-    const uy = dy / dist;
-    const angle = Math.atan2(uy, ux);
     const edgeRadius = Math.min(canvas.width, canvas.height) * 0.39;
     const margin = 44;
-
-    let ax = playerScreen.x + ux * edgeRadius;
-    let ay = playerScreen.y + uy * edgeRadius;
-    ax = Math.max(margin, Math.min(canvas.width - margin, ax));
-    ay = Math.max(margin, Math.min(canvas.height - margin, ay));
-
     const pulse = 0.8 + 0.2 * Math.sin(frameCount * 0.18);
 
-    ctx.save();
-    ctx.translate(ax, ay);
-    ctx.rotate(angle);
-    ctx.globalAlpha = 0.96;
-    ctx.shadowColor = '#b07cff';
-    ctx.shadowBlur = 16 * pulse;
+    for (const target of targets) {
+        const t = target.totem;
+        const totemX = (t.prevX ?? t.x) + (t.x - (t.prevX ?? t.x)) * renderAlpha;
+        const totemY = (t.prevY ?? t.y) + (t.y - (t.prevY ?? t.y)) * renderAlpha;
+        const totemScreen = toScreen(totemX, totemY);
+        const dx = totemScreen.x - playerScreen.x;
+        const dy = totemScreen.y - playerScreen.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.001) continue;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.54)';
-    ctx.beginPath();
-    ctx.arc(0, 0, 20, 0, Math.PI * 2);
-    ctx.fill();
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const angle = Math.atan2(uy, ux);
 
-    ctx.fillStyle = '#c9a6ff';
-    ctx.beginPath();
-    ctx.moveTo(19, 0);
-    ctx.lineTo(-11, -10);
-    ctx.lineTo(-11, 10);
-    ctx.closePath();
-    ctx.fill();
+        let ax = playerScreen.x + ux * edgeRadius;
+        let ay = playerScreen.y + uy * edgeRadius;
+        ax = Math.max(margin, Math.min(canvas.width - margin, ax));
+        ay = Math.max(margin, Math.min(canvas.height - margin, ay));
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-    ctx.restore();
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(angle);
+        ctx.globalAlpha = 0.96;
+        ctx.shadowColor = target.glow;
+        ctx.shadowBlur = 16 * pulse;
 
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = '#ddc8ff';
-    ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 6;
-    ctx.fillText('VOID TOTEM', ax, ay - 24);
-    ctx.restore();
+        ctx.fillStyle = 'rgba(0,0,0,0.54)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = target.arrow;
+        ctx.beginPath();
+        ctx.moveTo(19, 0);
+        ctx.lineTo(-11, -10);
+        ctx.lineTo(-11, 10);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 13px Arial';
+        ctx.fillStyle = target.text;
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(target.label, ax, ay - 24);
+        ctx.restore();
+    }
 }
 
 // Draw Void Totem Prompt keeps the game logic moving.
 function drawVoidTotemPrompt() {
-    if (!hasActiveVoidTotem() || gamePaused) return;
+    if (gamePaused) return;
 
-    const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
-    if (dist > player.size + VOID_BOSS_TRIGGER_RADIUS) return;
+    let promptText = '';
+    let stroke = 'rgba(195,150,255,0.85)';
+    let shadow = 'rgba(100,40,180,0.95)';
+    if (hasActiveVoidTotem()) {
+        const distVoid = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
+        if (distVoid <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
+            promptText = 'PRESS E TO ENTER VOID FIGHT';
+        }
+    }
+    if (!promptText && hasActiveNecromancerTotem()) {
+        const distNecro = Math.hypot(player.x - necromancerTotem.x, player.y - necromancerTotem.y);
+        if (distNecro <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
+            promptText = 'PRESS E TO ENTER NECROMANCER FIGHT';
+            stroke = 'rgba(130,230,180,0.85)';
+            shadow = 'rgba(35,130,88,0.95)';
+        }
+    }
+    if (!promptText) return;
 
     const pulse = 0.88 + 0.12 * Math.sin(frameCount * 0.2);
     const boxW = 360;
@@ -468,16 +505,16 @@ function drawVoidTotemPrompt() {
     ctx.globalAlpha = pulse;
     ctx.fillStyle = 'rgba(8,5,25,0.85)';
     ctx.fillRect(x, y, boxW, boxH);
-    ctx.strokeStyle = 'rgba(195,150,255,0.85)';
+    ctx.strokeStyle = stroke;
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, boxW, boxH);
 
     ctx.textAlign = 'center';
     ctx.font = 'bold 16px Arial';
     ctx.fillStyle = '#f1e5ff';
-    ctx.shadowColor = 'rgba(100,40,180,0.95)';
+    ctx.shadowColor = shadow;
     ctx.shadowBlur = 8;
-    ctx.fillText('PRESS E TO ENTER VOID FIGHT', canvas.width / 2, y + 28);
+    ctx.fillText(promptText, canvas.width / 2, y + 28);
     ctx.restore();
 }
 

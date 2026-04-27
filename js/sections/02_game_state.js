@@ -98,6 +98,13 @@ let voidEncounter = {
     completedLevels: {},
     returnContext: null,
 };
+let necromancerTotem = null;
+let necromancerEncounter = {
+    active: false,
+    state: 'inactive',
+    completedLevels: {},
+    returnContext: null,
+};
 
 
 
@@ -524,6 +531,17 @@ function clonePlain(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+// Finds a boss totem spawn point near the arena center.
+function pickBossTotemPosition(candidates, fallbackX, fallbackY) {
+    for (const pos of candidates) {
+        if (wallCollision(pos.x, pos.y, 20)) continue;
+        return pos;
+    }
+
+    const fallback = findNearestFreePosition(fallbackX, fallbackY, 20, 50);
+    return fallback ?? { x: fallbackX, y: fallbackY };
+}
+
 // Returns true when a level still needs its void totem fight.
 function shouldSpawnVoidTotemForLevel(level = currentArenaLevel) {
     return !(voidEncounter.completedLevels?.[level]);
@@ -544,20 +562,42 @@ function spawnVoidTotemForLevel() {
         { x: cx + TILE * 18, y: cy + TILE * 11 },
         { x: cx - TILE * 15, y: cy - TILE * 12 },
     ];
-
-    let chosen = null;
-    for (const pos of candidates) {
-        if (wallCollision(pos.x, pos.y, 20)) continue;
-        chosen = pos;
-        break;
-    }
-
-    if (!chosen) {
-        const fallback = findNearestFreePosition(cx + TILE * 14, cy + TILE * 10, 20, 50);
-        chosen = fallback ?? { x: cx + TILE * 8, y: cy + TILE * 8 };
-    }
+    const chosen = pickBossTotemPosition(candidates, cx + TILE * 14, cy + TILE * 10);
 
     voidTotem = {
+        x: chosen.x,
+        y: chosen.y,
+        prevX: chosen.x,
+        prevY: chosen.y,
+        size: 22,
+        level: currentArenaLevel,
+        active: true,
+    };
+}
+
+// Returns true when a level still needs its necromancer totem fight.
+function shouldSpawnNecromancerTotemForLevel(level = currentArenaLevel) {
+    return !(necromancerEncounter.completedLevels?.[level]);
+}
+
+// Spawns the necromancer objective for the active level.
+function spawnNecromancerTotemForLevel() {
+    if (!shouldSpawnNecromancerTotemForLevel(currentArenaLevel) || necromancerEncounter.active) {
+        necromancerTotem = null;
+        return;
+    }
+
+    const cx = Math.floor(MAP_W / 2) * TILE;
+    const cy = Math.floor(MAP_H / 2) * TILE;
+    const candidates = [
+        { x: cx + TILE * 14, y: cy + TILE * 12 },
+        { x: cx - TILE * 16, y: cy - TILE * 11 },
+        { x: cx + TILE * 17, y: cy - TILE * 9 },
+        { x: cx - TILE * 13, y: cy + TILE * 13 },
+    ];
+    const chosen = pickBossTotemPosition(candidates, cx - TILE * 14, cy - TILE * 10);
+
+    necromancerTotem = {
         x: chosen.x,
         y: chosen.y,
         prevX: chosen.x,
@@ -573,19 +613,39 @@ function hasActiveVoidTotem() {
     return !!voidTotem && voidTotem.active && !voidEncounter.active;
 }
 
+// Returns true if the necromancer totem can currently be activated.
+function hasActiveNecromancerTotem() {
+    return !!necromancerTotem && necromancerTotem.active && !necromancerEncounter.active;
+}
+
 // Attempts to trigger the encounter when the player presses E.
 function tryActivateVoidTotem() {
     if (gameState !== 'playing' || gamePaused) return false;
-    if (!hasActiveVoidTotem()) return false;
-    const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
-    if (dist > player.size + VOID_BOSS_TRIGGER_RADIUS) return false;
-    beginVoidEncounter();
-    return true;
+    if (hasActiveVoidTotem()) {
+        const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
+        if (dist <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
+            beginVoidEncounter();
+            return true;
+        }
+    }
+    if (hasActiveNecromancerTotem()) {
+        const dist = Math.hypot(player.x - necromancerTotem.x, player.y - necromancerTotem.y);
+        if (dist <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
+            beginNecromancerEncounter();
+            return true;
+        }
+    }
+    return false;
 }
 
 // Returns true when the run is currently in the isolated void encounter.
 function isVoidEncounterActive() {
     return !!voidEncounter.active;
+}
+
+// Returns true when the run is currently in any isolated boss encounter.
+function isAnyBossEncounterActive() {
+    return !!voidEncounter.active || !!necromancerEncounter.active;
 }
 
 // Starts the teleport flow into the void boss arena.
@@ -617,6 +677,8 @@ function beginVoidEncounter() {
         enemyProjectiles: clonePlain(enemyProjectiles),
         tumorTurrets: clonePlain(tumorTurrets),
         chests: clonePlain(chests),
+        voidTotem: clonePlain(voidTotem),
+        necromancerTotem: clonePlain(necromancerTotem),
     };
 
     enemies = [];
@@ -626,6 +688,7 @@ function beginVoidEncounter() {
     tumorTurrets = [];
     chests = [];
     voidTotem = null;
+    necromancerTotem = null;
 
     currentMapThemeId = 'special';
     currentMapTheme = MAP_THEME_SPRITES.special ?? MAP_THEME_SPRITES[1];
@@ -661,6 +724,7 @@ function spawnVoidBossEnemy() {
     enemy.isBoss = true;
     enemy.isVoidBoss = true;
     enemy.isVoidEncounterEnemy = true;
+    enemy.isBossEncounterEnemy = true;
     enemy.bossName = 'Void Sniper';
     enemy.voidAttackTimer = 0;
     enemy.voidBurstCooldown = 78;
@@ -711,6 +775,8 @@ function completeVoidEncounterVictory() {
     enemyProjectiles = ctxSaved.enemyProjectiles ?? [];
     tumorTurrets = ctxSaved.tumorTurrets ?? [];
     chests = ctxSaved.chests ?? [];
+    voidTotem = ctxSaved.voidTotem ?? null;
+    necromancerTotem = ctxSaved.necromancerTotem ?? null;
 
     player.x = ctxSaved.playerX;
     player.y = ctxSaved.playerY;
@@ -721,6 +787,148 @@ function completeVoidEncounterVictory() {
     voidEncounter.active = false;
     voidEncounter.state = 'inactive';
     voidTotem = null;
+    gamePaused = false;
+}
+
+// Starts the teleport flow into the necromancer boss arena.
+function beginNecromancerEncounter() {
+    if (necromancerEncounter.active) return;
+
+    necromancerEncounter.active = true;
+    necromancerEncounter.state = 'transition_in';
+    gamePaused = true;
+
+    necromancerEncounter.returnContext = {
+        playerX: player.x,
+        playerY: player.y,
+        mapTiles: clonePlain(mapTiles),
+        navGrid: clonePlain(navGrid),
+        levelDecorations: clonePlain(levelDecorations),
+        currentMapThemeId,
+        currentMapTheme,
+        currentArenaLevel,
+        currentWave,
+        enemiesRemainingInWave,
+        enemiesToSpawn,
+        waveClearTimer,
+        waveSpawnDelayFrames,
+        enemySpawnBudget,
+        enemies: clonePlain(enemies),
+        pickups: clonePlain(pickups),
+        projectiles: clonePlain(projectiles),
+        enemyProjectiles: clonePlain(enemyProjectiles),
+        tumorTurrets: clonePlain(tumorTurrets),
+        chests: clonePlain(chests),
+        voidTotem: clonePlain(voidTotem),
+        necromancerTotem: clonePlain(necromancerTotem),
+    };
+
+    enemies = [];
+    pickups = [];
+    projectiles = [];
+    enemyProjectiles = [];
+    tumorTurrets = [];
+    chests = [];
+    voidTotem = null;
+    necromancerTotem = null;
+
+    currentMapThemeId = 'necromancer';
+    currentMapTheme = MAP_THEME_SPRITES.necromancer ?? MAP_THEME_SPRITES.special ?? MAP_THEME_SPRITES[1];
+    generateNecromancerBossRoom();
+
+    player.x = (MAP_W * TILE) * 0.5;
+    player.y = (MAP_H * TILE) * 0.5 + TILE * 9;
+    player.prevX = player.x;
+    player.prevY = player.y;
+
+    spawnNecromancerBossEnemy();
+
+    necromancerEncounter.state = 'boss_fight';
+    gamePaused = false;
+}
+
+// Spawns the necromancer boss entity for the encounter.
+function spawnNecromancerBossEnemy() {
+    const enemy = { alive: true };
+    recycleEnemy(enemy, 'necromancer');
+    const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
+    const hpScale = [0, 1.16, 1.42, 1.76, 2.12, 2.56][level] ?? 1.16;
+    const speedScale = [0, 1.02, 1.08, 1.16, 1.24, 1.32][level] ?? 1.02;
+    enemy.x = (MAP_W * TILE) * 0.5;
+    enemy.y = (MAP_H * TILE) * 0.5 - TILE * 8;
+    enemy.prevX = enemy.x;
+    enemy.prevY = enemy.y;
+    enemy.hp = Math.round((enemy.hp ?? ENEMY_TYPES.necromancer.hp) * hpScale);
+    enemy.maxHp = enemy.hp;
+    enemy.speed = (enemy.speed ?? ENEMY_TYPES.necromancer.speed) * speedScale;
+    enemy.size = ENEMY_TYPES.necromancer.size;
+    enemy.wallSize = enemy.size * 0.84;
+    enemy.isBoss = true;
+    enemy.isNecromancerBoss = true;
+    enemy.isBossEncounterEnemy = true;
+    enemy.bossName = 'Necromancer';
+    enemy.necromancerSummonTimer = 0;
+    enemy.necromancerSummonCooldown = 130;
+    enemy.necromancerVolleyCooldown = 74;
+    enemy.necromancerOrbCooldown = 116;
+    enemy.necromancerRiftCooldown = 88;
+    enemy.necromancerMoveAngle = Math.random() * Math.PI * 2;
+    enemy.necromancerMoveTimer = 0;
+    enemies.push(enemy);
+}
+
+// Grants the configured necromancer boss XP reward for the current level.
+function grantNecromancerBossXpReward() {
+    const reward = NECROMANCER_BOSS_XP_REWARDS[currentArenaLevel] ?? NECROMANCER_BOSS_XP_REWARDS[1];
+    player.xp += reward * player.xpGainMult;
+    xpBarFlash = 18;
+    while (player.xp >= player.xpToNextLevel) {
+        player.xp -= player.xpToNextLevel;
+        player.level++;
+        beginLevelUp();
+    }
+}
+
+// Completes the necromancer encounter and restores the previous arena state.
+function completeNecromancerEncounterVictory() {
+    if (!necromancerEncounter.active || !necromancerEncounter.returnContext) return;
+
+    necromancerEncounter.state = 'transition_out';
+    gamePaused = true;
+
+    grantNecromancerBossXpReward();
+    necromancerEncounter.completedLevels[currentArenaLevel] = true;
+
+    const ctxSaved = necromancerEncounter.returnContext;
+    mapTiles = ctxSaved.mapTiles ?? [];
+    navGrid = ctxSaved.navGrid ?? [];
+    levelDecorations = ctxSaved.levelDecorations ?? [];
+    currentMapThemeId = ctxSaved.currentMapThemeId;
+    currentMapTheme = ctxSaved.currentMapTheme;
+    currentWave = ctxSaved.currentWave;
+    enemiesRemainingInWave = ctxSaved.enemiesRemainingInWave;
+    enemiesToSpawn = ctxSaved.enemiesToSpawn;
+    waveClearTimer = ctxSaved.waveClearTimer;
+    waveSpawnDelayFrames = ctxSaved.waveSpawnDelayFrames;
+    enemySpawnBudget = ctxSaved.enemySpawnBudget;
+    enemies = ctxSaved.enemies ?? [];
+    pickups = ctxSaved.pickups ?? [];
+    projectiles = ctxSaved.projectiles ?? [];
+    enemyProjectiles = ctxSaved.enemyProjectiles ?? [];
+    tumorTurrets = ctxSaved.tumorTurrets ?? [];
+    chests = ctxSaved.chests ?? [];
+    voidTotem = ctxSaved.voidTotem ?? null;
+    necromancerTotem = ctxSaved.necromancerTotem ?? null;
+
+    player.x = ctxSaved.playerX;
+    player.y = ctxSaved.playerY;
+    player.prevX = player.x;
+    player.prevY = player.y;
+
+    necromancerEncounter.returnContext = null;
+    necromancerEncounter.active = false;
+    necromancerEncounter.state = 'inactive';
+    necromancerTotem = null;
     gamePaused = false;
 }
 
@@ -813,6 +1021,15 @@ function handleEnemyDefeat(e) {
         enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
     }
 
+    if (e.isBossEncounterEnemy) {
+        if (e.isVoidBoss) {
+            completeVoidEncounterVictory();
+        } else if (e.isNecromancerBoss) {
+            completeNecromancerEncounterVictory();
+        }
+        return;
+    }
+
     if (e.isVoidBoss) {
         completeVoidEncounterVictory();
         return;
@@ -839,6 +1056,10 @@ function handleEnemyDefeat(e) {
 
     if ((player.killShieldFlat ?? 0) > 0 && (player.shieldMax ?? 0) > 0) {
         player.shieldCharges = Math.min(player.shieldMax, player.shieldCharges + player.killShieldFlat);
+    }
+
+    if (e.noXpDrop) {
+        return;
     }
 
     const ammoDropChance = AMMO_DROP_CHANCE;

@@ -81,6 +81,7 @@ function gameLoop(timestamp) {
     drawEnemyProjectiles();
     drawChests();
     drawVoidTotemObjective();
+    drawNecromancerTotemObjective();
     drawPickups();
     drawDamageNumbers();
     drawLowHealthMarker();

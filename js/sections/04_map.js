@@ -83,6 +83,23 @@ function generateVoidBossRoom() {
     buildNavGrid();
 }
 
+// Generate Necromancer Boss Room keeps the game logic moving.
+function generateNecromancerBossRoom() {
+    levelDecorations = [];
+    mapTiles = [];
+    for (let y = 0; y < MAP_H; y++) {
+        mapTiles[y] = [];
+        for (let x = 0; x < MAP_W; x++) {
+            const onOuterBorder = x < 2 || x >= MAP_W - 2 || y < 2 || y >= MAP_H - 2;
+            const onArenaBorder = x < 11 || x >= MAP_W - 11 || y < 11 || y >= MAP_H - 11;
+            mapTiles[y][x] = (onOuterBorder || onArenaBorder) ? TILE_WALL : TILE_FLOOR;
+        }
+    }
+
+    tumorTurrets = [];
+    buildNavGrid();
+}
+
 // Is Level4 Decoration Tile Valid keeps the game logic moving.
 function isLevel4DecorationTileValid(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;

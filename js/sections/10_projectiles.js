@@ -180,7 +180,7 @@ function updateEnemyProjectiles() {
         const oldX = p.x;
         const oldY = p.y;
 
-        if (p.projectileType === 'void_skull') {
+        if (p.projectileType === 'void_skull' || p.projectileType === 'necro_orb') {
             const aim = Math.atan2(player.y - p.y, player.x - p.x);
             const speed = Math.hypot(p.velocityX, p.velocityY);
             const steer = p.homingStrength ?? 0.06;
@@ -237,6 +237,9 @@ function drawEnemyProjectiles() {
         else if (p.projectileType === 'void_burst') sprite = p.sprite ?? voidBurstProjectileSprite;
         else if (p.projectileType === 'void_skull') sprite = p.sprite ?? voidSkullProjectileSprite;
         else if (p.projectileType === 'void_spike') sprite = p.sprite ?? voidSpikeProjectileSprite;
+        else if (p.projectileType === 'necro_bolt') sprite = p.sprite ?? necromancerProjectileSprite;
+        else if (p.projectileType === 'necro_orb') sprite = p.sprite ?? necromancerBurstProjectileSprite;
+        else if (p.projectileType === 'necro_rift') sprite = p.sprite ?? necromancerSpikeProjectileSprite;
 
         if (p.projectileType === 'void_wave_aoe') {
             const animIndex = Math.floor((p.waveAnimTimer ?? 0) / 4) % voidWaveAoeFrames.length;
@@ -253,9 +256,12 @@ function drawEnemyProjectiles() {
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
-        if (p.projectileType === 'void_burst') {
+        if (p.projectileType === 'necro_bolt' || p.projectileType === 'necro_orb' || p.projectileType === 'necro_rift') {
+            ctx.filter = 'hue-rotate(115deg) saturate(1.2)';
+        }
+        if (p.projectileType === 'void_burst' || p.projectileType === 'necro_orb') {
             const pulse = 0.75 + Math.sin((p.framesLeft ?? 0) * 0.28) * 0.25;
-            ctx.shadowColor = '#b060ff';
+            ctx.shadowColor = p.projectileType === 'necro_orb' ? '#5ae6b0' : '#b060ff';
             ctx.shadowBlur = 28 * pulse;
             ctx.globalAlpha = 0.92;
             const s = p.size * (1 + pulse * 0.18);

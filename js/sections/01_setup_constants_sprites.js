@@ -107,6 +107,13 @@ const VOID_BOSS_XP_REWARDS = {
     4: 330,
     5: 420,
 };
+const NECROMANCER_BOSS_XP_REWARDS = {
+    1: 130,
+    2: 190,
+    3: 265,
+    4: 350,
+    5: 445,
+};
 const VOID_BURST_DASH_LOCK_FRAMES = 480;
 const VOID_MAIN_PROJECTILE_SPEED = 10.2;
 const VOID_MAIN_PROJECTILE_SIZE = 12;
@@ -127,6 +134,18 @@ const VOID_SKULL_PROJECTILE_FRAMES = 210;
 const VOID_WAVE_AOE_DAMAGE = 24;
 const VOID_WAVE_AOE_MAX_RADIUS = 170;
 const VOID_WAVE_AOE_FRAMES = 54;
+const NECROMANCER_BOLT_PROJECTILE_SPEED = 8.8;
+const NECROMANCER_BOLT_PROJECTILE_SIZE = 13;
+const NECROMANCER_BOLT_PROJECTILE_DAMAGE = 30;
+const NECROMANCER_BOLT_PROJECTILE_FRAMES = 160;
+const NECROMANCER_ORB_PROJECTILE_SPEED = 6.6;
+const NECROMANCER_ORB_PROJECTILE_SIZE = 20;
+const NECROMANCER_ORB_PROJECTILE_DAMAGE = 30;
+const NECROMANCER_ORB_PROJECTILE_FRAMES = 320;
+const NECROMANCER_RIFT_PROJECTILE_SPEED = 10;
+const NECROMANCER_RIFT_PROJECTILE_SIZE = 12;
+const NECROMANCER_RIFT_PROJECTILE_DAMAGE = 15;
+const NECROMANCER_RIFT_PROJECTILE_FRAMES = 110;
 const DASH_SPEED    = 16;
 const DASH_DURATION = 15;
 
@@ -414,6 +433,7 @@ const ENEMY_TYPES = {
     tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
     sniper:{ hp: 3, size: 18, speed: 1.55, color: '#ff8a2b', animSpeed: 9 },
     void_sniper: { hp: 84, size: 34, speed: 2.25, color: '#8f5dff', animSpeed: 8 },
+    necromancer: { hp: 92, size: 36, speed: 1.95, color: '#4fd39f', animSpeed: 8 },
 };
 
 
@@ -1127,7 +1147,18 @@ const voidProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_void.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
 ]);
+const necromancerProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/projectile_necromancer.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
 const voidBurstProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_proj_burst.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const necromancerBurstProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/necro_proj_burst.png',
     'assets/sprites/projectiles/void_proj_burst.png',
     'assets/sprites/projectiles/projectile_void.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
@@ -1137,7 +1168,19 @@ const voidSkullProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_void.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
 ]);
+const necromancerSkullProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/necro_proj_skull.png',
+    'assets/sprites/projectiles/void_proj_skull.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
 const voidSpikeProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_proj_spike.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile_placeholder.png',
+]);
+const necromancerSpikeProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/necro_proj_spike.png',
     'assets/sprites/projectiles/void_proj_spike.png',
     'assets/sprites/projectiles/projectile_void.png',
     'assets/sprites/projectiles/projectile_placeholder.png',
@@ -1149,6 +1192,14 @@ const voidWaveAoeFrames = [
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+];
+const necromancerWaveAoeFrames = [
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame1.png', 'assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame2.png', 'assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame3.png', 'assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame4.png', 'assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame5.png', 'assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame6.png', 'assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
 ];
 
 const sniperTeleportFrames = [
@@ -1203,6 +1254,15 @@ const voidTotemSprite = imgWithFallback([
     'assets/sprites/enemies/special/cyber_totem.png',
     'assets/sprites/pickups/chest_placeholder_green.png',
 ]);
+const necromancerTotemSprite = imgWithFallback([
+    'assets/sprites/enemies/special/necro_totem.png',
+    'assets/sprites/enemies/special/cyber_totem.png',
+    'assets/sprites/pickups/chest_placeholder_green.png',
+]);
+const necromancerAuraOutlineSprite = imgWithFallback([
+    'assets/sprites/enemies/special/necro_heal_aura_placeholder.png',
+    'assets/sprites/pickups/unique_placeholder_green.png',
+]);
 
 const ENEMY_SPRITE_PATHS = {
     basic: ['assets/sprites/enemies/base/enemy_basic_frame1.png', 'assets/sprites/enemies/base/enemy_basic_frame2.png', 'assets/sprites/enemies/base/enemy_basic_frame3.png'],
@@ -1210,6 +1270,32 @@ const ENEMY_SPRITE_PATHS = {
     tank:  ['assets/sprites/enemies/base/enemy_tank_frame1.png',  'assets/sprites/enemies/base/enemy_tank_frame2.png',  'assets/sprites/enemies/base/enemy_tank_frame3.png' ],
     sniper:['assets/sprites/enemies/base/enemy_sniper_frame1.png','assets/sprites/enemies/base/enemy_sniper_frame2.png','assets/sprites/enemies/base/enemy_sniper_frame3.png','assets/sprites/enemies/base/enemy_sniper_frame4.png'],
     void_sniper: ['assets/sprites/enemies/special/enemy_void_sniper_frame1.png','assets/sprites/enemies/special/enemy_void_sniper_frame2.png','assets/sprites/enemies/special/enemy_void_sniper_frame3.png','assets/sprites/enemies/special/enemy_void_sniper_frame4.png'],
+    necromancer: ['assets/sprites/enemies/special/enemy_necromancer_frame1.png','assets/sprites/enemies/special/enemy_necromancer_frame2.png','assets/sprites/enemies/special/enemy_necromancer_frame3.png','assets/sprites/enemies/special/enemy_necromancer_frame4.png'],
+};
+
+const NECROMANCER_MINION_SPRITE_PATHS = {
+    fast: [
+        'assets/sprites/enemies/special/necro_minion_fast_frame1.png',
+        'assets/sprites/enemies/special/necro_minion_fast_frame2.png',
+        'assets/sprites/enemies/special/necro_minion_fast_frame3.png',
+    ],
+    sniper: [
+        'assets/sprites/enemies/special/necro_minion_sniper_frame1.png',
+        'assets/sprites/enemies/special/necro_minion_sniper_frame2.png',
+        'assets/sprites/enemies/special/necro_minion_sniper_frame3.png',
+        'assets/sprites/enemies/special/necro_minion_sniper_frame4.png',
+    ],
+    tank: [
+        'assets/sprites/enemies/special/necro_minion_tank_frame1.png',
+        'assets/sprites/enemies/special/necro_minion_tank_frame2.png',
+        'assets/sprites/enemies/special/necro_minion_tank_frame3.png',
+    ],
+};
+
+const NECROMANCER_MINION_SPRITES = {
+    fast: NECROMANCER_MINION_SPRITE_PATHS.fast.map((src, i) => imgWithFallback([src, ENEMY_SPRITE_PATHS.fast[i]])),
+    sniper: NECROMANCER_MINION_SPRITE_PATHS.sniper.map((src, i) => imgWithFallback([src, ENEMY_SPRITE_PATHS.sniper[i]])),
+    tank: NECROMANCER_MINION_SPRITE_PATHS.tank.map((src, i) => imgWithFallback([src, ENEMY_SPRITE_PATHS.tank[i]])),
 };
 
 const ENEMY_LEVEL_VARIANTS = {
@@ -1260,6 +1346,23 @@ const BOSS_ENEMY_SPRITE_FRAMES = [
     ]),
     imgWithFallback([
         'assets/sprites/enemies/base/enemy_boss_frame3.png',
+        'assets/sprites/enemies/base/enemy_tank_frame3.png',
+    ]),
+];
+const NECROMANCER_BOSS_SPRITE_FRAMES = [
+    imgWithFallback([
+        'assets/sprites/enemies/special/enemy_necromancer_frame1.png',
+        'assets/sprites/enemies/special/enemy_void_sniper_frame1.png',
+        'assets/sprites/enemies/base/enemy_tank_frame1.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/special/enemy_necromancer_frame2.png',
+        'assets/sprites/enemies/special/enemy_void_sniper_frame2.png',
+        'assets/sprites/enemies/base/enemy_tank_frame2.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/special/enemy_necromancer_frame3.png',
+        'assets/sprites/enemies/special/enemy_void_sniper_frame3.png',
         'assets/sprites/enemies/base/enemy_tank_frame3.png',
     ]),
 ];
@@ -1423,6 +1526,12 @@ const MAP_THEME_SPRITES = {
         wallFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
     },
+    necromancer: {
+        floor: imgWithFallback(['assets/sprites/levels/special/necro_floor.png', 'assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor1.png']),
+        wall: imgWithFallback(['assets/sprites/levels/special/necro_wall.png', 'assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_rune.png', 'assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_top.png', 'assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+    },
 };
 
 const MAP_THEME_TINT = {
@@ -1431,5 +1540,6 @@ const MAP_THEME_TINT = {
     3: null,
     4: null,
     5: null,
+    necromancer: 'rgba(26, 85, 54, 0.22)',
 };
 
