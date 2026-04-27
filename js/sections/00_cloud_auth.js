@@ -4,6 +4,7 @@ const SUPABASE_PROJECT_URL = 'https://lknltlcslvqoatwtfdlm.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_FbxRRzWOsFiG1Oh_Q2YF7g_WfgFswvD';
 const CLOUD_AUTH_EMAIL_DOMAIN = 'players.castanzakannon.local';
 const CLOUD_AUTOSAVE_INTERVAL_MS = 30000;
+const CLOUD_ACHIEVEMENT_SAVE_INTERVAL_MS = 5000;
 const CHARACTER_UNLOCK_WAVE_REQUIREMENTS = [0, 5, 10, 15, 20];
 const ACHIEVEMENT_DEFINITIONS = [
     { id: 'kills_25', title: 'First Bloodline', description: 'Defeat 25 enemies.', stat: 'totalKills', target: 25 },
@@ -61,6 +62,8 @@ let cloudSaveRowId = null;
 let cloudSaveInFlight = false;
 let cloudSaveQueued = false;
 let cloudLastAutosaveAt = 0;
+let cloudLastAchievementSaveAt = 0;
+let cloudAchievementSaveTimer = null;
 let cloudRunOutcomeSaved = false;
 let cloudStatusMessage = 'Cloud: not connected';
 let cloudSessionSyncPromise = null;
@@ -476,11 +479,29 @@ function resetAchievementProgress() {
     cloudAchievementState.pendingPopups = [];
 }
 
+function queueAchievementProgressSave(reason = 'achievement') {
+    if (!supabaseClient || !cloudUser) return;
+    const now = Date.now();
+    const elapsed = now - cloudLastAchievementSaveAt;
+    if (elapsed < CLOUD_ACHIEVEMENT_SAVE_INTERVAL_MS) {
+        const waitMs = CLOUD_ACHIEVEMENT_SAVE_INTERVAL_MS - elapsed;
+        if (cloudAchievementSaveTimer !== null) return;
+        cloudAchievementSaveTimer = setTimeout(() => {
+            cloudAchievementSaveTimer = null;
+            queueAchievementProgressSave('achievement-delayed');
+        }, waitMs);
+        return;
+    }
+    cloudLastAchievementSaveAt = now;
+    queueCloudSave(reason);
+}
+
 function registerAchievementEnemyKill(amount = 1) {
     const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
     if (safeAmount <= 0) return;
     cloudAchievementState.totalKills += safeAmount;
     evaluateAchievements({ queuePopup: true });
+    queueAchievementProgressSave('achievement-kill');
 }
 
 function registerAchievementBossKill(type) {
@@ -490,6 +511,7 @@ function registerAchievementBossKill(type) {
         cloudAchievementState.necromancerBossKills += 1;
     }
     evaluateAchievements({ queuePopup: true });
+    queueAchievementProgressSave('achievement-boss');
 }
 
 function registerAchievementRunOutcome(result) {
@@ -501,6 +523,7 @@ function registerAchievementRunOutcome(result) {
         cloudAchievementState.defeats += 1;
     }
     evaluateAchievements({ queuePopup: true });
+    queueAchievementProgressSave('achievement-run');
 }
 
 function drawAchievementPopup() {
@@ -947,6 +970,11 @@ function handleSignedOut() {
     cloudSaveRowId = null;
     cloudProfileSyncBlocked = false;
     cloudProfileWarningShown = false;
+    if (cloudAchievementSaveTimer !== null) {
+        clearTimeout(cloudAchievementSaveTimer);
+        cloudAchievementSaveTimer = null;
+    }
+    cloudLastAchievementSaveAt = 0;
     cloudUnlockState.bestWave = 1;
     cloudUnlockState.bestArenaLevel = 1;
     cloudUnlockState.keys = new Set(['character_1']);
