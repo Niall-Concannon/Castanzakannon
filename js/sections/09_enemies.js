@@ -13,6 +13,10 @@ function spawnEnemy(type) {
 // Picks a random enemy type for normal waves.
 function pickRandomEnemyType() {
     const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
+    const globalWave = (level - 1) * WAVES_PER_LEVEL + currentWave; // absolute wave count
+
+    // Sniper unlocks at global wave 3 (level 1 wave 3)
+    const sniperUnlocked = globalWave >= 3 || endlessMode;
     const baseSniperWeights = {
         1: 0.07,
         2: 0.14,
@@ -21,7 +25,7 @@ function pickRandomEnemyType() {
         5: 0.38,
     };
     const waveBonus = Math.min(0.14, Math.max(0, currentWave - 1) * 0.03);
-    const sniperWeight = (baseSniperWeights[level] ?? 0.07) + waveBonus;
+    const sniperWeight = sniperUnlocked ? ((baseSniperWeights[level] ?? 0.38) + waveBonus) : 0;
     const weights = {
         basic: 1.15,
         fast: 0.95,
@@ -71,8 +75,16 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
     const spec = ENEMY_TYPES[type];
     const variant = getEnemyVariantForLevel(currentArenaLevel);
     const variantStats = ENEMY_VARIANT_STATS[variant]?.[type] || spec;
-    const hp = variantStats.hp ?? spec.hp;
-    const speed = variantStats.speed ?? spec.speed;
+    const baseHp = variantStats.hp ?? spec.hp;
+    const baseSpeed = variantStats.speed ?? spec.speed;
+
+    // Scale HP by wave within level (each wave adds 8% HP) + endless scaling
+    const waveHpMult = 1 + (currentWave - 1) * 0.08;
+    const endlessHpMult = endlessMode ? (1 + (endlessWave - 1) * 0.18) : 1;
+    const endlessSpeedMult = endlessMode ? (1 + (endlessWave - 1) * 0.05) : 1;
+
+    const hp = Math.ceil(baseHp * waveHpMult * endlessHpMult);
+    const speed = baseSpeed * endlessSpeedMult;
     const wallSize = (type === 'tank' || type === 'void_sniper' || type === 'necromancer') ? spec.size * 0.8 : spec.size;
     const spawnPos = getEnemySpawnPosition(wallSize);
 

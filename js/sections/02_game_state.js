@@ -34,6 +34,9 @@ let navGrid        = [];
 let lastLevelDied  = 1;
 let levelUpMenuHover = -1;
 let levelUpInputDelay = 0;
+let endlessMode = false;
+let endlessWave = 0;       // counts up from 1 after normal content ends
+let totemSpawnedThisLevel = false;
 let xpBarFlash     = 0;
 let lastTimestamp  = 0;
 let accumulator    = 0;
@@ -549,12 +552,17 @@ function shouldSpawnVoidTotemForLevel(level = currentArenaLevel) {
     return !(voidEncounter.completedLevels?.[level]);
 }
 
-// Spawns one totem objective for the active level.
-function spawnVoidTotemForLevel() {
+// Spawns one totem objective for the active level — 10% chance per wave, instant in dev mode.
+function spawnVoidTotemForLevel(forceSpawn = false) {
     if (!shouldSpawnVoidTotemForLevel(currentArenaLevel) || voidEncounter.active) {
         voidTotem = null;
         return;
     }
+
+    if (voidTotem && voidTotem.active) return; // already up
+
+    const shouldSpawn = forceSpawn || devTestMode || (Math.random() < 0.10);
+    if (!shouldSpawn) return;
 
     const cx = Math.floor(MAP_W / 2) * TILE;
     const cy = Math.floor(MAP_H / 2) * TILE;
@@ -582,12 +590,17 @@ function shouldSpawnNecromancerTotemForLevel(level = currentArenaLevel) {
     return !(necromancerEncounter.completedLevels?.[level]);
 }
 
-// Spawns the necromancer objective for the active level.
-function spawnNecromancerTotemForLevel() {
+// Spawns the necromancer objective for the active level — 10% chance per wave, instant in dev mode.
+function spawnNecromancerTotemForLevel(forceSpawn = false) {
     if (!shouldSpawnNecromancerTotemForLevel(currentArenaLevel) || necromancerEncounter.active) {
         necromancerTotem = null;
         return;
     }
+
+    if (necromancerTotem && necromancerTotem.active) return; // already up
+
+    const shouldSpawn = forceSpawn || devTestMode || (Math.random() < 0.10);
+    if (!shouldSpawn) return;
 
     const cx = Math.floor(MAP_W / 2) * TILE;
     const cy = Math.floor(MAP_H / 2) * TILE;

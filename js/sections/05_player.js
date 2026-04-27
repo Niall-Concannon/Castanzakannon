@@ -124,8 +124,11 @@ function confirmWeaponAndStart() {
     necromancerEncounter.active = false;
     necromancerEncounter.state = 'inactive';
     necromancerEncounter.returnContext = null;
-    spawnVoidTotemForLevel();
-    spawnNecromancerTotemForLevel();
+    endlessMode = false;
+    endlessWave = 0;
+    // Totems use 10% chance per wave — don't force-spawn on game start
+    spawnVoidTotemForLevel(false);
+    spawnNecromancerTotemForLevel(false);
     spawnDevModePowerupLine();
     playRandomMusicTrack();
     startWave(1);
@@ -240,6 +243,10 @@ function startWave(waveNumber) {
     enemySpawnBudget = 0;
     spawnArenaChest();
 
+    // Roll totem chance each wave (already-spawned totems are guarded inside)
+    spawnVoidTotemForLevel(false);
+    spawnNecromancerTotemForLevel(false);
+
     if (waveNumber === getConfiguredWavesPerLevel()) {
         finalWaveBannerTimer = 180;
         spawnBossEnemy();
@@ -286,16 +293,23 @@ function updateWaveProgression() {
     if (waveClearTimer < WAVE_CLEAR_DELAY_FRAMES) return;
     waveClearTimer = 0;
 
+    // Endless mode: just keep going
+    if (endlessMode) {
+        endlessWave++;
+        startEndlessWave(endlessWave);
+        return;
+    }
+
     if (currentWave < getConfiguredWavesPerLevel()) {
         startWave(currentWave + 1);
         return;
     }
 
     if (currentArenaLevel >= MAX_ARENA_LEVELS) {
-        gameState = 'win';
-        if (typeof registerCloudRunOutcome === 'function') {
-            registerCloudRunOutcome('win');
-        }
+        // Enter endless mode instead of showing win screen
+        endlessMode = true;
+        endlessWave++;
+        startEndlessWave(endlessWave);
         return;
     }
 
@@ -321,10 +335,23 @@ function updateWaveProgression() {
     player.prevY = player.y;
 
     spawnDevModePowerupLine();
-    spawnVoidTotemForLevel();
-    spawnNecromancerTotemForLevel();
+    // Totems reset per level; wave 1 of new level gets the 10% roll
+    voidTotem = null;
+    necromancerTotem = null;
 
     startWave(1);
+}
+
+// Starts one endless wave with escalating enemy count.
+function startEndlessWave(n) {
+    // Grow enemy count quickly — base 80 + 30 per endless wave
+    const count = 80 + (n - 1) * 30;
+    currentWave = getConfiguredWavesPerLevel(); // keep UI wave indicator maxed
+    enemiesRemainingInWave = count;
+    enemiesToSpawn = count;
+    waveClearTimer = 0;
+    waveSpawnDelayFrames = WAVE_START_SPAWN_DELAY_FRAMES;
+    enemySpawnBudget = 0;
 }
 
 // Cleanup Dead Enemies keeps the game logic moving.

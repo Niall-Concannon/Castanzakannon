@@ -71,7 +71,9 @@ function drawUI() {
     ctx.fillStyle = '#ff0000';
     ctx.shadowColor = '#000000';
     ctx.shadowBlur = 6;
-    const waveLabel = `Level ${currentArenaLevel}  Wave ${currentWave}/${WAVES_PER_LEVEL}`;
+    const waveLabel = endlessMode
+        ? `∞ Endless Wave ${endlessWave}`
+        : `Level ${currentArenaLevel}  Wave ${currentWave}/${WAVES_PER_LEVEL}`;
     const alive = getAliveEnemyCount();
 
     const remainingNow = Math.max(0, enemiesRemainingInWave - alive);
@@ -229,6 +231,30 @@ function drawMinimap() {
     ctx.beginPath();
     ctx.arc(MM_X + (player.x - viewOriginX) * scaleX, MM_Y + (player.y - viewOriginY) * scaleY, 3, 0, Math.PI * 2);
     ctx.fill();
+
+    // Totems on minimap
+    const totemsToDraw = [];
+    if (voidTotem && voidTotem.active)           totemsToDraw.push({ t: voidTotem,        color: '#cc44ff' });
+    if (necromancerTotem && necromancerTotem.active) totemsToDraw.push({ t: necromancerTotem, color: '#44ffaa' });
+    for (const { t, color } of totemsToDraw) {
+        const tx = MM_X + (t.x - viewOriginX) * scaleX;
+        const ty = MM_Y + (t.y - viewOriginY) * scaleY;
+        // Pulsing diamond shape
+        const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.08);
+        const r = 5 * pulse;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(tx,     ty - r);
+        ctx.lineTo(tx + r, ty    );
+        ctx.lineTo(tx,     ty + r);
+        ctx.lineTo(tx - r, ty    );
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
     ctx.restore();
 
     ctx.save();
