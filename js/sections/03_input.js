@@ -79,7 +79,7 @@ window.addEventListener('keydown', e => {
         }
     }
 
-    if (gameState === 'levelUp') {
+    if (gameState === 'levelUp' && levelUpInputDelay <= 0) {
         if (e.key === '1') { playUiClick(); applyUpgradeChoice(0); }
         if (e.key === '2') { playUiClick(); applyUpgradeChoice(1); }
         if (e.key === '3') { playUiClick(); applyUpgradeChoice(2); }
@@ -383,7 +383,7 @@ window.addEventListener('mousedown', e => {
         playUiClick();
         gameState = 'menu';
         menuPage  = 'main';
-    } else if (gameState === 'levelUp') {
+    } else if (gameState === 'levelUp' && levelUpInputDelay <= 0) {
         const zones = getLevelUpZones();
         for (let i = 0; i < 3; i++) {
             const z = zones.cards[i];

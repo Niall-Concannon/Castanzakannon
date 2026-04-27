@@ -66,7 +66,7 @@ function gameLoop(timestamp) {
         }
         renderAlpha = accumulator / FIXED_STEP;
     } else {
-
+        if (levelUpInputDelay > 0) levelUpInputDelay--;
         frameCount++;
         renderAlpha = 1;
     }

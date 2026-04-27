@@ -33,6 +33,7 @@ let levelDecorations = [];
 let navGrid        = [];
 let lastLevelDied  = 1;
 let levelUpMenuHover = -1;
+let levelUpInputDelay = 0;
 let xpBarFlash     = 0;
 let lastTimestamp  = 0;
 let accumulator    = 0;
@@ -481,6 +482,7 @@ function rollLevelUpChoices(count = 3) {
 function beginLevelUp() {
     currentLevelUpChoices = rollLevelUpChoices(3);
     gameState = 'levelUp';
+    levelUpInputDelay = 120; // 2 seconds — prevents accidental clicks
 }
 
 // Apply Upgrade By Id keeps the game logic moving.
