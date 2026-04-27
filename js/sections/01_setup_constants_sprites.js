@@ -1079,6 +1079,9 @@ const fallbackPlayerSprites = CHARACTER_LOADOUTS[0].sprites;
 
 // Returns the currently selected character loadout.
 function getSelectedCharacter() {
+    if (typeof normalizeSelectedCharacter === 'function') {
+        normalizeSelectedCharacter();
+    }
     return CHARACTER_LOADOUTS[selectedCharacter] ?? CHARACTER_LOADOUTS[0];
 }
 

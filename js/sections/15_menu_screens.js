@@ -1232,7 +1232,11 @@ function drawMenu() {
         ctx.fillStyle  = MENU_TEXT_COLORS.selectedCharacter;
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 6;
-        ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 - 74);
+        const selectedName = getSelectedCharacter().name;
+        const selectedUnlockText = (typeof getCharacterUnlockRequirementText === 'function' && typeof isCharacterUnlocked === 'function' && !isCharacterUnlocked(selectedCharacter))
+            ? ` (Locked: ${getCharacterUnlockRequirementText(selectedCharacter)})`
+            : '';
+        ctx.fillText('Selected Character: ' + selectedName + selectedUnlockText, canvas.width / 2, canvas.height / 2 - 74);
         ctx.shadowBlur = 0;
 
         const mainLayout = getMainMenuLayout();
@@ -1300,6 +1304,7 @@ function drawMenu() {
             const loadout = CHARACTER_LOADOUTS[i];
             const isSel = i === selectedCharacter;
             const isHover = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
+            const isUnlocked = typeof isCharacterUnlocked === 'function' ? isCharacterUnlocked(i) : true;
 
             const targetHover = isHover ? 1 : 0;
             characterHoverAnim[i] += (targetHover - characterHoverAnim[i]) * 0.25;
@@ -1332,6 +1337,11 @@ function drawMenu() {
             const py = drawY + 20;
             ctx.drawImage(prev, px, py, size, size);
 
+            if (!isUnlocked) {
+                ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                ctx.fillRect(drawX, drawY, drawW, drawH);
+            }
+
             const nameY = drawY + drawH - 88;
             const spdY  = drawY + drawH - 60;
             const hpY   = drawY + drawH - 44;
@@ -1340,7 +1350,9 @@ function drawMenu() {
 
             ctx.textAlign = 'center';
             ctx.font = 'bold 13px Arial';
-            ctx.fillStyle = isSel ? MENU_TEXT_COLORS.selectedCharacter : '#e1edf8';
+            ctx.fillStyle = isUnlocked
+                ? (isSel ? MENU_TEXT_COLORS.selectedCharacter : '#e1edf8')
+                : '#9aa4b2';
             ctx.fillText(loadout.name, drawX + drawW / 2, nameY);
 
             ctx.font = '12px Arial';
@@ -1354,7 +1366,14 @@ function drawMenu() {
                 ctx.fillText(`DASH ${loadout.dashCharges ?? 1}x`, drawX + drawW / 2, tagY);
             }
 
-            if (isSel) {
+            if (!isUnlocked) {
+                const reqText = typeof getCharacterUnlockRequirementText === 'function' ? getCharacterUnlockRequirementText(i) : 'Locked';
+                ctx.fillStyle = '#ffd166';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(reqText, drawX + drawW / 2, drawY + drawH / 2 + 6);
+            }
+
+            if (isSel && isUnlocked) {
                 ctx.font = 'bold 11px Arial';
                 ctx.fillStyle = '#4a9eff';
                 ctx.fillText('ACTIVE', drawX + drawW / 2, drawY + 16);
