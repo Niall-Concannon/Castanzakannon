@@ -102,6 +102,7 @@ function getEncyclopediaTabButtons() {
     return {
         enemies: { x: panel.x + 26, y: tabY, w: 150, h: 34 },
         items: { x: panel.x + 190, y: tabY, w: 150, h: 34 },
+        achievements: { x: panel.x + 354, y: tabY, w: 170, h: 34 },
     };
 }
 
@@ -131,7 +132,10 @@ function getEncyclopediaFilterButtons() {
 
 // Get Encyclopedia Entries For Tab keeps the game logic moving.
 function getEncyclopediaEntriesForTab() {
-    return encyclopediaTab === 'enemies' ? getEncyclopediaEnemyEntries() : getEncyclopediaItemEntries();
+    if (encyclopediaTab === 'enemies') return getEncyclopediaEnemyEntries();
+    if (encyclopediaTab === 'items') return getEncyclopediaItemEntries();
+    if (typeof getAchievementEntries === 'function') return getAchievementEntries();
+    return [];
 }
 
 // Get Encyclopedia Scroll Metrics keeps the game logic moving.
@@ -142,8 +146,9 @@ function getEncyclopediaScrollMetrics(entries) {
     const listW = panel.w - 52;
     const listH = panel.h - 220;
     const isEnemies = encyclopediaTab === 'enemies';
-    const cols = isEnemies ? 1 : 2;
-    const entryH = isEnemies ? 78 : 92;
+    const isAchievements = encyclopediaTab === 'achievements';
+    const cols = isEnemies || isAchievements ? 1 : 2;
+    const entryH = isEnemies ? 78 : isAchievements ? 90 : 92;
     const gap = 10;
     const rows = entries.length > 0 ? Math.ceil(entries.length / cols) : 0;
     const contentH = rows > 0 ? rows * entryH + Math.max(0, rows - 1) * gap : 0;
@@ -154,6 +159,7 @@ function getEncyclopediaScrollMetrics(entries) {
 
 // Filter Encyclopedia Entries keeps the game logic moving.
 function filterEncyclopediaEntries(entries) {
+    if (encyclopediaTab === 'achievements') return entries;
     if (encyclopediaRarityFilter === 'all') return entries;
     return entries.filter(entry => entry.rarity === encyclopediaRarityFilter);
 }
@@ -265,11 +271,13 @@ function drawEncyclopediaMenu() {
     ctx.fillText('Encyclopedia', canvas.width / 2, panel.y + 46);
     ctx.font = '15px Arial';
     ctx.fillStyle = '#ff0000';
-    ctx.fillText('Enemy and item reference', canvas.width / 2, panel.y + 66);
+    ctx.fillText('Enemy, item, and achievement reference', canvas.width / 2, panel.y + 66);
 
     const isEnemies = encyclopediaTab === 'enemies';
+    const isAchievements = encyclopediaTab === 'achievements';
     const enemyHover = mouseX >= tabs.enemies.x && mouseX <= tabs.enemies.x + tabs.enemies.w && mouseY >= tabs.enemies.y && mouseY <= tabs.enemies.y + tabs.enemies.h;
     const itemHover = mouseX >= tabs.items.x && mouseX <= tabs.items.x + tabs.items.w && mouseY >= tabs.items.y && mouseY <= tabs.items.y + tabs.items.h;
+    const achievementHover = mouseX >= tabs.achievements.x && mouseX <= tabs.achievements.x + tabs.achievements.w && mouseY >= tabs.achievements.y && mouseY <= tabs.achievements.y + tabs.achievements.h;
 
     const drawTab = (tab, active, hover, label) => {
         ctx.fillStyle = active ? 'rgba(255,255,255,0.22)' : hover ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)';
@@ -284,19 +292,22 @@ function drawEncyclopediaMenu() {
     };
 
     drawTab(tabs.enemies, isEnemies, enemyHover, 'Enemies');
-    drawTab(tabs.items, !isEnemies, itemHover, 'Items');
+    drawTab(tabs.items, encyclopediaTab === 'items', itemHover, 'Items');
+    drawTab(tabs.achievements, isAchievements, achievementHover, 'Achievements');
 
-    for (const button of filterButtons) {
-        const active = encyclopediaRarityFilter === button.rarity;
-        ctx.fillStyle = active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)';
-        ctx.fillRect(button.x, button.y, button.w, button.h);
-        ctx.strokeStyle = active ? '#ff0000' : 'rgba(210,220,235,0.38)';
-        ctx.lineWidth = active ? 2 : 1;
-        ctx.strokeRect(button.x, button.y, button.w, button.h);
-        ctx.fillStyle = active ? '#ff0000' : '#ff0000';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(button.rarity === 'all' ? 'All' : button.rarity, button.x + button.w / 2, button.y + 19);
+    if (!isAchievements) {
+        for (const button of filterButtons) {
+            const active = encyclopediaRarityFilter === button.rarity;
+            ctx.fillStyle = active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)';
+            ctx.fillRect(button.x, button.y, button.w, button.h);
+            ctx.strokeStyle = active ? '#ff0000' : 'rgba(210,220,235,0.38)';
+            ctx.lineWidth = active ? 2 : 1;
+            ctx.strokeRect(button.x, button.y, button.w, button.h);
+            ctx.fillStyle = active ? '#ff0000' : '#ff0000';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(button.rarity === 'all' ? 'All' : button.rarity, button.x + button.w / 2, button.y + 19);
+        }
     }
 
     const entries = filterEncyclopediaEntries(getEncyclopediaEntriesForTab());
@@ -315,7 +326,7 @@ function drawEncyclopediaMenu() {
     ctx.clip();
 
     const entryWidth = listW - 12;
-    const iconSize = isEnemies ? 54 : 50;
+    const iconSize = isEnemies ? 54 : isAchievements ? 0 : 50;
     const slotPad = 10;
     const rowStep = entryH + gap;
     let hoveredEntry = null;
@@ -339,28 +350,60 @@ function drawEncyclopediaMenu() {
         ctx.lineWidth = hover ? 2 : 1;
         ctx.strokeRect(x + 0.5, y + 0.5, cardW - 1, entryH - 1);
 
-        const iconX = x + slotPad;
-        const iconY = y + (entryH - iconSize) / 2;
-        const iconFrames = entry.iconFrames;
-        const icon = iconFrames?.length ? iconFrames[encyclopediaAnimTick % iconFrames.length] : entry.icon;
-        if (icon?.complete && icon.naturalWidth) {
-            ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+        if (entry.kind === 'achievement') {
+            const textX = x + 12;
+            const barX = textX;
+            const barY = y + 56;
+            const barW = cardW - 24;
+            const barH = 16;
+            const progressText = `${Math.min(entry.current, entry.target)} / ${entry.target}`;
+            const ratio = Math.max(0, Math.min(1, entry.ratio ?? 0));
+
+            ctx.fillStyle = entry.unlocked ? '#7cffb0' : '#ffcc66';
+            ctx.font = 'bold 15px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(entry.title, textX, y + 24);
+
+            ctx.fillStyle = 'rgba(220,230,240,0.88)';
+            ctx.font = '12px Arial';
+            ctx.fillText(entry.detail, textX, y + 42);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = entry.unlocked ? 'rgba(124,255,176,0.9)' : 'rgba(255,204,102,0.9)';
+            ctx.fillRect(barX, barY, Math.floor(barW * ratio), barH);
+            ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barW, barH);
+
+            ctx.fillStyle = '#101010';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(progressText, barX + barW / 2, barY + 12);
         } else {
-            ctx.fillStyle = entry.kind === 'enemy' ? '#ff0000' : entry.kind === 'unique' ? '#ff0000' : '#ff0000';
-            ctx.fillRect(iconX, iconY, iconSize, iconSize);
+            const iconX = x + slotPad;
+            const iconY = y + (entryH - iconSize) / 2;
+            const iconFrames = entry.iconFrames;
+            const icon = iconFrames?.length ? iconFrames[encyclopediaAnimTick % iconFrames.length] : entry.icon;
+            if (icon?.complete && icon.naturalWidth) {
+                ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+            } else {
+                ctx.fillStyle = entry.kind === 'enemy' ? '#ff0000' : entry.kind === 'unique' ? '#ff0000' : '#ff0000';
+                ctx.fillRect(iconX, iconY, iconSize, iconSize);
+            }
+
+            ctx.fillStyle = getRarityUiColor(entry.rarity);
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(entry.title, iconX + iconSize + 14, y + 24);
+
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '11px Arial';
+            ctx.fillText(entry.detail, iconX + iconSize + 14, y + 44);
+
+            ctx.fillStyle = 'rgba(210,220,235,0.86)';
+            ctx.fillText(entry.extra, iconX + iconSize + 14, y + 61);
         }
-
-        ctx.fillStyle = getRarityUiColor(entry.rarity);
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(entry.title, iconX + iconSize + 14, y + 24);
-
-        ctx.fillStyle = '#ff0000';
-        ctx.font = '11px Arial';
-        ctx.fillText(entry.detail, iconX + iconSize + 14, y + 44);
-
-        ctx.fillStyle = 'rgba(210,220,235,0.86)';
-        ctx.fillText(entry.extra, iconX + iconSize + 14, y + 61);
     }
 
     ctx.restore();
@@ -1232,7 +1275,11 @@ function drawMenu() {
         ctx.fillStyle  = MENU_TEXT_COLORS.selectedCharacter;
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 6;
-        ctx.fillText('Selected Character: ' + getSelectedCharacter().name, canvas.width / 2, canvas.height / 2 - 74);
+        const selectedName = getSelectedCharacter().name;
+        const selectedUnlockText = (typeof getCharacterUnlockRequirementText === 'function' && typeof isCharacterUnlocked === 'function' && !isCharacterUnlocked(selectedCharacter))
+            ? ` (Locked: ${getCharacterUnlockRequirementText(selectedCharacter)})`
+            : '';
+        ctx.fillText('Selected Character: ' + selectedName + selectedUnlockText, canvas.width / 2, canvas.height / 2 - 74);
         ctx.shadowBlur = 0;
 
         const mainLayout = getMainMenuLayout();
@@ -1300,6 +1347,7 @@ function drawMenu() {
             const loadout = CHARACTER_LOADOUTS[i];
             const isSel = i === selectedCharacter;
             const isHover = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
+            const isUnlocked = typeof isCharacterUnlocked === 'function' ? isCharacterUnlocked(i) : true;
 
             const targetHover = isHover ? 1 : 0;
             characterHoverAnim[i] += (targetHover - characterHoverAnim[i]) * 0.25;
@@ -1332,6 +1380,11 @@ function drawMenu() {
             const py = drawY + 20;
             ctx.drawImage(prev, px, py, size, size);
 
+            if (!isUnlocked) {
+                ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                ctx.fillRect(drawX, drawY, drawW, drawH);
+            }
+
             const nameY = drawY + drawH - 88;
             const spdY  = drawY + drawH - 60;
             const hpY   = drawY + drawH - 44;
@@ -1340,7 +1393,9 @@ function drawMenu() {
 
             ctx.textAlign = 'center';
             ctx.font = 'bold 13px Arial';
-            ctx.fillStyle = isSel ? MENU_TEXT_COLORS.selectedCharacter : '#e1edf8';
+            ctx.fillStyle = isUnlocked
+                ? (isSel ? MENU_TEXT_COLORS.selectedCharacter : '#e1edf8')
+                : '#9aa4b2';
             ctx.fillText(loadout.name, drawX + drawW / 2, nameY);
 
             ctx.font = '12px Arial';
@@ -1354,7 +1409,21 @@ function drawMenu() {
                 ctx.fillText(`DASH ${loadout.dashCharges ?? 1}x`, drawX + drawW / 2, tagY);
             }
 
-            if (isSel) {
+            if (!isUnlocked) {
+                const reqLines = typeof getCharacterUnlockRequirementLines === 'function'
+                    ? getCharacterUnlockRequirementLines(i, 2)
+                    : [typeof getCharacterUnlockRequirementText === 'function' ? getCharacterUnlockRequirementText(i) : 'Locked'];
+                ctx.fillStyle = '#ffd166';
+                ctx.font = 'bold 11px Arial';
+                const centerY = drawY + drawH / 2 + 2;
+                const lineGap = 13;
+                const startY = centerY - ((reqLines.length - 1) * lineGap) / 2;
+                for (let lineIndex = 0; lineIndex < reqLines.length; lineIndex++) {
+                    ctx.fillText(reqLines[lineIndex], drawX + drawW / 2, startY + lineIndex * lineGap);
+                }
+            }
+
+            if (isSel && isUnlocked) {
                 ctx.font = 'bold 11px Arial';
                 ctx.fillStyle = '#4a9eff';
                 ctx.fillText('ACTIVE', drawX + drawW / 2, drawY + 16);

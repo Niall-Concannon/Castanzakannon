@@ -1019,21 +1019,41 @@ function handleEnemyDefeat(e) {
     if (!e.alive) return;
 
     e.alive = false;
+    if (typeof registerAchievementEnemyKill === 'function') {
+        registerAchievementEnemyKill(1);
+    }
     if (!e.isVoidEncounterEnemy) {
         enemiesRemainingInWave = Math.max(0, enemiesRemainingInWave - 1);
     }
 
     if (e.isBossEncounterEnemy) {
         if (e.isVoidBoss) {
+            if (typeof registerAchievementBossKill === 'function') {
+                registerAchievementBossKill('void');
+            }
             completeVoidEncounterVictory();
         } else if (e.isNecromancerBoss) {
+            if (typeof registerAchievementBossKill === 'function') {
+                registerAchievementBossKill('necromancer');
+            }
             completeNecromancerEncounterVictory();
         }
         return;
     }
 
     if (e.isVoidBoss) {
+        if (typeof registerAchievementBossKill === 'function') {
+            registerAchievementBossKill('void');
+        }
         completeVoidEncounterVictory();
+        return;
+    }
+
+    if (e.isNecromancerBoss) {
+        if (typeof registerAchievementBossKill === 'function') {
+            registerAchievementBossKill('necromancer');
+        }
+        completeNecromancerEncounterVictory();
         return;
     }
 

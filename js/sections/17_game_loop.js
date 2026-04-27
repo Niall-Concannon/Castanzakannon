@@ -11,6 +11,15 @@ function gameLoop(timestamp) {
 
     syncDevTestWaveControl();
     syncAudioControlPanel();
+    if (typeof syncAuthPanel === 'function') {
+        syncAuthPanel();
+    }
+    if (typeof updateCloudProgressMilestones === 'function') {
+        updateCloudProgressMilestones();
+    }
+    if (typeof tickCloudAutosave === 'function') {
+        tickCloudAutosave();
+    }
 
     fps = dt > 0 ? Math.round(1000 / dt) : fps;
 
@@ -89,6 +98,7 @@ function gameLoop(timestamp) {
     drawUI();
     if (gamePaused) drawPauseOverlay();
     if (gameState === 'levelUp') drawLevelUpMenu();
+    if (typeof drawAchievementPopup === 'function') drawAchievementPopup();
     drawCursor();
 
     requestAnimationFrame(gameLoop);

@@ -11,6 +11,13 @@ function startGame() {
 }
 
 function confirmWeaponAndStart() {
+    if (typeof normalizeSelectedCharacter === 'function') {
+        normalizeSelectedCharacter();
+    }
+    if (typeof resetCloudRunState === 'function') {
+        resetCloudRunState();
+    }
+
     showPerfGuide = false;
     showCheatMenu = false;
     currentArenaLevel = 1;
@@ -286,6 +293,9 @@ function updateWaveProgression() {
 
     if (currentArenaLevel >= MAX_ARENA_LEVELS) {
         gameState = 'win';
+        if (typeof registerCloudRunOutcome === 'function') {
+            registerCloudRunOutcome('win');
+        }
         return;
     }
 
@@ -662,7 +672,13 @@ function updatePlayer() {
         }
     }
 
-    if (player.hp <= 0) { lastLevelDied = player.level; gameState = 'gameOver'; }
+    if (player.hp <= 0) {
+        lastLevelDied = player.level;
+        gameState = 'gameOver';
+        if (typeof registerCloudRunOutcome === 'function') {
+            registerCloudRunOutcome('defeat');
+        }
+    }
 
     player.weaponAngle = Math.atan2(mouseY - canvas.height / 2, mouseX - canvas.width / 2);
     playerShoot();

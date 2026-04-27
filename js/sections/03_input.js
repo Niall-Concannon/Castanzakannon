@@ -6,6 +6,10 @@
 window.addEventListener('keydown', e => {
     unlockAudioIfNeeded();
 
+    if (typeof isCloudAuthInputFocused === 'function' && isCloudAuthInputFocused()) {
+        return;
+    }
+
     if (gameState === 'splash') {
         startSplashTransition();
         return;
@@ -108,6 +112,8 @@ window.addEventListener('wheel', e => {
 }, { passive: false });
 
 window.addEventListener('mousedown', e => {
+    if (cloudAuthPanel.contains(e.target)) return;
+    if (typeof cloudAuthToggleButton !== 'undefined' && cloudAuthToggleButton.contains(e.target)) return;
     if (devTestWaveControl.contains(e.target)) return;
     if (audioControlPanel.contains(e.target)) {
         unlockAudioIfNeeded();
@@ -269,6 +275,10 @@ window.addEventListener('mousedown', e => {
                 for (let i = 0; i < cards.length; i++) {
                     const c = cards[i];
                     if (mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h) {
+                        if (typeof isCharacterUnlocked === 'function' && !isCharacterUnlocked(i)) {
+                            playUiClick();
+                            break;
+                        }
                         playUiClick();
                         selectedCharacter = i;
                         break;
@@ -357,7 +367,7 @@ window.addEventListener('mousedown', e => {
         } else if (menuPage === 'encyclopedia') {
             const back = getEncyclopediaBackButton();
             const tabs = getEncyclopediaTabButtons();
-            const filterButton = getEncyclopediaFilterButtonAt(mouseX, mouseY);
+            const filterButton = encyclopediaTab === 'achievements' ? null : getEncyclopediaFilterButtonAt(mouseX, mouseY);
             if (filterButton) {
                 playUiClick();
                 encyclopediaRarityFilter = filterButton.rarity;
@@ -372,6 +382,10 @@ window.addEventListener('mousedown', e => {
             } else if (mouseX >= tabs.items.x && mouseX <= tabs.items.x + tabs.items.w && mouseY >= tabs.items.y && mouseY <= tabs.items.y + tabs.items.h) {
                 playUiClick();
                 encyclopediaTab = 'items';
+                encyclopediaScroll = 0;
+            } else if (mouseX >= tabs.achievements.x && mouseX <= tabs.achievements.x + tabs.achievements.w && mouseY >= tabs.achievements.y && mouseY <= tabs.achievements.y + tabs.achievements.h) {
+                playUiClick();
+                encyclopediaTab = 'achievements';
                 encyclopediaScroll = 0;
             }
         }
