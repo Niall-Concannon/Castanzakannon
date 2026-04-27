@@ -751,25 +751,25 @@ const ITEM_DEFINITIONS = [
 ];
 
 const ITEM_PLACEHOLDER_NAMES = {
-    iron_shards: 'Iron Shards Placeholder',
-    runner_wrap: 'Runner Wrap Placeholder',
-    vial_mesh: 'Vial Mesh Placeholder',
-    ammo_pouch: 'Ammo Pouch Placeholder',
-    paper_shield: 'Paper Shield Placeholder',
-    copper_jacket: 'Copper Jacket Placeholder',
-    drill_mag: 'Drill Mag Placeholder',
-    orb_compass: 'Orb Compass Placeholder',
-    kinetic_cell: 'Kinetic Cell Placeholder',
-    splitter_rounds: 'Splitter Rounds Placeholder',
-    predator_lens: 'Predator Lens Placeholder',
-    dash_coil: 'Dash Coil Placeholder',
-    blood_etching: 'Blood Etching Placeholder',
-    chain_relay: 'Chain Relay Placeholder',
-    blast_powder: 'Blast Powder Placeholder',
-    cleaving_ailment: 'Cleaving Ailment Placeholder',
-    ghost_fiber: 'Ghost Fiber Placeholder',
-    leviathan_ink: 'Leviathan Ink Placeholder',
-    godframe_scrap: 'Godframe Scrap Placeholder',
+    iron_shards: 'Iron Shards',
+    runner_wrap: 'Runner Wrap',
+    vial_mesh: 'Vial Mesh',
+    ammo_pouch: 'Ammo Pouch',
+    paper_shield: 'Paper Shield',
+    copper_jacket: 'Copper Jacket',
+    drill_mag: 'Drill Mag',
+    orb_compass: 'Orb Compass',
+    kinetic_cell: 'Kinetic Cell',
+    splitter_rounds: 'Splitter Rounds',
+    predator_lens: 'Predator Lens',
+    dash_coil: 'Dash Coil',
+    blood_etching: 'Blood Etching',
+    chain_relay: 'Chain Relay',
+    blast_powder: 'Blast Powder',
+    cleaving_ailment: 'Cleaving Ailment',
+    ghost_fiber: 'Ghost Fiber',
+    leviathan_ink: 'Leviathan Ink',
+    godframe_scrap: 'Godframe Scrap',
 };
 
 const UNIQUE_ITEM_DEFINITIONS = [
@@ -954,25 +954,25 @@ const UNIQUE_ITEM_DEFINITIONS = [
 ];
 
 const UNIQUE_PLACEHOLDER_NAMES = {
-    boss_crown: 'Boss Crown Placeholder',
-    chrono_shell: 'Chrono Shell Placeholder',
-    overkill_matrix: 'Overkill Matrix Placeholder',
-    soul_harvester: 'Soul Harvester Placeholder',
-    voltaic_core: 'Voltaic Core Placeholder',
-    shield_matrix: 'Shield Matrix Placeholder',
-    mythic_railgun_core: 'Mythic Railgun Core Placeholder',
-    sunflare_module: 'Sunflare Module Placeholder',
-    phoenix_feather: 'Phoenix Feather Placeholder',
-    war_machine: 'War Machine Placeholder',
-    blackhole_core: 'Blackhole Core Placeholder',
-    soul_battery: 'Soul Battery Placeholder',
-    warden_plating: 'Warden Plating Placeholder',
-    warp_tendon: 'Warp Tendon Placeholder',
-    recycler_spine: 'Recycler Spine Placeholder',
-    kingmaker_core: 'Kingmaker Core Placeholder',
-    apocalypse_engine: 'Apocalypse Engine Placeholder',
-    celestial_heart: 'Celestial Heart Placeholder',
-    singularity_seed: 'Singularity Seed Placeholder',
+    boss_crown: 'Boss Crown',
+    chrono_shell: 'Chrono Shell',
+    overkill_matrix: 'Overkill Matrix',
+    soul_harvester: 'Soul Harvester',
+    voltaic_core: 'Voltaic Core',
+    shield_matrix: 'Shield Matrix',
+    mythic_railgun_core: 'Mythic Railgun Core',
+    sunflare_module: 'Sunflare Module',
+    phoenix_feather: 'Phoenix Feather',
+    war_machine: 'War Machine',
+    blackhole_core: 'Blackhole Core',
+    soul_battery: 'Soul Battery',
+    warden_plating: 'Warden Plating',
+    warp_tendon: 'Warp Tendon',
+    recycler_spine: 'Recycler Spine',
+    kingmaker_core: 'Kingmaker Core',
+    apocalypse_engine: 'Apocalypse Engine',
+    celestial_heart: 'Celestial Heart',
+    singularity_seed: 'Singularity Seed',
 };
 
 const XP_PICKUP_BASE_VALUE = 5;
@@ -1118,9 +1118,9 @@ const weaponSelectSprites = WEAPON_LOADOUTS.map(w => imgWithFallback([
     'assets/sprites/guns/assault_rifle.png',
 ]));
 
-const wallSprite         = img('assets/sprites/levels/level1/wall_placeholder.png');
-const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face_placeholder.png');
-const cornerFaceSprite   = img('assets/sprites/levels/level1/wall_corner_face_placeholder.png');
+const wallSprite         = img('assets/sprites/levels/level1/wall.png');
+const wallFaceSprite     = img('assets/sprites/levels/level1/wall_face.png');
+const cornerFaceSprite   = img('assets/sprites/levels/level1/wall_corner_face.png');
 const floorSprite        = img('assets/sprites/levels/level1/floor1.png');
 const floorVariants      = [
     img('assets/sprites/levels/level1/floor1.png'),
@@ -1128,81 +1128,81 @@ const floorVariants      = [
     img('assets/sprites/levels/level1/floor3.png'),
     img('assets/sprites/levels/level1/floor4.png'),
 ];
-const projectileSprite   = img('assets/sprites/projectiles/projectile_placeholder.png');
+const projectileSprite   = img('assets/sprites/projectiles/projectile.png');
 const enemyProjectileSprite = imgWithFallback([
-    'assets/sprites/projectiles/tumor_projectile_placeholder.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/tumor_projectile.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const sniperProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_sniper.png',
-    'assets/sprites/projectiles/tumor_projectile_placeholder.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/tumor_projectile.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const sniperProjectileSprites = {
-    base: imgWithFallback(['assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    a: imgWithFallback(['assets/sprites/projectiles/projectile_a_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    b: imgWithFallback(['assets/sprites/projectiles/projectile_b_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    c: imgWithFallback(['assets/sprites/projectiles/projectile_c_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    d: imgWithFallback(['assets/sprites/projectiles/projectile_d_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    base: imgWithFallback(['assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile.png']),
+    a: imgWithFallback(['assets/sprites/projectiles/projectile_a_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile.png']),
+    b: imgWithFallback(['assets/sprites/projectiles/projectile_b_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile.png']),
+    c: imgWithFallback(['assets/sprites/projectiles/projectile_c_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile.png']),
+    d: imgWithFallback(['assets/sprites/projectiles/projectile_d_sniper.png', 'assets/sprites/projectiles/projectile_sniper.png', 'assets/sprites/projectiles/projectile.png']),
 };
 
 const voidProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const necromancerProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_necromancer.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const voidBurstProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/void_proj_burst.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const necromancerBurstProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/necro_proj_burst.png',
     'assets/sprites/projectiles/void_proj_burst.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const voidSkullProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/void_proj_skull.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const necromancerSkullProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/necro_proj_skull.png',
     'assets/sprites/projectiles/void_proj_skull.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const voidSpikeProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/void_proj_spike.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const necromancerSpikeProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/necro_proj_spike.png',
     'assets/sprites/projectiles/void_proj_spike.png',
     'assets/sprites/projectiles/projectile_void.png',
-    'assets/sprites/projectiles/projectile_placeholder.png',
+    'assets/sprites/projectiles/projectile.png',
 ]);
 const voidWaveAoeFrames = [
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
 ];
 const necromancerWaveAoeFrames = [
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame1.png', 'assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame2.png', 'assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame3.png', 'assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame4.png', 'assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame5.png', 'assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
-    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame6.png', 'assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile_placeholder.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame1.png', 'assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame2.png', 'assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame3.png', 'assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame4.png', 'assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame5.png', 'assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/necro_wave_aoe_frame6.png', 'assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
 ];
 
 const sniperTeleportFrames = [
@@ -1227,44 +1227,44 @@ const tumorShootSprite = imgWithFallback([
     'assets/sprites/levels/level5/egg_face.png',
     'assets/sprites/levels/level5/egg_wall.png',
 ]);
-const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp_placeholder.png');
-const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue_placeholder.png');
+const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp.png');
+const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue.png');
 const pickupAmmoSprite = imgWithFallback([
-    'assets/sprites/pickups/pickup_ammo_placeholder.png',
-    'assets/sprites/pickups/pickup_xp_placeholder.png',
+    'assets/sprites/pickups/pickup_ammo.png',
+    'assets/sprites/pickups/pickup_xp.png',
 ]);
 const pickupHealSprite = imgWithFallback([
-    'assets/sprites/pickups/pickup_heal_placeholder.png',
-    'assets/sprites/pickups/pickup_xp_placeholder.png',
+    'assets/sprites/pickups/pickup_heal.png',
+    'assets/sprites/pickups/pickup_xp.png',
 ]);
 const pickupInstaKillSprite = imgWithFallback([
-    'assets/sprites/pickups/pickup_instakill_placeholder.png',
-    'assets/sprites/pickups/pickup_xp_placeholder.png',
+    'assets/sprites/pickups/pickup_instakill.png',
+    'assets/sprites/pickups/pickup_xp.png',
 ]);
 const pickupChestSprite = imgWithFallback([
-    'assets/sprites/pickups/chest_placeholder_green.png',
-    'assets/sprites/pickups/unique_placeholder_green.png',
+    'assets/sprites/pickups/chest_green.png',
+    'assets/sprites/pickups/unique_green.png',
 ]);
 const itemPlaceholderSprite = imgWithFallback([
-    'assets/sprites/pickups/item_placeholder_black.png',
-    'assets/sprites/pickups/pickup_xp_placeholder.png',
+    'assets/sprites/pickups/item_black.png',
+    'assets/sprites/pickups/pickup_xp.png',
 ]);
 const uniquePlaceholderSprite = imgWithFallback([
-    'assets/sprites/pickups/unique_placeholder_green.png',
-    'assets/sprites/pickups/item_placeholder_black.png',
+    'assets/sprites/pickups/unique_green.png',
+    'assets/sprites/pickups/item_black.png',
 ]);
 const voidTotemSprite = imgWithFallback([
     'assets/sprites/enemies/special/cyber_totem.png',
-    'assets/sprites/pickups/chest_placeholder_green.png',
+    'assets/sprites/pickups/chest_green.png',
 ]);
 const necromancerTotemSprite = imgWithFallback([
     'assets/sprites/enemies/special/necro_totem.png',
     'assets/sprites/enemies/special/cyber_totem.png',
-    'assets/sprites/pickups/chest_placeholder_green.png',
+    'assets/sprites/pickups/chest_green.png',
 ]);
 const necromancerAuraOutlineSprite = imgWithFallback([
-    'assets/sprites/enemies/special/necro_heal_aura_placeholder.png',
-    'assets/sprites/pickups/unique_placeholder_green.png',
+    'assets/sprites/enemies/special/necro_heal_aura.png',
+    'assets/sprites/pickups/unique_green.png',
 ]);
 
 const ENEMY_SPRITE_PATHS = {
@@ -1395,16 +1395,16 @@ function getEnemySpriteFrames(type) {
 const ITEM_PLACEHOLDER_SPRITES = Object.fromEntries(ITEM_DEFINITIONS.map(def => [
     def.id,
     imgWithFallback([
-        `assets/sprites/pickups/items/${def.id}_placeholder_green.png`,
-        'assets/sprites/pickups/unique_placeholder_green.png',
+        `assets/sprites/pickups/items/${def.id}_green.png`,
+        'assets/sprites/pickups/unique_green.png',
     ]),
 ]));
 
 const UNIQUE_PLACEHOLDER_SPRITES = Object.fromEntries(UNIQUE_ITEM_DEFINITIONS.map(def => [
     def.id,
     imgWithFallback([
-        `assets/sprites/pickups/uniques/${def.id}_placeholder_green.png`,
-        'assets/sprites/pickups/unique_placeholder_green.png',
+        `assets/sprites/pickups/uniques/${def.id}_green.png`,
+        'assets/sprites/pickups/unique_green.png',
     ]),
 ]));
 
@@ -1430,19 +1430,19 @@ const vialGlowHpSprite   = img('assets/sprites/ui/ui_vial_glow_hp.png');
 const vialGlowDashSprite = img('assets/sprites/ui/ui_vial_glow_dash.png');
 const vialBubblesSprite  = img('assets/sprites/ui/ui_vial_bubbles.png');
 const ammoBarBgSprite = imgWithFallback([
-    'assets/sprites/ui/ui_ammobar_bg_placeholder.png',
+    'assets/sprites/ui/ui_ammobar_bg.png',
     'assets/sprites/ui/ui_xpbar_bg.png',
 ]);
 const ammoBarFillSprite = imgWithFallback([
-    'assets/sprites/ui/ui_ammobar_fill_placeholder.png',
+    'assets/sprites/ui/ui_ammobar_fill.png',
     'assets/sprites/ui/ui_xpbar_fill.png',
 ]);
 const ammoBarFrameSprite = imgWithFallback([
-    'assets/sprites/ui/ui_ammobar_frame_placeholder.png',
+    'assets/sprites/ui/ui_ammobar_frame.png',
     'assets/sprites/ui/ui_xpbar_frame.png',
 ]);
 const ammoBarGlowSprite = imgWithFallback([
-    'assets/sprites/ui/ui_ammobar_glow_placeholder.png',
+    'assets/sprites/ui/ui_ammobar_glow.png',
     'assets/sprites/ui/ui_xpbar_glow.png',
 ]);
 
@@ -1473,67 +1473,67 @@ const MAP_THEME_SPRITES = {
         wallFace: wallFaceSprite,
         cornerFace: cornerFaceSprite,
         pots: [
-            imgWithFallback(['assets/sprites/levels/level1/pot1_clay_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level1/pot2_urn_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level1/pot3_vase_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potD_sandy_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potE_orange_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potF_ochre_pixel.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot1_clay_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot2_urn_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot3_vase_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potD_sandy_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potE_orange_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potF_ochre_pixel.png', 'assets/sprites/levels/level1/wall.png']),
         ],
         skullCandles: [
             imgWithFallback([
                 'assets/sprites/levels/level1/skull_candle_pixel.png',
                 'assets/sprites/levels/level1/skull_cangle_pixel.png',
                 'assets/sprites/levels/level1/skull_with_candle_pixel.png',
-                'assets/sprites/levels/level1/wall_placeholder.png',
+                'assets/sprites/levels/level1/wall.png',
             ]),
         ],
     },
     2: {
         floor: imgWithFallback(['assets/sprites/levels/level2/floor_level2.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/level2/wall_level2.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/level2/wall_face_level2.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/level2/wall_corner_face_level2.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level2/wall_level2.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level2/wall_face_level2.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level2/wall_corner_face_level2.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
     },
     3: {
         floor: imgWithFallback(['assets/sprites/levels/level3/floor_level3.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/level3/wall_level3.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level3/wall_level3.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
     },
     4: {
         floor: imgWithFallback(['assets/sprites/levels/level4/floor_level4.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/level4/wall_level4.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/level4/wall_face_level4.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/level4/wall_corner_face_level4.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level4/wall_level4.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level4/wall_face_level4.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level4/wall_corner_face_level4.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
         mushroomTrees: [
-            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2a.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2b.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3a.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3b.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2a.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_2b.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3a.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level4/mushroom_tree_3b.png', 'assets/sprites/levels/level1/wall.png']),
         ],
     },
     5: {
         floor: imgWithFallback(['assets/sprites/levels/level5/floor_level5.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/level5/wall_corner_face_level5.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
-        sausageWall: imgWithFallback(['assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/sausage.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        sausageFace: imgWithFallback(['assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        eggWall: imgWithFallback(['assets/sprites/levels/level5/egg_wall.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        eggFace: imgWithFallback(['assets/sprites/levels/level5/egg_face.png', 'assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/level5/wall_corner_face_level5.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
+        sausageWall: imgWithFallback(['assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/sausage.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall.png']),
+        sausageFace: imgWithFallback(['assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face.png']),
+        eggWall: imgWithFallback(['assets/sprites/levels/level5/egg_wall.png', 'assets/sprites/levels/level5/sausage_wall.png', 'assets/sprites/levels/level5/wall_level5.png', 'assets/sprites/levels/level1/wall.png']),
+        eggFace: imgWithFallback(['assets/sprites/levels/level5/egg_face.png', 'assets/sprites/levels/level5/sausage_face.png', 'assets/sprites/levels/level5/wall_face_level5.png', 'assets/sprites/levels/level1/wall_face.png']),
     },
     special: {
         floor: imgWithFallback(['assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
     },
     necromancer: {
         floor: imgWithFallback(['assets/sprites/levels/special/necro_floor.png', 'assets/sprites/levels/special/boss_floor.png', 'assets/sprites/levels/level1/floor1.png']),
-        wall: imgWithFallback(['assets/sprites/levels/special/necro_wall.png', 'assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall_placeholder.png']),
-        wallFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_rune.png', 'assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face_placeholder.png']),
-        cornerFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_top.png', 'assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face_placeholder.png']),
+        wall: imgWithFallback(['assets/sprites/levels/special/necro_wall.png', 'assets/sprites/levels/special/boss_wall.png', 'assets/sprites/levels/level1/wall.png']),
+        wallFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_rune.png', 'assets/sprites/levels/special/boss_wall_rune.png', 'assets/sprites/levels/level1/wall_face.png']),
+        cornerFace: imgWithFallback(['assets/sprites/levels/special/necro_wall_top.png', 'assets/sprites/levels/special/boss_wall_top.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
     },
 };
 
