@@ -1,6 +1,7 @@
 // Loads the section files in order so the game keeps the same startup sequence.
 (function () {
   var sectionScripts = [
+    'js/sections/00_cloud_auth.js',
     'js/sections/01_setup_constants_sprites.js',
     'js/sections/02_game_state.js',
     'js/sections/03_input.js',

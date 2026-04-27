@@ -11,6 +11,15 @@ function gameLoop(timestamp) {
 
     syncDevTestWaveControl();
     syncAudioControlPanel();
+    if (typeof syncAuthPanel === 'function') {
+        syncAuthPanel();
+    }
+    if (typeof updateCloudProgressMilestones === 'function') {
+        updateCloudProgressMilestones();
+    }
+    if (typeof tickCloudAutosave === 'function') {
+        tickCloudAutosave();
+    }
 
     fps = dt > 0 ? Math.round(1000 / dt) : fps;
 
