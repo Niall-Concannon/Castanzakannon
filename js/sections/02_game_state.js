@@ -456,11 +456,33 @@ function spawnArenaChests(count = 1) {
             prevY: pos.y,
             size: CHEST_WORLD_SIZE,
             opened: false,
+            bossChest: false,
+            spawnOffset: Math.random() * Math.PI * 2,
         });
     }
 }
 
-// Find Random Floor Position keeps the game logic moving.
+// Spawn Arena Chest keeps the game logic moving.
+function spawnArenaChest() {
+    spawnArenaChests(1);
+}
+
+// Spawn Boss Chest keeps the game logic moving.
+function spawnBossChest(x, y) {
+    const safePos = findNearestFreePosition(x, y, CHEST_WORLD_SIZE, 32) ?? findRandomFloorPosition(TILE * 5) ?? { x, y };
+    chests.push({
+        x: safePos.x,
+        y: safePos.y,
+        prevX: safePos.x,
+        prevY: safePos.y,
+        size: CHEST_WORLD_SIZE,
+        opened: false,
+        bossChest: true,
+        spawnOffset: Math.random() * Math.PI * 2,
+    });
+}
+
+// Spawn Boss Return Totem keeps the game logic moving.
 function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 300) {
     for (let i = 0; i < maxTries; i++) {
         const tx = 3 + Math.floor(Math.random() * (MAP_W - 6));
@@ -1263,6 +1285,18 @@ function handleEnemyDefeat(e) {
             }
             completeNecromancerEncounterVictory();
         }
+        return;
+    }
+
+    if (e.isBoss && !e.isBossEncounterEnemy) {
+        if (typeof registerAchievementBossKill === 'function') {
+            if (e.isVoidBoss) {
+                registerAchievementBossKill('void');
+            } else if (e.isNecromancerBoss) {
+                registerAchievementBossKill('necromancer');
+            }
+        }
+        spawnBossChest(e.x, e.y);
         return;
     }
 

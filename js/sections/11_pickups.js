@@ -1,5 +1,7 @@
 // Pickup collection chest rewards and damage numbers live here.
 
+let chestPickupEffects = [];
+
 
 
 
@@ -9,7 +11,32 @@ function updateChests() {
         const chest = chests[i];
         const dist = Math.hypot(player.x - chest.x, player.y - chest.y);
         if (dist <= player.size + chest.size) {
-            rewardChestLoot();
+            const gotLoot = chest.bossChest ? rewardBossLoot() : rewardChestLoot();
+            const text = player.lastLootText || 'CHEST OPENED';
+            const particles = [];
+            for (let p = 0; p < 10; p++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.9 + Math.random() * 1.6;
+                particles.push({
+                    x: chest.x,
+                    y: chest.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed * 0.45 - 1.6,
+                    life: 18 + Math.floor(Math.random() * 18),
+                    maxLife: 18 + Math.floor(Math.random() * 18),
+                    size: 2 + Math.random() * 2.5,
+                    color: chest.bossChest ? '255,212,110' : '140,255,160',
+                });
+            }
+            chestPickupEffects.push({
+                x: chest.x,
+                y: chest.y,
+                timer: 72,
+                text: gotLoot ? text : 'CHEST EMPTY',
+                boss: !!chest.bossChest,
+                created: frameCount,
+                particles,
+            });
             chests.splice(i, 1);
         }
     }
@@ -20,9 +47,11 @@ function drawChests() {
     for (const chest of chests) {
         const crx = (chest.prevX ?? chest.x) + (chest.x - (chest.prevX ?? chest.x)) * renderAlpha;
         const cry = (chest.prevY ?? chest.y) + (chest.y - (chest.prevY ?? chest.y)) * renderAlpha;
-        const sc = toScreen(crx, cry);
+        const bob = Math.sin(frameCount * 0.08 + (chest.spawnOffset ?? 0)) * 4;
+        const sc = toScreen(crx, cry + bob);
         const drawRadius = chest.size * CHEST_DRAW_SCALE;
-        const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.06);
+        const pulse = 0.82 + 0.18 * Math.sin(frameCount * 0.06 + (chest.spawnOffset ?? 0));
+        const label = chest.bossChest ? 'BOSS CHEST' : 'CHEST';
 
         ctx.save();
         const halo = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, drawRadius * 3.3 * pulse);
@@ -33,6 +62,18 @@ function drawChests() {
         ctx.beginPath();
         ctx.arc(sc.x, sc.y, drawRadius * 3.3 * pulse, 0, Math.PI * 2);
         ctx.fill();
+
+        for (let s = 0; s < 4; s++) {
+            const angle = frameCount * 0.08 + s * Math.PI * 0.5 + (chest.spawnOffset ?? 0);
+            const sparkleRadius = drawRadius * 2.1;
+            const sparkleX = sc.x + Math.cos(angle) * sparkleRadius;
+            const sparkleY = sc.y + Math.sin(angle) * sparkleRadius;
+            const sparkleAlpha = 0.45 + 0.22 * Math.sin(frameCount * 0.12 + s);
+            ctx.fillStyle = `rgba(255,255,220,${sparkleAlpha})`;
+            ctx.beginPath();
+            ctx.arc(sparkleX, sparkleY, 2 + 0.8 * Math.sin(frameCount * 0.16 + s), 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.shadowColor = '#ff0000';
         ctx.shadowBlur = 18 * pulse;
@@ -53,7 +94,103 @@ function drawChests() {
         ctx.fillStyle = 'rgba(220,255,225,0.95)';
         ctx.shadowColor = 'rgba(0,0,0,0.95)';
         ctx.shadowBlur = 5;
-        ctx.fillText('CHEST', sc.x, sc.y - drawRadius - 10);
+        ctx.fillText(label, sc.x, sc.y - drawRadius - 10);
+        ctx.restore();
+    }
+}
+
+function updateChestPickupEffects() {
+    for (let i = chestPickupEffects.length - 1; i >= 0; i--) {
+        const effect = chestPickupEffects[i];
+        effect.timer--;
+        for (let j = effect.particles.length - 1; j >= 0; j--) {
+            const particle = effect.particles[j];
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.14;
+            particle.life--;
+            if (particle.life <= 0) {
+                effect.particles.splice(j, 1);
+            }
+        }
+        if (effect.timer <= 0) {
+            chestPickupEffects.splice(i, 1);
+        }
+    }
+}
+
+function drawChestPickupEffects() {
+    const duration = 72;
+    for (const effect of chestPickupEffects) {
+        const progress = 1 - effect.timer / duration;
+        const screen = toScreen(effect.x, effect.y - 14 - Math.sin(progress * Math.PI) * 20);
+        const alpha = Math.min(1, effect.timer / 24, progress * 1.4);
+        const cardScale = 0.96 + 0.08 * Math.sin((frameCount + effect.created) * 0.18);
+        const glowRadius = 30 + progress * 20;
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.36;
+        const glow = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, glowRadius);
+        glow.addColorStop(0, effect.boss ? 'rgba(255,220,150,0.78)' : 'rgba(140,255,170,0.68)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        for (const particle of effect.particles) {
+            const partScreen = toScreen(particle.x, particle.y);
+            const lifeRatio = Math.max(0, particle.life / particle.maxLife);
+            ctx.save();
+            ctx.globalAlpha = alpha * lifeRatio;
+            ctx.fillStyle = `rgba(${particle.color},${0.95 * lifeRatio})`;
+            ctx.beginPath();
+            ctx.arc(partScreen.x, partScreen.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        const text = effect.text;
+        const cardWidth = Math.min(canvas.width - 80, Math.max(180, text.length * 10 + 120));
+        const cardHeight = 56;
+        const halfW = cardWidth * 0.5;
+        const halfH = cardHeight * 0.5;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(screen.x, screen.y - 36);
+        ctx.scale(cardScale, cardScale);
+
+        ctx.fillStyle = 'rgba(14,18,30,0.92)';
+        ctx.strokeStyle = effect.boss ? 'rgba(255,215,120,0.95)' : 'rgba(145,255,170,0.95)';
+        ctx.lineWidth = 2;
+        const radius = 14;
+        ctx.beginPath();
+        ctx.moveTo(-halfW + radius, -halfH);
+        ctx.lineTo(halfW - radius, -halfH);
+        ctx.quadraticCurveTo(halfW, -halfH, halfW, -halfH + radius);
+        ctx.lineTo(halfW, halfH - radius);
+        ctx.quadraticCurveTo(halfW, halfH, halfW - radius, halfH);
+        ctx.lineTo(-halfW + radius, halfH);
+        ctx.quadraticCurveTo(-halfW, halfH, -halfW, halfH - radius);
+        ctx.lineTo(-halfW, -halfH + radius);
+        ctx.quadraticCurveTo(-halfW, -halfH, -halfW + radius, -halfH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (pickupChestSprite.complete && pickupChestSprite.naturalWidth) {
+            ctx.drawImage(pickupChestSprite, -halfW + 14, -22, 44, 44);
+        }
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#f8f1d4';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(text, -halfW + 72, 0);
         ctx.restore();
     }
 }

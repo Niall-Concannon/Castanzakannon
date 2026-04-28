@@ -674,18 +674,47 @@ function drawLootToast() {
     if (player.lastLootTimer <= 0) return;
     player.lastLootTimer--;
 
-    const alpha = Math.min(1, player.lastLootTimer / 30);
-    const y = 122 + Math.sin((220 - player.lastLootTimer) * 0.05) * 2;
+    const timer = player.lastLootTimer;
+    const fadeIn = Math.min(1, (220 - timer) / 20);
+    const fadeOut = Math.min(1, timer / 40);
+    const alpha = Math.min(1, fadeIn, fadeOut);
+    const y = 122 + (1 - fadeIn) * 26 + Math.sin((220 - timer) * 0.05) * 2;
     const text = player.lastLootText;
+    const width = Math.min(canvas.width - 80, 18 * Math.max(12, text.length) + 60);
+    const height = 50;
+    const x = canvas.width / 2;
 
     ctx.save();
     ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+
+    ctx.fillStyle = 'rgba(18,18,26,0.86)';
+    ctx.strokeStyle = 'rgba(190,220,255,0.92)';
+    ctx.lineWidth = 2;
+    const halfW = width * 0.5;
+    const halfH = height * 0.5;
+    const radius = 14;
+    ctx.beginPath();
+    ctx.moveTo(-halfW + radius, -halfH);
+    ctx.lineTo(halfW - radius, -halfH);
+    ctx.quadraticCurveTo(halfW, -halfH, halfW, -halfH + radius);
+    ctx.lineTo(halfW, halfH - radius);
+    ctx.quadraticCurveTo(halfW, halfH, halfW - radius, halfH);
+    ctx.lineTo(-halfW + radius, halfH);
+    ctx.quadraticCurveTo(-halfW, halfH, -halfW, halfH - radius);
+    ctx.lineTo(-halfW, -halfH + radius);
+    ctx.quadraticCurveTo(-halfW, -halfH, -halfW + radius, -halfH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.font = 'bold 18px Arial';
-    ctx.fillStyle = '#ff0000';
-    ctx.shadowColor = 'rgba(0,0,0,0.95)';
-    ctx.shadowBlur = 8;
-    ctx.fillText(text, canvas.width / 2, y);
+    ctx.fillStyle = '#ffeaa0';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(text, 0, 0);
     ctx.restore();
 }
 

@@ -70,6 +70,7 @@ function gameLoop(timestamp) {
             updateWaveProgression();
             updatePickups();
             updateChests();
+            updateChestPickupEffects();
             updateDamageNumbers();
             frameCount++;
             accumulator -= FIXED_STEP;
@@ -90,6 +91,7 @@ function gameLoop(timestamp) {
     drawProjectiles();
     drawEnemyProjectiles();
     drawChests();
+    drawChestPickupEffects();
     drawVoidTotemObjective();
     drawNecromancerTotemObjective();
     drawPickups();

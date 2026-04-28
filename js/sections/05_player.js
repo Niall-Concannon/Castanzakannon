@@ -334,6 +334,11 @@ function updateWaveProgression() {
         return;
     }
 
+    if (chests.some(chest => chest.bossChest)) {
+        waveClearTimer = 0;
+        return;
+    }
+
     waveClearTimer++;
     if (waveClearTimer < WAVE_CLEAR_DELAY_FRAMES) return;
     waveClearTimer = 0;
