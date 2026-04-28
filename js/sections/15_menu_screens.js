@@ -190,6 +190,16 @@ function getEncyclopediaEnemyEntries() {
     }
 
     entries.push({
+        title: 'Mechanical Heart',
+        rarity: 'epic',
+        detail: `HP ${LEVEL2_TUMOR_HP}  Size ${LEVEL2_TUMOR_SIZE}  Projectile DMG ${TUMOR_PROJECTILE_DAMAGE}`,
+        extra: `Found on Level 2  Projectile Speed ${LEVEL2_TUMOR_PROJECTILE_SPEED}  Projectile Size ${LEVEL2_TUMOR_PROJECTILE_SIZE}`,
+        icon: TUMOR_TURRET_SPRITES.level2.idle,
+        iconFrames: [TUMOR_TURRET_SPRITES.level2.idle, TUMOR_TURRET_SPRITES.level2.shoot],
+        kind: 'enemy',
+    });
+
+    entries.push({
         title: 'Tumor Turret',
         rarity: 'epic',
         detail: `HP ${TUMOR_HP}  Range ${TUMOR_RANGE}  Projectile DMG ${TUMOR_PROJECTILE_DAMAGE}`,
