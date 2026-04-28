@@ -301,7 +301,78 @@ const WEAPON_LOADOUTS = [
             p.projectilePierce = Math.max(p.projectilePierce ?? 0, 3);
         },
     },
+    {
+        id: 'necromancer_staff',
+        name: 'Necromancer Staff',
+        spritePath: 'assets/sprites/guns/necromancer_staff.png',
+        accentColor: '#5ae6b0',
+        tagline: 'Bouncing snake bolts',
+        stats: {
+            'Damage':    '★★★☆☆',
+            'Fire Rate': '★☆☆☆☆',
+            'Ammo':      '★★★☆☆',
+            'Range':     '★★★★☆',
+        },
+        description: 'Each shot is a snake that hops between enemies. 25% chance to instead loose a void parasite that bounces farther and slows what it hits.',
+        apply(p) {
+            p.weaponType      = 'necromancer_staff';
+            p.bulletDamage    = 1.8;
+            p.fireRateMult    = 0.45;
+            p.weaponSpread    = 0.06;
+            p.weaponPellets   = 1;
+            p.weaponSpeed     = NECRO_SNAKE_PROJECTILE_SPEED;
+            p.weaponFrames    = NECRO_SNAKE_PROJECTILE_FRAMES;
+            p.weaponAmmoMax   = 15;
+            p.weaponAmmoRegen = 14;
+            p.weaponShotCost  = 1;
+        },
+    },
+    {
+        id: 'void_sword',
+        name: 'Void Sword',
+        spritePath: 'assets/sprites/swords/void_tip_TOP.png',
+        accentColor: '#b388ff',
+        tagline: 'Piston-blade melee',
+        stats: {
+            'Damage':    '★★★★☆',
+            'Fire Rate': '★★★☆☆',
+            'Ammo':      '∞',
+            'Range':     '★★☆☆☆',
+        },
+        description: 'Hold to extend a void blade along your aim. Projectile items grow its length and reach. Strikes once per extension.',
+        apply(p) {
+            p.weaponType      = 'void_sword';
+            p.bulletDamage    = 2.0;
+            p.fireRateMult    = 1;
+            p.weaponSpread    = 0;
+            p.weaponPellets   = 1;
+            p.weaponSpeed     = 0;
+            p.weaponFrames    = 0;
+            p.weaponAmmoMax   = 1;
+            p.weaponAmmoRegen = 1;
+            p.weaponShotCost  = 0;
+        },
+    },
 ];
+
+// Necromancer Staff tuning
+const NECRO_SNAKE_PROJECTILE_SPEED = 9;
+const NECRO_SNAKE_PROJECTILE_FRAMES = 220;
+const NECRO_SNAKE_PROJECTILE_SIZE = 7;
+const NECRO_SNAKE_BOUNCES = 3;
+const VOID_SNAKE_BOUNCES = 6;
+const VOID_SNAKE_CHANCE = 0.25;
+const SNAKE_BOUNCE_RANGE = 360;
+const VOID_SNAKE_SLOW_FRAMES = 90;
+const VOID_SNAKE_SLOW_MULT = 0.55;
+
+// Void Sword tuning
+const VOID_SWORD_BASE_MID_SEGMENTS = 2;
+const VOID_SWORD_BLADE_THICKNESS = 26;
+const VOID_SWORD_BOT_LEN = 24;
+const VOID_SWORD_MID_LEN = 28;
+const VOID_SWORD_TOP_LEN = 32;
+const VOID_SWORD_RETRACT_SPEED_MULT = 3;
 const AUDIO_STORAGE_KEYS = {
     music: 'castanza_music_volume',
     sfx: 'castanza_sfx_volume',
@@ -1110,6 +1181,27 @@ const weaponGunSprites = {
         idle:  img('assets/sprites/guns/sniper.png'),
         shoot: img('assets/sprites/guns/snipershoot.png'),
     },
+    necromancer_staff: {
+        idle:  img('assets/sprites/guns/necromancer_staff.png'),
+        shoot: img('assets/sprites/guns/necro_staff_shoot.png'),
+    },
+};
+
+const necroSnakeProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/necromancers_snake_bullet.png',
+    'assets/sprites/projectiles/projectile_necromancer.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+const voidSnakeProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/void_bearers_parasite.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+
+const voidSwordSprites = {
+    bot: img('assets/sprites/swords/void_tip_BOT.png'),
+    mid: img('assets/sprites/swords/void_tip_MID.png'),
+    top: img('assets/sprites/swords/void_tip_TOP.png'),
 };
 
 // Weapon select card sprites — loaded once at startup

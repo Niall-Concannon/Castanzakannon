@@ -74,6 +74,50 @@ function spawnDevModePowerupLine() {
     });
 }
 
+// Picks the next bounce target for a snake projectile (nearest hostile not visited yet).
+function pickBounceTarget(p, originX, originY) {
+    const range = p.bounceRange ?? SNAKE_BOUNCE_RANGE;
+    let best = null;
+    let bestDist = range;
+    for (const e of enemies) {
+        if (!e.alive || p.visited.has(e)) continue;
+        const dist = Math.hypot(e.x - originX, e.y - originY);
+        if (dist < bestDist) { bestDist = dist; best = e; }
+    }
+    for (const t of tumorTurrets) {
+        if (!t.alive || p.visited.has(t)) continue;
+        const dist = Math.hypot(t.x - originX, t.y - originY);
+        if (dist < bestDist) { bestDist = dist; best = t; }
+    }
+    return best;
+}
+
+// Routes a hit through bounce/slow effects; returns true if the projectile should despawn.
+function consumeProjectileHit(p, target) {
+    if (p.appliesSlow) {
+        const slowFrames = p.slowFrames ?? VOID_SNAKE_SLOW_FRAMES;
+        const slowMult = p.slowMult ?? VOID_SNAKE_SLOW_MULT;
+        target.slowFrames = Math.max(target.slowFrames ?? 0, slowFrames);
+        target.slowMult = Math.min(target.slowMult ?? 1, slowMult);
+    }
+    if ((p.bouncesLeft ?? 0) > 0) {
+        p.visited.add(target);
+        p.bouncesLeft--;
+        const next = pickBounceTarget(p, target.x, target.y);
+        if (!next) return true;
+        const speed = Math.hypot(p.velocityX, p.velocityY) || NECRO_SNAKE_PROJECTILE_SPEED;
+        const a = Math.atan2(next.y - target.y, next.x - target.x);
+        p.velocityX = Math.cos(a) * speed;
+        p.velocityY = Math.sin(a) * speed;
+        return false;
+    }
+    if ((p.piercesLeft ?? 0) > 0) {
+        p.piercesLeft--;
+        return false;
+    }
+    return true;
+}
+
 // Update Projectiles keeps the game logic moving.
 function updateProjectiles() {
     updateRailgunBeams();
@@ -86,45 +130,50 @@ function updateProjectiles() {
         const p = arr[i];
         const oldX = p.x;
         const oldY = p.y;
+        p.lastHitFrame = -1;
         p.x += p.velocityX;
         p.y += p.velocityY;
         p.framesLeft--;
 
-        if (wallCollision(p.x, p.y, p.size) || p.framesLeft <= 0) {
+        const ignoreWalls = (p.bouncesLeft ?? 0) > 0 || p.visited;
+        if ((!ignoreWalls && wallCollision(p.x, p.y, p.size)) || p.framesLeft <= 0) {
             arr.splice(i, 1);
             continue;
         }
 
+        let hitThisFrame = false;
         for (const t of tumorTurrets) {
             if (!t.alive) continue;
+            if (p.visited?.has(t)) continue;
 
             if (segmentCircleHit(oldX, oldY, p.x, p.y, t.x, t.y, p.size + t.size)) {
                 const turretDamageBase = player.instakillTimer > 0 ? t.hp : player.bulletDamage;
                 let turretDamage = getCurrentProjectileDamage(turretDamageBase, t);
                 if (p.isCrit) turretDamage = Math.round(turretDamage * (p.critMult ?? 1.75));
                 applyEnemyDamage(t, turretDamage, { sourceX: p.x, sourceY: p.y, sourceProjectile: p });
-                if ((p.piercesLeft ?? 0) > 0) {
-                    p.piercesLeft--;
-                } else {
+                hitThisFrame = true;
+                p.lastHitFrame = frameCount;
+                if (consumeProjectileHit(p, t)) {
                     arr.splice(i, 1);
                 }
                 break;
             }
         }
 
+        if (hitThisFrame || p.lastHitFrame === frameCount) continue;
         if (!arr[i]) continue;
 
         for (const e of enemies) {
             if (!e.alive) continue;
+            if (p.visited?.has(e)) continue;
             if (segmentCircleHit(oldX, oldY, p.x, p.y, e.x, e.y, p.size + e.size)) {
                 const enemyDamageBase = player.instakillTimer > 0 ? e.hp : player.bulletDamage;
                 let enemyDamage = getCurrentProjectileDamage(enemyDamageBase, e);
                 if (p.isCrit) enemyDamage = Math.round(enemyDamage * (p.critMult ?? 1.75));
                 applyEnemyDamage(e, enemyDamage, { sourceX: p.x, sourceY: p.y, sourceProjectile: p });
+                p.lastHitFrame = frameCount;
 
-                if ((p.piercesLeft ?? 0) > 0) {
-                    p.piercesLeft--;
-                } else {
+                if (consumeProjectileHit(p, e)) {
                     arr.splice(i, 1);
                 }
                 break;
@@ -139,10 +188,17 @@ function drawProjectiles() {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
         const pry = (p.prevY ?? p.y) + (p.y - (p.prevY ?? p.y)) * renderAlpha;
         const sc  = toScreen(prx, pry);
+        const sprite = p.sprite ?? projectileSprite;
         ctx.save();
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
-        ctx.drawImage(projectileSprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        if (p.lengthMultiplier && p.lengthMultiplier > 1) {
+            const drawH = p.size * 2;
+            const drawW = drawH * p.lengthMultiplier;
+            ctx.drawImage(sprite, -drawW / 2, -drawH / 2, drawW, drawH);
+        } else {
+            ctx.drawImage(sprite, -p.size, -p.size, p.size * 2, p.size * 2);
+        }
         ctx.restore();
     }
 

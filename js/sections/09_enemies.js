@@ -1111,7 +1111,16 @@ function updateEnemies() {
             }
         }
 
-        const moved = !shouldMove || moveEnemyToward(e, tx, ty, e.speed * speedMult);
+        let slowFactor = 1;
+        if ((e.slowFrames ?? 0) > 0) {
+            slowFactor = e.slowMult ?? 1;
+            e.slowFrames--;
+            if (e.slowFrames <= 0) {
+                e.slowFrames = 0;
+                e.slowMult = 1;
+            }
+        }
+        const moved = !shouldMove || moveEnemyToward(e, tx, ty, e.speed * speedMult * slowFactor);
         if (!moved) {
             e.path = [];
             e.pathTimer = 0;

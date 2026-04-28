@@ -181,6 +181,9 @@ let player = {
     killShieldFlat: 0,
     reviveCharges: 0,
     xp: 0, xpToNextLevel: 100, level: 1,
+    swordExtension: 0,
+    swordPhase: 'idle',
+    swordHitSet: new Set(),
 };
 
 // Calculates the current fire delay from the player stats.
@@ -619,6 +622,49 @@ function clonePlain(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+// Rebuilds projectile records restored from JSON so runtime-only fields are safe again.
+function sanitizeRestoredProjectiles(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const raw of list) {
+        if (!raw || typeof raw !== 'object') continue;
+        const p = { ...raw };
+        // Image instances do not survive JSON cloning; let draw code pick defaults.
+        p.sprite = null;
+        // Snake visited targets are object refs and cannot be serialized; restart empty.
+        if (p.visited !== undefined) p.visited = new Set();
+        if (typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+        if (typeof p.velocityX !== 'number') p.velocityX = 0;
+        if (typeof p.velocityY !== 'number') p.velocityY = 0;
+        if (typeof p.size !== 'number') p.size = 5;
+        if (typeof p.framesLeft !== 'number') p.framesLeft = 1;
+        p.prevX = typeof p.prevX === 'number' ? p.prevX : p.x;
+        p.prevY = typeof p.prevY === 'number' ? p.prevY : p.y;
+        out.push(p);
+    }
+    return out;
+}
+
+// Rebuilds enemy projectile records restored from JSON so runtime-only fields are safe again.
+function sanitizeRestoredEnemyProjectiles(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const raw of list) {
+        if (!raw || typeof raw !== 'object') continue;
+        const p = { ...raw };
+        p.sprite = null;
+        if (typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+        if (typeof p.velocityX !== 'number') p.velocityX = 0;
+        if (typeof p.velocityY !== 'number') p.velocityY = 0;
+        if (typeof p.size !== 'number') p.size = 8;
+        if (typeof p.framesLeft !== 'number') p.framesLeft = 1;
+        p.prevX = typeof p.prevX === 'number' ? p.prevX : p.x;
+        p.prevY = typeof p.prevY === 'number' ? p.prevY : p.y;
+        out.push(p);
+    }
+    return out;
+}
+
 // Finds a boss totem spawn point near the arena center.
 function pickBossTotemPosition(candidates, fallbackX, fallbackY) {
     for (const pos of candidates) {
@@ -888,11 +934,12 @@ function returnFromVoidEncounter() {
     enemySpawnBudget = ctxSaved.enemySpawnBudget;
     enemies = ctxSaved.enemies ?? [];
     pickups = ctxSaved.pickups ?? [];
-    projectiles = ctxSaved.projectiles ?? [];
-    enemyProjectiles = ctxSaved.enemyProjectiles ?? [];
+    projectiles = sanitizeRestoredProjectiles(ctxSaved.projectiles);
+    enemyProjectiles = sanitizeRestoredEnemyProjectiles(ctxSaved.enemyProjectiles);
     tumorTurrets = ctxSaved.tumorTurrets ?? [];
     chests = ctxSaved.chests ?? [];
-    voidTotem = ctxSaved.voidTotem ?? null;
+    // The used void totem should not persist on the main map after return.
+    voidTotem = null;
     necromancerTotem = ctxSaved.necromancerTotem ?? null;
 
     player.x = ctxSaved.playerX;
@@ -1037,12 +1084,13 @@ function returnFromNecromancerEncounter() {
     enemySpawnBudget = ctxSaved.enemySpawnBudget;
     enemies = ctxSaved.enemies ?? [];
     pickups = ctxSaved.pickups ?? [];
-    projectiles = ctxSaved.projectiles ?? [];
-    enemyProjectiles = ctxSaved.enemyProjectiles ?? [];
+    projectiles = sanitizeRestoredProjectiles(ctxSaved.projectiles);
+    enemyProjectiles = sanitizeRestoredEnemyProjectiles(ctxSaved.enemyProjectiles);
     tumorTurrets = ctxSaved.tumorTurrets ?? [];
     chests = ctxSaved.chests ?? [];
     voidTotem = ctxSaved.voidTotem ?? null;
-    necromancerTotem = ctxSaved.necromancerTotem ?? null;
+    // The used necromancer totem should not persist on the main map after return.
+    necromancerTotem = null;
 
     player.x = ctxSaved.playerX;
     player.y = ctxSaved.playerY;

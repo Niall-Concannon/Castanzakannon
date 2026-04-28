@@ -108,6 +108,10 @@ function confirmWeaponAndStart() {
     elapsedGameMs = 0;
     gamePaused   = false;
 
+    player.swordExtension = 0;
+    player.swordPhase = 'idle';
+    player.swordHitSet = new Set();
+
     // Apply the chosen weapon loadout (must happen before ammo init)
     const loadout = WEAPON_LOADOUTS[selectedWeaponIndex] ?? WEAPON_LOADOUTS[0];
     loadout.apply(player);
@@ -386,21 +390,112 @@ function playerDash() {
     trailTimer = 0;
 }
 
+// Returns the number of mid-segments the sword can grow to right now.
+function getVoidSwordMaxMidSegments() {
+    const fromExtraShots = player.extraShots ?? 0;
+    const fromPellets = Math.max(0, (player.weaponPellets ?? 1) - 1);
+    const fromPierce = player.projectilePierce ?? 0;
+    return VOID_SWORD_BASE_MID_SEGMENTS + fromExtraShots + fromPellets + fromPierce;
+}
+
+// Returns the active mid segment count and the world-space sword length for the current frame.
+function getVoidSwordGeometry() {
+    const maxMid = getVoidSwordMaxMidSegments();
+    const phase = Math.max(0, Math.min(1, player.swordExtension ?? 0));
+    const activeMid = Math.floor(phase * maxMid + 1e-6);
+    const length = VOID_SWORD_BOT_LEN + activeMid * VOID_SWORD_MID_LEN + VOID_SWORD_TOP_LEN;
+    return { maxMid, activeMid, phase, length };
+}
+
+// Drives the sword extension/retraction state machine and applies hit damage.
+function updateVoidSword() {
+    if (player.weaponType !== 'void_sword') {
+        player.swordExtension = 0;
+        player.swordPhase = 'idle';
+        if (player.swordHitSet?.size) player.swordHitSet.clear();
+        return;
+    }
+
+    const extendFrames = Math.max(1, getPlayerShootCooldownFrames());
+    const retractFrames = Math.max(1, extendFrames / VOID_SWORD_RETRACT_SPEED_MULT);
+    const extendStep = 1 / extendFrames;
+    const retractStep = 1 / retractFrames;
+
+    if (!player.swordHitSet) player.swordHitSet = new Set();
+
+    if (player.swordPhase === 'idle') {
+        if (mouseDown) {
+            player.swordPhase = 'extending';
+            player.swordHitSet.clear();
+        }
+    }
+
+    if (player.swordPhase === 'extending') {
+        if (!mouseDown) {
+            player.swordPhase = 'retracting';
+        } else {
+            player.swordExtension = Math.min(1, (player.swordExtension ?? 0) + extendStep);
+            if (player.swordExtension >= 1) {
+                player.swordExtension = 1;
+                player.swordPhase = 'retracting';
+            }
+        }
+    } else if (player.swordPhase === 'retracting') {
+        player.swordExtension = Math.max(0, (player.swordExtension ?? 0) - retractStep);
+        if (player.swordExtension <= 0) {
+            player.swordExtension = 0;
+            if (mouseDown) {
+                player.swordPhase = 'extending';
+                player.swordHitSet.clear();
+            } else {
+                player.swordPhase = 'idle';
+            }
+        }
+    }
+
+    if (player.swordPhase !== 'extending') return;
+
+    const angle = player.weaponAngle;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    const anchorX = player.x + cosA * RAIL_RADIUS;
+    const anchorY = player.y + sinA * RAIL_RADIUS;
+    const { length } = getVoidSwordGeometry();
+    if (length <= 0) return;
+    const halfThickness = VOID_SWORD_BLADE_THICKNESS / 2;
+    const damage = Math.max(1, player.bulletDamage ?? 1);
+
+    const hitTarget = (target) => {
+        if (!target?.alive) return;
+        if (player.swordHitSet.has(target)) return;
+        const dx = target.x - anchorX;
+        const dy = target.y - anchorY;
+        const along = dx * cosA + dy * sinA;
+        const perp = Math.abs(-dx * sinA + dy * cosA);
+        const radius = target.size ?? 12;
+        if (along < -radius || along > length + radius) return;
+        if (perp > halfThickness + radius) return;
+        player.swordHitSet.add(target);
+        applyEnemyDamage(target, damage, { sourceX: anchorX, sourceY: anchorY });
+    };
+
+    for (const e of enemies) hitTarget(e);
+    for (const t of tumorTurrets) hitTarget(t);
+}
+
 // Player Shoot keeps the game logic moving.
 function playerShoot() {
+    if (player.weaponType === 'void_sword') return;
     if (!mouseDown || player.shootCooldown > 0) return;
     const hasInfiniteAmmo = player.infiniteAmmoTimer > 0;
     const shotCost = player.weaponShotCost ?? AMMO_SHOT_COST;
 
-    if (!hasInfiniteAmmo && player.weaponType === 'sniper') {
-        const sniperAmmoMax = player.weaponAmmoMax ?? 8;
-        if (player.sniperReloadLocked) {
-            if (player.ammo >= sniperAmmoMax) {
-                player.sniperReloadLocked = false;
-                player.sniperReloadTimer = 0;
-            } else {
-                return;
-            }
+    if (!hasInfiniteAmmo && player.sniperReloadLocked) {
+        if (player.ammo > 0) {
+            player.sniperReloadLocked = false;
+            player.sniperReloadTimer = 0;
+        } else {
+            return;
         }
     }
 
@@ -408,10 +503,12 @@ function playerShoot() {
 
     if (!hasInfiniteAmmo) {
         player.ammo = Math.max(0, player.ammo - shotCost);
-        if (player.weaponType === 'sniper' && player.ammo <= 0) {
+        if (player.ammo <= 0) {
             player.sniperReloadLocked = true;
             player.sniperReloadTimer = 0;
-            player.sniperPingDelayTimer = SNIPER_PING_DELAY_FRAMES;
+            if (player.weaponType === 'sniper') {
+                player.sniperPingDelayTimer = SNIPER_PING_DELAY_FRAMES;
+            }
         }
     }
     player.ammoRegenTimer = 0;
@@ -449,7 +546,7 @@ function playerShoot() {
         const pelletAngle = isShotgun
             ? player.weaponAngle + (Math.random() - 0.5) * (player.weaponSpread ?? 0.55)
             : angle + (startOffset + i) * spreadStep;
-        projectiles.push({
+        const projectile = {
             x: bx, y: by, prevX: bx, prevY: by,
             velocityX: Math.cos(pelletAngle) * (player.weaponSpeed ?? 12),
             velocityY: Math.sin(pelletAngle) * (player.weaponSpeed ?? 12),
@@ -462,7 +559,25 @@ function playerShoot() {
             chainChance: player.chainLightningChance ?? 0,
             chainDamageMult: player.chainLightningDamageMult ?? 0.6,
             isCrit: Math.random() < (player.critChance ?? 0),
-        });
+        };
+
+        if (player.weaponType === 'necromancer_staff') {
+            const isVoid = Math.random() < VOID_SNAKE_CHANCE;
+            projectile.size = NECRO_SNAKE_PROJECTILE_SIZE;
+            projectile.piercesLeft = 0;
+            projectile.bouncesLeft = isVoid ? VOID_SNAKE_BOUNCES : NECRO_SNAKE_BOUNCES;
+            projectile.bounceRange = SNAKE_BOUNCE_RANGE;
+            projectile.visited = new Set();
+            projectile.sprite = isVoid ? voidSnakeProjectileSprite : necroSnakeProjectileSprite;
+            projectile.lengthMultiplier = 400 / 65;
+            if (isVoid) {
+                projectile.appliesSlow = true;
+                projectile.slowFrames = VOID_SNAKE_SLOW_FRAMES;
+                projectile.slowMult = VOID_SNAKE_SLOW_MULT;
+            }
+        }
+
+        projectiles.push(projectile);
     }
 
 
@@ -590,54 +705,46 @@ function updatePlayer() {
         player.infiniteAmmoTimer--;
         player.ammoRegenTimer = 0;
         player.ammoNoShootFrames = 0;
+        player.sniperReloadLocked = false;
         player.sniperReloadTimer = 0;
-    } else if (player.weaponType === 'sniper') {
-        const sniperAmmoMax = player.weaponAmmoMax ?? 8;
+    } else {
+        const ammoMax = player.weaponAmmoMax ?? AMMO_MAX;
 
         if (player.sniperReloadLocked) {
-            player.ammoNoShootFrames++;
-            player.sniperReloadTimer = Math.max(0, player.sniperReloadTimer ?? 0) + 1;
-
-            if (player.sniperReloadTimer >= SNIPER_RELOAD_MIN_FRAMES) {
-                player.ammoRegenTimer++;
-                const baseInterval = player.weaponAmmoRegen ?? AMMO_REGEN_INTERVAL_FRAMES;
-                const regenInterval = Math.max(
-                    AMMO_REGEN_MIN_INTERVAL_FRAMES,
-                    Math.floor(baseInterval / player.ammoRegenMult),
-                );
-                if (player.ammoRegenTimer >= regenInterval) {
-                    player.ammo = Math.min(sniperAmmoMax, player.ammo + 1);
-                    player.ammoRegenTimer = 0;
-                }
-            } else {
-                player.ammoRegenTimer = 0;
-            }
-
-            if (player.ammo >= sniperAmmoMax) {
+            if (player.ammo > 0) {
                 player.sniperReloadLocked = false;
                 player.sniperReloadTimer = 0;
+            } else {
+                player.ammoRegenTimer = 0;
+                player.ammoNoShootFrames++;
+                player.sniperReloadTimer = Math.max(0, player.sniperReloadTimer ?? 0) + 1;
+                if (player.sniperReloadTimer >= SNIPER_RELOAD_MIN_FRAMES) {
+                    player.ammo = ammoMax;
+                    player.sniperReloadLocked = false;
+                    player.sniperReloadTimer = 0;
+                }
             }
+        } else if (player.ammo < ammoMax && !mouseDown) {
+            player.ammoNoShootFrames++;
+            player.ammoRegenTimer++;
+            const idleSeconds = (player.ammoNoShootFrames * FIXED_STEP) / 1000;
+            const baseInterval = player.weaponAmmoRegen ?? AMMO_REGEN_INTERVAL_FRAMES;
+            const regenInterval = Math.max(
+                AMMO_REGEN_MIN_INTERVAL_FRAMES,
+                Math.floor((baseInterval * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)) / player.ammoRegenMult),
+            );
+            if (player.ammoRegenTimer >= regenInterval) {
+                player.ammo = Math.min(ammoMax, player.ammo + 1);
+                player.ammoRegenTimer = 0;
+            }
+        } else if (player.ammo < ammoMax) {
+            player.ammoRegenTimer = 0;
+            player.ammoNoShootFrames = 0;
         } else {
             player.ammoRegenTimer = 0;
             player.ammoNoShootFrames++;
             player.sniperReloadTimer = 0;
         }
-    } else if (player.ammo < (player.weaponAmmoMax ?? AMMO_MAX)) {
-        player.ammoNoShootFrames++;
-        player.ammoRegenTimer++;
-        const idleSeconds = (player.ammoNoShootFrames * FIXED_STEP) / 1000;
-        const baseInterval = player.weaponAmmoRegen ?? AMMO_REGEN_INTERVAL_FRAMES;
-        const regenInterval = Math.max(
-            AMMO_REGEN_MIN_INTERVAL_FRAMES,
-            Math.floor((baseInterval * Math.exp(-AMMO_REGEN_ACCEL_PER_SEC * idleSeconds)) / player.ammoRegenMult),
-        );
-        if (player.ammoRegenTimer >= regenInterval) {
-            player.ammo = Math.min(player.weaponAmmoMax ?? AMMO_MAX, player.ammo + 1);
-            player.ammoRegenTimer = 0;
-        }
-    } else {
-        player.ammoRegenTimer = 0;
-        player.ammoNoShootFrames++;
     }
 
 
@@ -709,6 +816,7 @@ function updatePlayer() {
 
     player.weaponAngle = Math.atan2(mouseY - canvas.height / 2, mouseX - canvas.width / 2);
     playerShoot();
+    updateVoidSword();
     updatePlayerAnim();
 }
 
