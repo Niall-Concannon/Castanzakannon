@@ -356,10 +356,8 @@ function updateWaveProgression() {
     }
 
     if (currentArenaLevel >= MAX_ARENA_LEVELS) {
-        // Enter endless mode instead of showing win screen
-        endlessMode = true;
-        endlessWave++;
-        startEndlessWave(endlessWave);
+        // All levels cleared; show the win screen before endless mode.
+        gameState = 'win';
         return;
     }
 
@@ -403,6 +401,13 @@ function startEndlessWave(n) {
     waveClearTimer = 0;
     waveSpawnDelayFrames = WAVE_START_SPAWN_DELAY_FRAMES;
     enemySpawnBudget = 0;
+}
+
+function startEndlessFromWin() {
+    gameState = 'playing';
+    endlessMode = true;
+    endlessWave = 1;
+    startEndlessWave(endlessWave);
 }
 
 // Cleanup Dead Enemies keeps the game logic moving.

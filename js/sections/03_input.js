@@ -75,10 +75,17 @@ window.addEventListener('keydown', e => {
         playUiClick();
     }
 
+    if (e.key === 'Escape' && gameState === 'win') {
+        playUiClick();
+        gameState = 'menu';
+        menuPage = 'main';
+        return;
+    }
+
     if (e.key === ' ' || e.key === 'Enter') {
         if      (gameState === 'menu'    && menuPage === 'main') { playUiClick(); startGame(); }
         else if (gameState === 'gameOver') { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
-        else if (gameState === 'win')      { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
+        else if (gameState === 'win')      { playUiClick(); startEndlessFromWin(); }
         else if (gameState === 'levelUp')  { playUiClick(); currentLevelUpChoices = []; gameState = 'playing'; }
         else if (gameState === 'playing')  playerDash();
     }
@@ -420,9 +427,17 @@ window.addEventListener('mousedown', e => {
         gameState = 'menu';
         menuPage  = 'main';
     } else if (gameState === 'win') {
-        playUiClick();
-        gameState = 'menu';
-        menuPage  = 'main';
+        const buttons = getWinScreenButtons();
+        const clickedEndless = mouseX >= buttons.endless.x && mouseX <= buttons.endless.x + buttons.endless.w && mouseY >= buttons.endless.y && mouseY <= buttons.endless.y + buttons.endless.h;
+        const clickedMenu = mouseX >= buttons.menu.x && mouseX <= buttons.menu.x + buttons.menu.w && mouseY >= buttons.menu.y && mouseY <= buttons.menu.y + buttons.menu.h;
+        if (clickedEndless) {
+            playUiClick();
+            startEndlessFromWin();
+        } else if (clickedMenu) {
+            playUiClick();
+            gameState = 'menu';
+            menuPage  = 'main';
+        }
     } else if (gameState === 'levelUp' && levelUpInputDelay <= 0) {
         const zones = getLevelUpZones();
         for (let i = 0; i < 3; i++) {

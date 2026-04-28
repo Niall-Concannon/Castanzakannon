@@ -83,6 +83,19 @@ function getEncyclopediaButton() {
 function getBackButton() {
     return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 };
 }
+
+function getWinScreenButtons() {
+    const buttonW = Math.min(320, Math.max(260, Math.floor(canvas.width * 0.25)));
+    const buttonH = Math.min(60, Math.max(52, Math.floor(canvas.height * 0.08)));
+    const gap = 24;
+    const totalWidth = buttonW * 2 + gap;
+    const leftX = Math.floor(canvas.width / 2 - totalWidth / 2);
+    const y = Math.floor(canvas.height / 2 + 36);
+    return {
+        endless: { x: leftX, y, w: buttonW, h: buttonH },
+        menu:    { x: leftX + buttonW + gap, y, w: buttonW, h: buttonH },
+    };
+}
 // Get Encyclopedia Panel keeps the game logic moving.
 function getEncyclopediaPanel() {
     const w = Math.min(1140, canvas.width - 70);
@@ -1650,21 +1663,54 @@ function drawGameOver() {
 
 // Draw Win Screen keeps the game logic moving.
 function drawWinScreen() {
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = '#0f0f10';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = '#ff3b5a';
     ctx.font      = 'bold 64px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('YOU WIN', canvas.width / 2, canvas.height / 2 - 60);
+    ctx.fillText('YOU WIN', canvas.width / 2, canvas.height / 2 - 90);
 
     ctx.font      = '26px Arial';
-    ctx.fillStyle = '#ff0000';
-    ctx.fillText('All 5 levels cleared', canvas.width / 2, canvas.height / 2 - 12);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('All 5 levels cleared', canvas.width / 2, canvas.height / 2 - 40);
 
     ctx.font      = '20px Arial';
     ctx.fillStyle = '#c0c0c0';
-    ctx.fillText('Press ENTER or Click to return to Menu', canvas.width / 2, canvas.height / 2 + 38);
+    ctx.fillText('Choose your next challenge below', canvas.width / 2, canvas.height / 2 - 10);
+
+    const buttons = getWinScreenButtons();
+    const endlessHover = mouseX >= buttons.endless.x && mouseX <= buttons.endless.x + buttons.endless.w && mouseY >= buttons.endless.y && mouseY <= buttons.endless.y + buttons.endless.h;
+    const menuHover = mouseX >= buttons.menu.x && mouseX <= buttons.menu.x + buttons.menu.w && mouseY >= buttons.menu.y && mouseY <= buttons.menu.y + buttons.menu.h;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(buttons.endless.x, buttons.endless.y, buttons.endless.w, buttons.endless.h);
+    ctx.fillRect(buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(buttons.endless.x, buttons.endless.y, buttons.endless.w, buttons.endless.h);
+    ctx.strokeRect(buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h);
+
+    if (endlessHover) {
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(buttons.endless.x, buttons.endless.y, buttons.endless.w, buttons.endless.h);
+    }
+    if (menuHover) {
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(buttons.menu.x, buttons.menu.y, buttons.menu.w, buttons.menu.h);
+    }
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('Start Endless Wave', buttons.endless.x + buttons.endless.w / 2, buttons.endless.y + buttons.endless.h / 2 + 6);
+    ctx.fillText('Main Menu', buttons.menu.x + buttons.menu.w / 2, buttons.menu.y + buttons.menu.h / 2 + 6);
+
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#a8b1c4';
+    ctx.fillText('Press ENTER to begin endless, ESC to return', canvas.width / 2, buttons.menu.y + buttons.menu.h + 40);
+    ctx.restore();
 }
 
 // Draw Cursor keeps the game logic moving.

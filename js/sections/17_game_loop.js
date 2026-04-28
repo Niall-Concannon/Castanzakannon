@@ -51,8 +51,8 @@ function gameLoop(timestamp) {
     }
     if (gameState === 'menu')         { cloudAuthToggleButton.style.display = menuPage === 'main' ? 'flex' : 'none'; drawMenu();               requestAnimationFrame(gameLoop); return; }
     if (gameState === 'weaponSelect') { cloudAuthToggleButton.style.display = 'none'; drawWeaponSelectScreen(); requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'gameOver')     { cloudAuthToggleButton.style.display = 'none'; drawGameOver();           requestAnimationFrame(gameLoop); return; }
-    if (gameState === 'win')          { cloudAuthToggleButton.style.display = 'none'; drawWinScreen();          requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'gameOver')     { cloudAuthToggleButton.style.display = 'none'; drawGameOver(); drawCursor(); requestAnimationFrame(gameLoop); return; }
+    if (gameState === 'win')          { cloudAuthToggleButton.style.display = 'none'; drawWinScreen(); drawCursor(); requestAnimationFrame(gameLoop); return; }
 
     if (gameState === 'playing' && !gamePaused) {
         elapsedGameMs += dt;
