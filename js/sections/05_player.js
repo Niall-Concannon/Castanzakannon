@@ -434,17 +434,20 @@ function updateVoidSword() {
         if (mouseDown) {
             player.swordPhase = 'extending';
             player.swordHitSet.clear();
+            if (typeof scheduleStartVoidSwordLoop === 'function') scheduleStartVoidSwordLoop();
         }
     }
 
     if (player.swordPhase === 'extending') {
         if (!mouseDown) {
             player.swordPhase = 'retracting';
+            if (typeof scheduleStopVoidSwordLoop === 'function') scheduleStopVoidSwordLoop();
         } else {
             player.swordExtension = Math.min(1, (player.swordExtension ?? 0) + extendStep);
             if (player.swordExtension >= 1) {
                 player.swordExtension = 1;
                 player.swordPhase = 'retracting';
+                if (typeof scheduleStopVoidSwordLoop === 'function') scheduleStopVoidSwordLoop();
             }
         }
     } else if (player.swordPhase === 'retracting') {
@@ -454,6 +457,7 @@ function updateVoidSword() {
             if (mouseDown) {
                 player.swordPhase = 'extending';
                 player.swordHitSet.clear();
+                if (typeof scheduleStartVoidSwordLoop === 'function') scheduleStartVoidSwordLoop();
             } else {
                 player.swordPhase = 'idle';
             }
@@ -527,6 +531,8 @@ function playerShoot() {
         playSmgShot();
     } else if (player.weaponType === 'shotgun') {
         playShotgunShot();
+    } else if (player.weaponType === 'necromancer_staff') {
+        playNecroShot();
     } else {
         playLaserShot();
     }
@@ -706,6 +712,13 @@ function updatePlayer() {
             playSniperPing();
             player.sniperPingDelayTimer = -1;
         }
+    }
+
+    // Laser loop management: schedule start/stop with small delays to avoid stutter.
+    if (mouseDown && lastShotWasLaser) {
+        if (typeof scheduleStartLaserLoop === 'function') scheduleStartLaserLoop();
+    } else {
+        if (typeof scheduleStopLaserLoop === 'function') scheduleStopLaserLoop();
     }
 
     if (player.infiniteAmmoTimer > 0) {

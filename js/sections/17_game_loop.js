@@ -136,6 +136,8 @@ initializeHealPickupPool();
 initializeInstakillPickupPool();
 initializeUiClickPool();
 initializeExpOrbPool();
+initializeNecroShotPool();
+initializeVoidSwordPool();
 playRandomMusicTrack();
 
 for (let i = 1; i <= WAVES_PER_LEVEL; i++) {

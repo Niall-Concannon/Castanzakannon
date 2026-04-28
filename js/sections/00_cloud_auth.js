@@ -120,6 +120,9 @@ const cloudAchievementState = {
     pendingPopups: [],
 };
 
+// Achievement audio (save attachment as assets/audio/sfx/achivement-normale.mp3)
+const achievementAudio = new Audio('assets/audio/sfx/achivement-normale.mp3');
+
 const cloudAuthPanel = document.createElement('section');
 cloudAuthPanel.id = 'cloudAuthPanel';
 
@@ -512,6 +515,20 @@ function evaluateAchievements({ queuePopup = false } = {}) {
                 description: def.description,
                 expiresAt: Date.now() + 3000,
             });
+        }
+        // Play achievement sound once for the unlocked batch if available
+        try {
+            const canPlay = (typeof audioUnlocked !== 'undefined' ? audioUnlocked : true);
+            if (canPlay && achievementAudio) {
+                let vol = 1;
+                if (typeof scaledSfxVolume === 'function') vol = scaledSfxVolume();
+                else if (typeof sfxVolume !== 'undefined') vol = sfxVolume;
+                achievementAudio.currentTime = 0;
+                achievementAudio.volume = Math.max(0, Math.min(1, vol));
+                achievementAudio.play().catch(() => {});
+            }
+        } catch (e) {
+            // ignore
         }
     }
 

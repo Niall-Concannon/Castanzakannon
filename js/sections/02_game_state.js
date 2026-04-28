@@ -68,6 +68,7 @@ let sfxVolume = 1;
 let pendingMusicStart = false;
 let currentMusicTrack = null;
 let lastMusicTrackIndex = -1;
+let lastBossMusicTrackIndex = -1;
 let laserShotPool = [];
 let laserShotPoolIndex = 0;
 let shotgunShotPool = [];
@@ -78,6 +79,23 @@ let sniperShotPool = [];
 let sniperShotPoolIndex = 0;
 let sniperPingAudio = null;
 let sniperPingAudioLayer = null;
+let laserLoopAudio = null;
+let lastShotWasLaser = false;
+let voidSwordLoopAudio = null;
+let voidSwordLoopActive = false;
+let laserLoopStartTimeout = null;
+let laserLoopStopTimeout = null;
+let voidSwordStartTimeout = null;
+let voidSwordStopTimeout = null;
+
+const LASER_LOOP_DELAY_MS = 120; // wait before starting looping to avoid stutter on taps
+const LASER_LOOP_STOP_HOLDOFF_MS = 140; // keep playing briefly on release
+const VOID_SWORD_LOOP_DELAY_MS = 80;
+const VOID_SWORD_STOP_HOLDOFF_MS = 120;
+let necroShotPool = [];
+let necroShotPoolIndex = 0;
+let voidSwordPool = [];
+let voidSwordPoolIndex = 0;
 let dashPool = [];
 let dashPoolIndex = 0;
 let ammoPickupPool = [];
@@ -367,6 +385,16 @@ function registerLootGain(definition, source) {
     entry.level = player.itemLevels[definition.id];
     player.lastLootText = `${source === 'unique' ? 'UNIQUE' : 'ITEM'}: ${definition.title}`;
     player.lastLootTimer = 220;
+    // Play item/unique pickup audio
+    try {
+        if (audioUnlocked && itemPickupAudio) {
+            itemPickupAudio.currentTime = 0;
+            itemPickupAudio.volume = scaledSfxVolume();
+            itemPickupAudio.play().catch(() => {});
+        }
+    } catch (e) {
+        // ignore
+    }
     return true;
 }
 
@@ -509,6 +537,15 @@ function spawnBossEnemy() {
     enemy.bossHomingCooldown = 110;
     enemies.push(enemy);
     enemiesRemainingInWave++;
+
+    if (bossSpawnAudio) {
+        try {
+            bossSpawnAudio.currentTime = 0;
+            bossSpawnAudio.volume = scaledSfxVolume();
+            bossSpawnAudio.play();
+        } catch (e) {
+        }
+    }
 }
 
 // Spawn Water Boss Enemy keeps the game logic moving.
@@ -530,6 +567,15 @@ function spawnWaterBossEnemy() {
     enemy.waterAttackCooldown = 52;
     enemies.push(enemy);
     enemiesRemainingInWave++;
+
+    if (bossSpawnAudio) {
+        try {
+            bossSpawnAudio.currentTime = 0;
+            bossSpawnAudio.volume = scaledSfxVolume();
+            bossSpawnAudio.play();
+        } catch (e) {
+        }
+    }
 }
 
 // Roll Level Up Choices keeps the game logic moving.
@@ -854,6 +900,7 @@ function beginVoidEncounter() {
     player.prevY = player.y;
 
     spawnVoidBossEnemy();
+    playRandomBossMusicTrack();
 
     voidEncounter.state = 'boss_fight';
     gamePaused = false;
@@ -953,6 +1000,7 @@ function returnFromVoidEncounter() {
     voidEncounter.returnContext = null;
     voidEncounter.active = false;
     voidEncounter.state = 'inactive';
+    playRandomMusicTrack();
 }
 
 // Starts the teleport flow into the necromancer boss arena.
@@ -1007,6 +1055,7 @@ function beginNecromancerEncounter() {
     player.prevY = player.y;
 
     spawnNecromancerBossEnemy();
+    playRandomBossMusicTrack();
 
     necromancerEncounter.state = 'boss_fight';
     gamePaused = false;
@@ -1106,6 +1155,7 @@ function returnFromNecromancerEncounter() {
     necromancerEncounter.returnContext = null;
     necromancerEncounter.active = false;
     necromancerEncounter.state = 'inactive';
+    playRandomMusicTrack();
 }
 
 // Get Player Xp Attract Radius keeps the game logic moving.
@@ -1467,6 +1517,10 @@ function createAudioWithFallback(sources, { loop = false } = {}) {
     return audio;
 }
 
+const bossSpawnAudio = createAudioWithFallback(['assets/audio/sfx/boss_spawn.mp3']);
+// Item/unique pickup audio (save attachment as assets/audio/sfx/gta-pick-up.mp3)
+const itemPickupAudio = createAudioWithFallback(['assets/audio/sfx/gta-pick-up.mp3']);
+
 // Update Audio Label Text keeps the game logic moving.
 function updateAudioLabelText() {
     musicVolumeLabel.textContent = `Music Volume: ${Math.round(musicVolume * 100)}%`;
@@ -1527,6 +1581,16 @@ function pickRandomMusicTrackIndex() {
     return idx;
 }
 
+// Pick Random Track Index keeps the game logic moving.
+function pickRandomTrackIndex(trackPaths, lastTrackIndex) {
+    if (!trackPaths.length) return -1;
+    if (trackPaths.length === 1) return 0;
+
+    let idx = Math.floor(Math.random() * trackPaths.length);
+    if (idx === lastTrackIndex) idx = (idx + 1 + Math.floor(Math.random() * (trackPaths.length - 1))) % trackPaths.length;
+    return idx;
+}
+
 // Stop Current Music keeps the game logic moving.
 function stopCurrentMusic() {
     if (!currentMusicTrack) return;
@@ -1545,7 +1609,7 @@ function playCurrentMusicTrack() {
 
 // Play Random Music Track keeps the game logic moving.
 function playRandomMusicTrack() {
-    const idx = pickRandomMusicTrackIndex();
+    const idx = pickRandomTrackIndex(MUSIC_TRACK_PATHS, lastMusicTrackIndex);
     if (idx < 0) return;
 
 
@@ -1557,6 +1621,27 @@ function playRandomMusicTrack() {
 
     currentMusicTrack = nextTrack;
     lastMusicTrackIndex = idx;
+
+    if (audioUnlocked) {
+        playCurrentMusicTrack();
+    } else {
+        pendingMusicStart = true;
+    }
+}
+
+// Play Random Boss Music Track keeps the game logic moving.
+function playRandomBossMusicTrack() {
+    const idx = pickRandomTrackIndex(BOSS_MUSIC_TRACK_PATHS, lastBossMusicTrackIndex);
+    if (idx < 0) return;
+
+    stopCurrentMusic();
+
+    const nextTrack = createAudioWithFallback([BOSS_MUSIC_TRACK_PATHS[idx]], { loop: false });
+    nextTrack.volume = musicVolume;
+    nextTrack.addEventListener('ended', playRandomBossMusicTrack);
+
+    currentMusicTrack = nextTrack;
+    lastBossMusicTrackIndex = idx;
 
     if (audioUnlocked) {
         playCurrentMusicTrack();
@@ -1615,6 +1700,28 @@ function initializeSniperPingAudio() {
     sniperPingAudio.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
     sniperPingAudioLayer = createAudioWithFallback(SNIPER_PING_PATHS);
     sniperPingAudioLayer.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
+}
+
+// Initialize Necromancer Shot Pool keeps the game logic moving.
+function initializeNecroShotPool() {
+    necroShotPool = [];
+    for (let i = 0; i < NECRO_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(NECRO_SHOT_PATHS);
+        channel.volume = scaledSfxVolume(NECRO_VOLUME_MULT);
+        necroShotPool.push(channel);
+    }
+    necroShotPoolIndex = 0;
+}
+
+// Initialize Void Sword Pool keeps the game logic moving.
+function initializeVoidSwordPool() {
+    voidSwordPool = [];
+    for (let i = 0; i < VOID_SWORD_POOL_SIZE; i++) {
+        const channel = createAudioWithFallback(VOID_SWORD_PATHS);
+        channel.volume = scaledSfxVolume(VOID_SWORD_VOLUME_MULT);
+        voidSwordPool.push(channel);
+    }
+    voidSwordPoolIndex = 0;
 }
 
 // Initialize Dash Pool keeps the game logic moving.
@@ -1693,6 +1800,105 @@ function playLaserShot() {
     channel.play().catch(() => {
 
     });
+    lastShotWasLaser = true;
+}
+
+function startLaserLoop() {
+    if (!audioUnlocked) return;
+    if (laserLoopAudio && !laserLoopAudio.paused) return;
+    try {
+        laserLoopAudio = createAudioWithFallback(LASER_SHOT_PATHS, { loop: true });
+        laserLoopAudio.volume = scaledSfxVolume(LASER_VOLUME_MULT);
+        laserLoopAudio.currentTime = 0;
+        laserLoopAudio.play().catch(() => {});
+    } catch (e) {
+        laserLoopAudio = null;
+    }
+}
+
+function stopLaserLoop() {
+    if (!laserLoopAudio) return;
+    try {
+        laserLoopAudio.pause();
+        laserLoopAudio.currentTime = 0;
+    } catch (e) {}
+    laserLoopAudio = null;
+}
+
+function scheduleStartLaserLoop(delay = LASER_LOOP_DELAY_MS) {
+    if (laserLoopStopTimeout) {
+        clearTimeout(laserLoopStopTimeout);
+        laserLoopStopTimeout = null;
+    }
+    if (laserLoopAudio && !laserLoopAudio.paused) return;
+    if (laserLoopStartTimeout) return; // already scheduled
+    laserLoopStartTimeout = setTimeout(() => {
+        startLaserLoop();
+        laserLoopStartTimeout = null;
+    }, delay);
+}
+
+function scheduleStopLaserLoop(delay = LASER_LOOP_STOP_HOLDOFF_MS) {
+    if (laserLoopStartTimeout) {
+        clearTimeout(laserLoopStartTimeout);
+        laserLoopStartTimeout = null;
+    }
+    if (laserLoopStopTimeout) return;
+    laserLoopStopTimeout = setTimeout(() => {
+        stopLaserLoop();
+        laserLoopStopTimeout = null;
+        lastShotWasLaser = false;
+    }, delay);
+}
+
+function scheduleStartVoidSwordLoop(delay = VOID_SWORD_LOOP_DELAY_MS) {
+    if (voidSwordStopTimeout) {
+        clearTimeout(voidSwordStopTimeout);
+        voidSwordStopTimeout = null;
+    }
+    if (voidSwordLoopActive) return;
+    if (voidSwordStartTimeout) return;
+    voidSwordStartTimeout = setTimeout(() => {
+        startVoidSwordLoop();
+        voidSwordStartTimeout = null;
+    }, delay);
+}
+
+function scheduleStopVoidSwordLoop(delay = VOID_SWORD_STOP_HOLDOFF_MS) {
+    if (voidSwordStartTimeout) {
+        clearTimeout(voidSwordStartTimeout);
+        voidSwordStartTimeout = null;
+    }
+    if (voidSwordStopTimeout) return;
+    voidSwordStopTimeout = setTimeout(() => {
+        stopVoidSwordLoop();
+        voidSwordStopTimeout = null;
+    }, delay);
+}
+
+function startVoidSwordLoop() {
+    if (!audioUnlocked) return;
+    if (voidSwordLoopAudio && !voidSwordLoopAudio.paused) return;
+    try {
+        voidSwordLoopAudio = createAudioWithFallback(VOID_SWORD_PATHS, { loop: true });
+        voidSwordLoopAudio.volume = scaledSfxVolume(VOID_SWORD_VOLUME_MULT);
+        voidSwordLoopAudio.currentTime = 0;
+        voidSwordLoopAudio.play().catch(() => {});
+        voidSwordLoopActive = true;
+    } catch (e) {
+        voidSwordLoopAudio = null;
+        voidSwordLoopActive = false;
+    }
+}
+
+function stopVoidSwordLoop() {
+    if (!voidSwordLoopAudio) return;
+    try {
+        voidSwordLoopAudio.pause();
+        voidSwordLoopAudio.currentTime = 0;
+    } catch (e) {}
+    voidSwordLoopAudio = null;
+    voidSwordLoopActive = false;
 }
 
 // Play Shotgun Shot keeps the game logic moving.
@@ -1745,6 +1951,25 @@ function playSniperPing() {
     sniperPingAudioLayer.play().catch(() => {
 
     });
+}
+
+// Play Necromancer Staff Shot keeps the game logic moving.
+function playNecroShot() {
+    if (!audioUnlocked || !necroShotPool.length) return;
+
+    const channel = necroShotPool[necroShotPoolIndex];
+    necroShotPoolIndex = (necroShotPoolIndex + 1) % necroShotPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {});
+}
+
+// Play Void Sword (tip) sound when extending the blade.
+function playVoidSwordExtend() {
+    if (!audioUnlocked || !voidSwordPool.length) return;
+    const channel = voidSwordPool[voidSwordPoolIndex];
+    voidSwordPoolIndex = (voidSwordPoolIndex + 1) % voidSwordPool.length;
+    channel.currentTime = 0;
+    channel.play().catch(() => {});
 }
 
 // Play Dash Sound keeps the game logic moving.

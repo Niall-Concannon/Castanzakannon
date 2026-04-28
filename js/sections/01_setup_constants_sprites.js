@@ -382,6 +382,12 @@ const MUSIC_TRACK_PATHS = [
     'assets/audio/music/Black+Light.mp3',
     'assets/audio/music/Semantic+Satiation.mp3',
 ];
+const BOSS_MUSIC_TRACK_PATHS = [
+    'assets/audio/music/davidgallie-final-boss-483043.mp3',
+    'assets/audio/music/psychronic-wacky-fight-317983.mp3',
+    'assets/audio/music/amaz1ngdragon-fast-paced-boss-battle-230222.mp3',
+    'assets/audio/music/psychronic-antimatter-ancestor-227352.mp3',
+];
 const LASER_SHOT_PATHS = [
     'assets/audio/sfx/freesound_community-single-gunshot-54-40780.mp3',
     'freesound_community-single-gunshot-54-40780.mp3',
@@ -390,6 +396,22 @@ const LASER_SHOT_PATHS = [
 ];
 const LASER_POOL_SIZE = 8;
 const LASER_VOLUME_MULT = 0.35;
+const NECRO_SHOT_PATHS = [
+    'assets/audio/sfx/snake.mp3',
+    'snake.mp3',
+];
+const NECRO_POOL_SIZE = 6;
+const NECRO_VOLUME_MULT = 0.7;
+
+const VOID_SWORD_PATHS = [
+    'assets/audio/sfx/laser-rifle_uvJVY5a.mp3',
+    'assets/audio/sfx/laser-rifle_uvJvY5a.mp3',
+    'assets/audio/sfx/laser-rifle_uvjvY5a.mp3',
+    'laser-rifle_uvJVY5a.mp3',
+    'laser-rifle_uvJvY5a.mp3',
+];
+const VOID_SWORD_POOL_SIZE = 4;
+const VOID_SWORD_VOLUME_MULT = 0.6;
 const SHOTGUN_SHOT_PATHS = [
     'assets/audio/sfx/ElevenLabs_shotgun_fire_sfx_for_game.mp3',
     'ElevenLabs_shotgun_fire_sfx_for_game.mp3',
