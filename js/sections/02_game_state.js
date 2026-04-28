@@ -907,6 +907,9 @@ function completeVoidEncounterVictory() {
     if (!voidEncounter.active || !voidEncounter.returnContext) return;
 
     voidEncounter.completedLevels[currentArenaLevel] = true;
+    if (typeof unlockWeaponByBossType === 'function') {
+        unlockWeaponByBossType('void');
+    }
 
     voidEncounter.state = 'return_to_arena';
     gamePaused = false;
@@ -1057,6 +1060,9 @@ function completeNecromancerEncounterVictory() {
     if (!necromancerEncounter.active || !necromancerEncounter.returnContext) return;
 
     necromancerEncounter.completedLevels[currentArenaLevel] = true;
+    if (typeof unlockWeaponByBossType === 'function') {
+        unlockWeaponByBossType('necromancer');
+    }
 
     necromancerEncounter.state = 'return_to_arena';
     gamePaused = false;

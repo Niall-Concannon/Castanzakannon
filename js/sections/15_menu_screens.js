@@ -1048,7 +1048,8 @@ function drawWeaponSelectScreen() {
     for (let i = 0; i < WEAPON_LOADOUTS.length; i++) {
         const w      = WEAPON_LOADOUTS[i];
         const c      = cards[i];
-        const sel    = i === selectedWeaponIndex;
+        const unlocked = typeof isWeaponUnlocked === 'function' ? isWeaponUnlocked(i) : true;
+        const sel    = i === selectedWeaponIndex && unlocked;
         const hov    = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
         const accent = w.accentColor;
         const pulse  = 0.82 + 0.18 * Math.sin(frameCount * 0.07 + i * 1.2);
@@ -1105,7 +1106,7 @@ function drawWeaponSelectScreen() {
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
         ctx.font         = `bold ${Math.floor(c.w * 0.115)}px ${MENU_UI_FONT_FAMILY}`;
-        ctx.fillStyle    = sel ? accent : '#e1edf8';
+        ctx.fillStyle    = unlocked ? (sel ? accent : '#e1edf8') : '#a7b2c5';
         ctx.fillText(w.name, c.x + c.w / 2, nameY);
 
         // Tagline
@@ -1136,8 +1137,29 @@ function drawWeaponSelectScreen() {
             ctx.fillText(statKeys[s], c.x + 12, sy);
             ctx.textAlign    = 'right';
             ctx.font         = `${Math.floor(c.w * 0.08)}px serif`;
-            ctx.fillStyle    = sel ? accent : 'rgba(200,220,255,0.6)';
+            ctx.fillStyle    = unlocked ? (sel ? accent : 'rgba(200,220,255,0.6)') : 'rgba(170,185,210,0.46)';
             ctx.fillText(w.stats[statKeys[s]], c.x + c.w - 10, sy);
+        }
+
+        if (!unlocked) {
+            ctx.fillStyle = 'rgba(0,0,0,0.60)';
+            ctx.fillRect(c.x, c.y, c.w, c.h);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `bold ${Math.floor(c.w * 0.085)}px ${MENU_UI_FONT_FAMILY}`;
+            ctx.fillStyle = '#ffd166';
+            ctx.fillText('LOCKED', c.x + c.w / 2, c.y + c.h * 0.54);
+
+            const reqLines = typeof getWeaponUnlockRequirementLines === 'function'
+                ? getWeaponUnlockRequirementLines(i, 2)
+                : [typeof getWeaponUnlockRequirementText === 'function' ? getWeaponUnlockRequirementText(i) : 'Defeat required boss'];
+            ctx.font = `bold ${Math.floor(c.w * 0.06)}px ${MENU_UI_FONT_FAMILY}`;
+            ctx.fillStyle = 'rgba(255,227,163,0.95)';
+            const lineGap = Math.floor(c.h * 0.05);
+            const textY = c.y + c.h * 0.66;
+            for (let lineIndex = 0; lineIndex < reqLines.length; lineIndex++) {
+                ctx.fillText(reqLines[lineIndex], c.x + c.w / 2, textY + lineIndex * lineGap);
+            }
         }
 
         // Selected badge
@@ -1159,12 +1181,15 @@ function drawWeaponSelectScreen() {
     // Confirm button
     const btn       = getWeaponSelectConfirmButton();
     const btnHov    = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
-    const selAccent = WEAPON_LOADOUTS[selectedWeaponIndex].accentColor;
+    const selectedWeaponUnlocked = typeof isWeaponUnlocked === 'function' ? isWeaponUnlocked(selectedWeaponIndex) : true;
+    const selAccent = selectedWeaponUnlocked
+        ? WEAPON_LOADOUTS[selectedWeaponIndex].accentColor
+        : '#8a8f9e';
 
     ctx.save();
     ctx.shadowColor = selAccent;
     ctx.shadowBlur  = btnHov ? 22 : 10;
-    ctx.fillStyle   = btnHov ? selAccent : `rgba(20,24,36,0.97)`;
+    ctx.fillStyle   = (btnHov && selectedWeaponUnlocked) ? selAccent : `rgba(20,24,36,0.97)`;
     ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
     ctx.strokeStyle = selAccent;
     ctx.lineWidth   = 2;
@@ -1173,8 +1198,8 @@ function drawWeaponSelectScreen() {
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.font         = `bold 18px ${MENU_UI_FONT_FAMILY}`;
-    ctx.fillStyle    = btnHov ? '#000' : selAccent;
-    ctx.fillText('▶  Confirm & Start', btn.x + btn.w / 2, btn.y + btn.h / 2);
+    ctx.fillStyle    = (btnHov && selectedWeaponUnlocked) ? '#000' : selAccent;
+    ctx.fillText(selectedWeaponUnlocked ? '▶  Confirm & Start' : 'Locked Weapon', btn.x + btn.w / 2, btn.y + btn.h / 2);
     ctx.restore();
 
     // Back hint

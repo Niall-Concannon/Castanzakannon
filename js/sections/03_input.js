@@ -1,6 +1,20 @@
 // Keyboard mouse and touch input are wired up here.
 
 
+function findNextUnlockedWeaponIndex(startIndex, step) {
+    if (!Array.isArray(WEAPON_LOADOUTS) || WEAPON_LOADOUTS.length === 0) return 0;
+    const count = WEAPON_LOADOUTS.length;
+    let index = typeof startIndex === 'number' ? startIndex : 0;
+    for (let attempts = 0; attempts < count; attempts++) {
+        index = (index + step + count) % count;
+        if (typeof isWeaponUnlocked !== 'function' || isWeaponUnlocked(index)) {
+            return index;
+        }
+    }
+    return startIndex;
+}
+
+
 
 
 window.addEventListener('keydown', e => {
@@ -35,12 +49,16 @@ window.addEventListener('keydown', e => {
 
     if (gameState === 'weaponSelect') {
         if (e.key === 'ArrowLeft'  || e.key.toLowerCase() === 'a') {
-            selectedWeaponIndex = (selectedWeaponIndex - 1 + WEAPON_LOADOUTS.length) % WEAPON_LOADOUTS.length;
+            selectedWeaponIndex = findNextUnlockedWeaponIndex(selectedWeaponIndex, -1);
             playUiClick();
         } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
-            selectedWeaponIndex = (selectedWeaponIndex + 1) % WEAPON_LOADOUTS.length;
+            selectedWeaponIndex = findNextUnlockedWeaponIndex(selectedWeaponIndex, 1);
             playUiClick();
         } else if (e.key === ' ' || e.key === 'Enter') {
+            if (typeof isWeaponUnlocked === 'function' && !isWeaponUnlocked(selectedWeaponIndex)) {
+                playUiClick();
+                return;
+            }
             playUiClick();
             confirmWeaponAndStart();
         }
@@ -169,6 +187,10 @@ window.addEventListener('mousedown', e => {
         for (let i = 0; i < cards.length; i++) {
             const c = cards[i];
             if (mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h) {
+                if (typeof isWeaponUnlocked === 'function' && !isWeaponUnlocked(i)) {
+                    playUiClick();
+                    return;
+                }
                 if (selectedWeaponIndex === i) {
                     // Second click on already-selected card = confirm
                     playUiClick();
@@ -182,6 +204,10 @@ window.addEventListener('mousedown', e => {
         }
         const btn = getWeaponSelectConfirmButton();
         if (mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+            if (typeof isWeaponUnlocked === 'function' && !isWeaponUnlocked(selectedWeaponIndex)) {
+                playUiClick();
+                return;
+            }
             playUiClick();
             confirmWeaponAndStart();
             return;

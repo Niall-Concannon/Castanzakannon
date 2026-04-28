@@ -6,6 +6,24 @@ const CLOUD_AUTH_EMAIL_DOMAIN = 'players.castanzakannon.local';
 const CLOUD_AUTOSAVE_INTERVAL_MS = 30000;
 const CLOUD_ACHIEVEMENT_SAVE_INTERVAL_MS = 5000;
 const CHARACTER_UNLOCK_WAVE_REQUIREMENTS = [0, 5, 10, 15, 20];
+const DEFAULT_UNLOCK_KEYS = [
+    'character_1',
+    'weapon_assault_rifle',
+    'weapon_shotgun',
+    'weapon_sniper',
+];
+const WEAPON_UNLOCK_RULES = {
+    necromancer_staff: {
+        unlockKey: 'weapon_necromancer_staff',
+        requirementText: 'Defeat Necromancer boss via Necromancer Totem',
+        unlockBossType: 'necromancer',
+    },
+    void_sword: {
+        unlockKey: 'weapon_void_sword',
+        requirementText: 'Defeat Void boss via Void Totem',
+        unlockBossType: 'void',
+    },
+};
 const ACHIEVEMENT_DEFINITIONS = [
     { id: 'kills_25', title: 'First Bloodline', description: 'Defeat 25 enemies.', stat: 'totalKills', target: 25 },
     { id: 'kills_50', title: 'Merciless', description: 'Defeat 50 enemies.', stat: 'totalKills', target: 50 },
@@ -80,7 +98,7 @@ let cloudAuthPanelUserToggled = false;
 const cloudUnlockState = {
     bestWave: 1,
     bestArenaLevel: 1,
-    keys: new Set(['character_1']),
+    keys: new Set(DEFAULT_UNLOCK_KEYS),
 };
 
 const cloudUnlockProgressState = {
@@ -322,6 +340,87 @@ function resetUnlockProgressState() {
     cloudUnlockProgressState.bestSpeedBonusPct = 0;
 }
 
+function isWeaponUnlockedById(weaponId) {
+    const id = String(weaponId ?? '').trim();
+    if (!id) return true;
+    const rule = WEAPON_UNLOCK_RULES[id] ?? null;
+    if (!rule) return true;
+    return cloudUnlockState.keys.has(rule.unlockKey);
+}
+
+function isWeaponUnlocked(index) {
+    if (typeof WEAPON_LOADOUTS === 'undefined' || !Array.isArray(WEAPON_LOADOUTS)) return true;
+    if (typeof index !== 'number' || index < 0 || index >= WEAPON_LOADOUTS.length) return true;
+    return isWeaponUnlockedById(WEAPON_LOADOUTS[index]?.id);
+}
+
+function getWeaponUnlockRequirementText(index) {
+    if (typeof WEAPON_LOADOUTS === 'undefined' || !Array.isArray(WEAPON_LOADOUTS)) return 'Unlocked';
+    const weaponId = WEAPON_LOADOUTS[index]?.id;
+    const rule = WEAPON_UNLOCK_RULES[weaponId] ?? null;
+    return rule?.requirementText ?? 'Unlocked';
+}
+
+function getWeaponUnlockRequirementLines(index, maxLines = 2) {
+    const text = getWeaponUnlockRequirementText(index);
+    if (text === 'Unlocked') return [text];
+    const words = text.split(' ').filter(Boolean);
+    if (words.length <= 4 || maxLines <= 1) return [text];
+
+    const firstLineWordCount = Math.ceil(words.length / maxLines);
+    const first = words.slice(0, firstLineWordCount).join(' ');
+    const rest = words.slice(firstLineWordCount).join(' ');
+    return rest ? [first, rest] : [first];
+}
+
+function normalizeSelectedWeapon() {
+    if (typeof selectedWeaponIndex === 'undefined') return;
+    if (typeof WEAPON_LOADOUTS === 'undefined' || !Array.isArray(WEAPON_LOADOUTS) || WEAPON_LOADOUTS.length === 0) return;
+    if (typeof selectedWeaponIndex !== 'number' || selectedWeaponIndex < 0 || selectedWeaponIndex >= WEAPON_LOADOUTS.length) {
+        selectedWeaponIndex = 0;
+    }
+    if (isWeaponUnlocked(selectedWeaponIndex)) return;
+
+    for (let i = 0; i < WEAPON_LOADOUTS.length; i++) {
+        if (isWeaponUnlocked(i)) {
+            selectedWeaponIndex = i;
+            return;
+        }
+    }
+
+    selectedWeaponIndex = 0;
+}
+
+function unlockWeaponByBossType(type) {
+    const bossType = String(type ?? '').trim().toLowerCase();
+    if (!bossType) return false;
+
+    const matchingRule = Object.values(WEAPON_UNLOCK_RULES).find(rule => rule.unlockBossType === bossType);
+    if (!matchingRule) return false;
+    if (cloudUnlockState.keys.has(matchingRule.unlockKey)) return false;
+
+    cloudUnlockState.keys.add(matchingRule.unlockKey);
+    normalizeSelectedWeapon();
+
+    if (cloudUser) {
+        persistUnlockKey(matchingRule.unlockKey).catch(err => {
+            setCloudStatus(`Unlock sync error: ${err.message}`);
+        });
+        queueCloudSave('weapon-unlock');
+    }
+
+    return true;
+}
+
+function syncWeaponUnlocksFromAchievements() {
+    if ((cloudAchievementState.voidBossKills ?? 0) > 0) {
+        unlockWeaponByBossType('void');
+    }
+    if ((cloudAchievementState.necromancerBossKills ?? 0) > 0) {
+        unlockWeaponByBossType('necromancer');
+    }
+}
+
 function isCharacterUnlocked(index) {
     if (index <= 0) return true;
     const unlockKey = `character_${index + 1}`;
@@ -379,6 +478,7 @@ function unlockCharactersFromProgress() {
     }
 
     normalizeSelectedCharacter();
+    normalizeSelectedWeapon();
     return newlyUnlocked;
 }
 
@@ -467,6 +567,7 @@ function applyLoadedAchievements(raw) {
     }
 
     evaluateAchievements({ queuePopup: false });
+    syncWeaponUnlocksFromAchievements();
 }
 
 function resetAchievementProgress() {
@@ -594,6 +695,7 @@ function serializeCloudSavePayload() {
     const nowIso = new Date().toISOString();
     const stats = {
         selectedCharacter: typeof selectedCharacter === 'number' ? selectedCharacter : 0,
+        selectedWeaponIndex: typeof selectedWeaponIndex === 'number' ? selectedWeaponIndex : 0,
         selectedCursor: typeof selectedCursor === 'number' ? selectedCursor : 0,
         playerLevel: typeof player?.level === 'number' ? player.level : 1,
         playerXp: typeof player?.xp === 'number' ? player.xp : 0,
@@ -761,6 +863,15 @@ function applyLoadedStats(stats) {
         selectedCharacter = Math.max(0, Math.min(CHARACTER_LOADOUTS.length - 1, stats.selectedCharacter));
     }
 
+    if (
+        typeof stats.selectedWeaponIndex === 'number'
+        && typeof WEAPON_LOADOUTS !== 'undefined'
+        && Array.isArray(WEAPON_LOADOUTS)
+        && WEAPON_LOADOUTS.length > 0
+    ) {
+        selectedWeaponIndex = Math.max(0, Math.min(WEAPON_LOADOUTS.length - 1, stats.selectedWeaponIndex));
+    }
+
     if (stats.unlockProgress) {
         applyLoadedUnlockProgress(stats.unlockProgress);
     }
@@ -770,6 +881,7 @@ function applyLoadedStats(stats) {
     }
 
     normalizeSelectedCharacter();
+    normalizeSelectedWeapon();
 }
 
 async function loadCloudData() {
@@ -790,7 +902,7 @@ async function loadCloudData() {
         .select('unlock_key')
         .eq('user_id', cloudUser.id);
 
-    cloudUnlockState.keys = new Set(['character_1']);
+    cloudUnlockState.keys = new Set(DEFAULT_UNLOCK_KEYS);
     for (const row of unlockRows ?? []) {
         if (typeof row.unlock_key === 'string') {
             cloudUnlockState.keys.add(row.unlock_key);
@@ -821,6 +933,8 @@ async function loadCloudData() {
     if (newlyUnlocked.length > 0) {
         await persistUnlockKeys(newlyUnlocked);
     }
+
+    normalizeSelectedWeapon();
 }
 
 async function queueCloudSave(reason = 'manual') {
@@ -992,10 +1106,11 @@ function handleSignedOut() {
     cloudLastAchievementSaveAt = 0;
     cloudUnlockState.bestWave = 1;
     cloudUnlockState.bestArenaLevel = 1;
-    cloudUnlockState.keys = new Set(['character_1']);
+    cloudUnlockState.keys = new Set(DEFAULT_UNLOCK_KEYS);
     resetUnlockProgressState();
     resetAchievementProgress();
     normalizeSelectedCharacter();
+    normalizeSelectedWeapon();
     setCloudStatus('Cloud: signed out');
 }
 
@@ -1039,12 +1154,14 @@ async function tryResetCloudProgress() {
         cloudSaveRowId = null;
         cloudUnlockState.bestWave = 1;
         cloudUnlockState.bestArenaLevel = 1;
-        cloudUnlockState.keys = new Set(['character_1']);
+        cloudUnlockState.keys = new Set(DEFAULT_UNLOCK_KEYS);
         resetUnlockProgressState();
         selectedCharacter = 0;
+        selectedWeaponIndex = 0;
         lastLevelDied = 1;
         resetAchievementProgress();
         normalizeSelectedCharacter();
+        normalizeSelectedWeapon();
 
         await queueCloudSave('reset');
         setCloudStatus('Cloud: progress reset complete');
@@ -1275,6 +1392,10 @@ window.updateCloudProgressMilestones = updateCloudProgressMilestones;
 window.isCharacterUnlocked = isCharacterUnlocked;
 window.getCharacterUnlockRequirementText = getCharacterUnlockRequirementText;
 window.getCharacterUnlockRequirementLines = getCharacterUnlockRequirementLines;
+window.isWeaponUnlocked = isWeaponUnlocked;
+window.getWeaponUnlockRequirementText = getWeaponUnlockRequirementText;
+window.getWeaponUnlockRequirementLines = getWeaponUnlockRequirementLines;
+window.unlockWeaponByBossType = unlockWeaponByBossType;
 window.registerCloudRunOutcome = registerCloudRunOutcome;
 window.registerAchievementEnemyKill = registerAchievementEnemyKill;
 window.registerAchievementBossKill = registerAchievementBossKill;
@@ -1285,3 +1406,4 @@ window.resetCloudRunState = resetCloudRunState;
 window.queueCloudSave = queueCloudSave;
 window.tickCloudAutosave = tickCloudAutosave;
 window.normalizeSelectedCharacter = normalizeSelectedCharacter;
+window.normalizeSelectedWeapon = normalizeSelectedWeapon;

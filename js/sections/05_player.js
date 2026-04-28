@@ -14,6 +14,9 @@ function confirmWeaponAndStart() {
     if (typeof normalizeSelectedCharacter === 'function') {
         normalizeSelectedCharacter();
     }
+    if (typeof normalizeSelectedWeapon === 'function') {
+        normalizeSelectedWeapon();
+    }
     if (typeof resetCloudRunState === 'function') {
         resetCloudRunState();
     }
@@ -113,7 +116,11 @@ function confirmWeaponAndStart() {
     player.swordHitSet = new Set();
 
     // Apply the chosen weapon loadout (must happen before ammo init)
-    const loadout = WEAPON_LOADOUTS[selectedWeaponIndex] ?? WEAPON_LOADOUTS[0];
+    const requestedWeaponIndex = selectedWeaponIndex;
+    const canUseRequestedWeapon = typeof isWeaponUnlocked === 'function' ? isWeaponUnlocked(requestedWeaponIndex) : true;
+    const loadoutIndex = canUseRequestedWeapon ? requestedWeaponIndex : 0;
+    const loadout = WEAPON_LOADOUTS[loadoutIndex] ?? WEAPON_LOADOUTS[0];
+    selectedWeaponIndex = loadoutIndex;
     loadout.apply(player);
     player.ammo  = player.weaponAmmoMax ?? AMMO_MAX;
     gameState    = 'playing';
