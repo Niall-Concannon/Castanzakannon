@@ -442,10 +442,10 @@ const ENEMY_TYPES = {
 const ENEMY_VARIANT_STATS = {
 
     base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 },  sniper: { hp: 3, speed: 1.55, projectileDamage: 8, chargeFrames: 62, cooldownFrames: 68 } },
-    a:    { basic: { hp: 4, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 10, speed: 1.3 }, sniper: { hp: 4, speed: 1.7, projectileDamage: 10, chargeFrames: 58, cooldownFrames: 62 } },
-    b:    { basic: { hp: 5, speed: 2.4 },    fast: { hp: 3, speed: 4.1 },   tank: { hp: 12, speed: 1.4 }, sniper: { hp: 5, speed: 1.9, projectileDamage: 12, chargeFrames: 54, cooldownFrames: 56 } },
-    c:    { basic: { hp: 6, speed: 2.6 },    fast: { hp: 4, speed: 4.4 },   tank: { hp: 14, speed: 1.5 }, sniper: { hp: 6, speed: 2.05, projectileDamage: 14, chargeFrames: 50, cooldownFrames: 50 } },
-    d:    { basic: { hp: 7, speed: 2.8 },    fast: { hp: 4, speed: 4.7 },   tank: { hp: 16, speed: 1.6 }, sniper: { hp: 7, speed: 2.2, projectileDamage: 16, chargeFrames: 46, cooldownFrames: 46 } },
+    a:    { basic: { hp: 5, speed: 2.2 },    fast: { hp: 3, speed: 3.8 },   tank: { hp: 11, speed: 1.3 }, sniper: { hp: 4, speed: 1.7, projectileDamage: 8, chargeFrames: 58, cooldownFrames: 62 } },
+    b:    { basic: { hp: 7, speed: 2.4 },    fast: { hp: 4, speed: 4.1 },   tank: { hp: 14, speed: 1.4 }, sniper: { hp: 5, speed: 1.9, projectileDamage: 8, chargeFrames: 54, cooldownFrames: 56 } },
+    c:    { basic: { hp: 9, speed: 2.6 },    fast: { hp: 5, speed: 4.4 },   tank: { hp: 17, speed: 1.5 }, sniper: { hp: 6, speed: 2.05, projectileDamage: 8, chargeFrames: 50, cooldownFrames: 50 } },
+    d:    { basic: { hp: 11, speed: 2.8 },    fast: { hp: 6, speed: 4.7 },   tank: { hp: 20, speed: 1.6 }, sniper: { hp: 7, speed: 2.2, projectileDamage: 8, chargeFrames: 46, cooldownFrames: 46 } },
 };
 
 
@@ -474,148 +474,148 @@ const LEVEL_UPGRADES = [
         id: 'fleet_footing',
         rarity: 'common',
         title: 'Fleet Footing',
-        detail: '+6% move speed',
+        detail: '+4% move speed',
         apply: () => {
-            player.speed = Math.min(11.2, player.speed * 1.06);
+            player.speed = Math.min(11.2, player.speed * 1.04);
         },
     },
     {
         id: 'magnet_core',
         rarity: 'common',
         title: 'Magnet Core',
-        detail: '+16% XP pickup radius',
+        detail: '+10% XP pickup radius',
         apply: () => {
-            player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.16);
+            player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.10);
         },
     },
     {
         id: 'scavenger_rounds',
         rarity: 'common',
         title: 'Scavenger Rounds',
-        detail: '+10% ammo regen speed',
+        detail: '+6% ammo regen speed',
         apply: () => {
             if (grantSniperAmmoPierceBonus()) return;
-            player.ammoRegenMult = Math.min(4.2, player.ammoRegenMult * 1.1);
+            player.ammoRegenMult = Math.min(4.2, player.ammoRegenMult * 1.06);
         },
     },
     {
         id: 'steady_trigger',
         rarity: 'uncommon',
         title: 'Steady Trigger',
-        detail: '+14% fire rate',
+        detail: '+9% fire rate',
         apply: () => {
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.14);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.09);
         },
     },
     {
         id: 'reinforced_vitals',
         rarity: 'uncommon',
         title: 'Reinforced Vitals',
-        detail: '+10 max HP, heal 8',
+        detail: '+7 max HP, heal 5',
         apply: () => {
-            player.maxHp += 10;
-            player.hp = Math.min(player.maxHp, player.hp + 8);
+            player.maxHp += 7;
+            player.hp = Math.min(player.maxHp, player.hp + 5);
         },
     },
     {
         id: 'ballistic_lining',
         rarity: 'uncommon',
         title: 'Ballistic Lining',
-        detail: '-6% damage taken',
+        detail: '-4% damage taken',
         apply: () => {
-            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.94);
+            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.96);
         },
     },
     {
         id: 'rapid_fire',
         rarity: 'rare',
         title: 'Rapid Fire',
-        detail: '+24% fire rate',
+        detail: '+16% fire rate',
         apply: () => {
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.24);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.16);
         },
     },
     {
         id: 'high_cal_rounds',
         rarity: 'rare',
         title: 'High-Cal Rounds',
-        detail: '+1 bullet damage',
+        detail: '+0.7 bullet damage',
         apply: () => {
-            player.bulletDamage = Math.min(34, player.bulletDamage + 1);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 0.7);
         },
     },
     {
         id: 'juggernaut_frame',
         rarity: 'rare',
         title: 'Juggernaut Frame',
-        detail: '-10% damage taken, +12 max HP',
+        detail: '-7% damage taken, +8 max HP',
         apply: () => {
-            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.9);
-            player.maxHp += 12;
-            player.hp = Math.min(player.maxHp, player.hp + 12);
+            player.damageTakenMult = Math.max(0.28, player.damageTakenMult * 0.93);
+            player.maxHp += 8;
+            player.hp = Math.min(player.maxHp, player.hp + 8);
         },
     },
     {
         id: 'vampire_teeth',
         rarity: 'epic',
         title: 'Vampire Teeth',
-        detail: '+2% lifesteal on kill',
+        detail: '+1% lifesteal on kill',
         apply: () => {
-            player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.02);
+            player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.01);
         },
     },
     {
         id: 'overclock_dash',
         rarity: 'epic',
         title: 'Overclock Dash',
-        detail: '+1 dash charge, -10% dash cooldown',
+        detail: '+1 dash charge, -7% dash cooldown',
         apply: () => {
             player.dashMaxCharges = Math.min(6, player.dashMaxCharges + 1);
             player.dashCharges = Math.min(player.dashMaxCharges, player.dashCharges + 1);
-            player.dashRechargeFrames = Math.max(18, Math.round(player.dashRechargeFrames * 0.9));
+            player.dashRechargeFrames = Math.max(18, Math.round(player.dashRechargeFrames * 0.93));
         },
     },
     {
         id: 'vital_surge',
         rarity: 'epic',
         title: 'Vital Surge',
-        detail: '+20 max HP and heal 25 HP',
+        detail: '+14 max HP and heal 18 HP',
         apply: () => {
-            player.maxHp += 20;
-            player.hp = Math.min(player.maxHp, player.hp + 25);
+            player.maxHp += 14;
+            player.hp = Math.min(player.maxHp, player.hp + 18);
         },
     },
     {
         id: 'doom_protocol',
         rarity: 'legendary',
         title: 'Doom Protocol',
-        detail: '+3 bullet damage, +15% fire rate',
+        detail: '+2 bullet damage, +10% fire rate',
         apply: () => {
-            player.bulletDamage = Math.min(34, player.bulletDamage + 3);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.15);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.10);
         },
     },
     {
         id: 'adamant_plate',
         rarity: 'legendary',
         title: 'Adamant Plate',
-        detail: '-16% damage taken, +30 max HP',
+        detail: '-10% damage taken, +21 max HP',
         apply: () => {
-            player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.84);
-            player.maxHp += 30;
-            player.hp = Math.min(player.maxHp, player.hp + 18);
+            player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.90);
+            player.maxHp += 21;
+            player.hp = Math.min(player.maxHp, player.hp + 13);
         },
     },
     {
         id: 'mythical_physiology',
         rarity: 'mythical',
         title: 'Mythical Physiology',
-        detail: '+35 max HP, +2 damage, +10% speed',
+        detail: '+24 max HP, +1 damage, +6% speed',
         apply: () => {
-            player.maxHp += 35;
-            player.hp = Math.min(player.maxHp, player.hp + 28);
-            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
-            player.speed = Math.min(11.8, player.speed * 1.1);
+            player.maxHp += 24;
+            player.hp = Math.min(player.maxHp, player.hp + 19);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 1);
+            player.speed = Math.min(11.8, player.speed * 1.06);
         },
     },
 ];
@@ -635,25 +635,25 @@ const CHEST_DRAW_SCALE = 1.65;
 const ITEM_DEFINITIONS = [
     {
         id: 'iron_shards', rarity: 'common', title: 'Iron Shards',
-        detail: '+0.5 bullet damage', maxStacks: 12,
-        apply: () => { player.bulletDamage = Math.min(34, player.bulletDamage + 0.5); },
+        detail: '+0.3 bullet damage', maxStacks: 12,
+        apply: () => { player.bulletDamage = Math.min(34, player.bulletDamage + 0.3); },
     },
     {
         id: 'runner_wrap', rarity: 'common', title: 'Runner Wrap',
-        detail: '+4% move speed', maxStacks: 12,
-        apply: () => { player.speed = Math.min(11.8, player.speed * 1.04); },
+        detail: '+2% move speed', maxStacks: 12,
+        apply: () => { player.speed = Math.min(11.8, player.speed * 1.02); },
     },
     {
         id: 'vial_mesh', rarity: 'common', title: 'Vial Mesh',
-        detail: '+6 max HP', maxStacks: 14,
-        apply: () => { player.maxHp += 6; player.hp = Math.min(player.maxHp, player.hp + 4); },
+        detail: '+4 max HP', maxStacks: 14,
+        apply: () => { player.maxHp += 4; player.hp = Math.min(player.maxHp, player.hp + 3); },
     },
     {
         id: 'ammo_pouch', rarity: 'common', title: 'Ammo Pouch',
-        detail: '+10% ammo regen speed', maxStacks: 10,
+        detail: '+6% ammo regen speed', maxStacks: 10,
         apply: () => {
             if (grantSniperAmmoPierceBonus()) return;
-            player.ammoRegenMult = Math.min(5, player.ammoRegenMult * 1.1);
+            player.ammoRegenMult = Math.min(5, player.ammoRegenMult * 1.06);
         },
     },
     {
@@ -666,18 +666,18 @@ const ITEM_DEFINITIONS = [
     },
     {
         id: 'copper_jacket', rarity: 'uncommon', title: 'Copper Jacket',
-        detail: '-3% damage taken', maxStacks: 10,
-        apply: () => { player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.97); },
+        detail: '-2% damage taken', maxStacks: 10,
+        apply: () => { player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.98); },
     },
     {
         id: 'drill_mag', rarity: 'uncommon', title: 'Drill Mag',
-        detail: '+7% fire rate', maxStacks: 10,
-        apply: () => { player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.07); },
+        detail: '+4% fire rate', maxStacks: 10,
+        apply: () => { player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.04); },
     },
     {
         id: 'orb_compass', rarity: 'uncommon', title: 'Orb Compass',
-        detail: '+12% XP pull radius', maxStacks: 8,
-        apply: () => { player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.12); },
+        detail: '+7% XP pull radius', maxStacks: 8,
+        apply: () => { player.xpAttractMult = Math.min(4.2, player.xpAttractMult * 1.07); },
     },
     {
         id: 'kinetic_cell', rarity: 'uncommon', title: 'Kinetic Cell',
@@ -685,7 +685,7 @@ const ITEM_DEFINITIONS = [
         apply: () => {
             player.shieldMax = Math.min(8, (player.shieldMax ?? 0) + 1);
             player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 1);
-            player.shieldRegenCooldown = Math.max(90, Math.round(player.shieldRegenCooldown * 0.9));
+            player.shieldRegenCooldown = Math.max(90, Math.round(player.shieldRegenCooldown * 0.95));
         },
     },
     {
@@ -695,57 +695,57 @@ const ITEM_DEFINITIONS = [
     },
     {
         id: 'predator_lens', rarity: 'uncommon', title: 'Predator Lens',
-        detail: '+5% crit chance', maxStacks: 8,
-        apply: () => { player.critChance = Math.min(0.75, (player.critChance ?? 0) + 0.05); },
+        detail: '+3% crit chance', maxStacks: 8,
+        apply: () => { player.critChance = Math.min(0.75, (player.critChance ?? 0) + 0.03); },
     },
     {
         id: 'dash_coil', rarity: 'rare', title: 'Dash Coil',
-        detail: '-6% dash recharge', maxStacks: 8,
-        apply: () => { player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.94)); },
+        detail: '-4% dash recharge', maxStacks: 8,
+        apply: () => { player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.96)); },
     },
     {
         id: 'blood_etching', rarity: 'rare', title: 'Blood Etching',
-        detail: '+1% lifesteal on kill', maxStacks: 8,
-        apply: () => { player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.01); },
+        detail: '+0.5% lifesteal on kill', maxStacks: 8,
+        apply: () => { player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.005); },
     },
     {
         id: 'chain_relay', rarity: 'rare', title: 'Chain Relay',
         detail: 'Shots can chain lightning to a nearby foe', maxStacks: 8,
-        apply: () => { player.chainLightningChance = Math.min(0.5, (player.chainLightningChance ?? 0) + 0.1); },
+        apply: () => { player.chainLightningChance = Math.min(0.5, (player.chainLightningChance ?? 0) + 0.06); },
     },
     {
         id: 'blast_powder', rarity: 'rare', title: 'Blast Powder',
         detail: 'Bullets explode on impact', maxStacks: 8,
-        apply: () => { player.explosionRadius = Math.min(140, (player.explosionRadius ?? 0) + 18); },
+        apply: () => { player.explosionRadius = Math.min(140, (player.explosionRadius ?? 0) + 12); },
     },
     {
         id: 'cleaving_ailment', rarity: 'rare', title: 'Cleaving Ailment',
-        detail: '+20% damage to low-health enemies', maxStacks: 8,
-        apply: () => { player.executeBonusMult = Math.min(2, (player.executeBonusMult ?? 1) + 0.2); },
+        detail: '+12% damage to low-health enemies', maxStacks: 8,
+        apply: () => { player.executeBonusMult = Math.min(2, (player.executeBonusMult ?? 1) + 0.12); },
     },
     {
         id: 'ghost_fiber', rarity: 'epic', title: 'Ghost Fiber',
-        detail: '+10% speed, +10% fire rate', maxStacks: 5,
+        detail: '+6% speed, +6% fire rate', maxStacks: 5,
         apply: () => {
-            player.speed = Math.min(11.8, player.speed * 1.1);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.1);
+            player.speed = Math.min(11.8, player.speed * 1.06);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.06);
         },
     },
     {
         id: 'leviathan_ink', rarity: 'legendary', title: 'Leviathan Ink',
-        detail: '+2 damage, +20 max HP', maxStacks: 4,
+        detail: '+1 damage, +14 max HP', maxStacks: 4,
         apply: () => {
-            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
-            player.maxHp += 20;
-            player.hp = Math.min(player.maxHp, player.hp + 14);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 1);
+            player.maxHp += 14;
+            player.hp = Math.min(player.maxHp, player.hp + 10);
         },
     },
     {
         id: 'godframe_scrap', rarity: 'mythical', title: 'Godframe Scrap',
-        detail: '-12% damage taken, +3 damage', maxStacks: 2,
+        detail: '-9% damage taken, +2 damage', maxStacks: 2,
         apply: () => {
-            player.damageTakenMult = Math.max(0.2, player.damageTakenMult * 0.88);
-            player.bulletDamage = Math.min(34, player.bulletDamage + 3);
+            player.damageTakenMult = Math.max(0.2, player.damageTakenMult * 0.91);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
         },
     },
 ];
@@ -775,12 +775,12 @@ const ITEM_PLACEHOLDER_NAMES = {
 const UNIQUE_ITEM_DEFINITIONS = [
     {
         id: 'boss_crown', rarity: 'rare', title: 'Boss Crown',
-        detail: '+1 dash charge and +12 max HP', maxStacks: 1,
+        detail: '+1 dash charge and +8 max HP', maxStacks: 1,
         apply: () => {
             player.dashMaxCharges = Math.min(6, player.dashMaxCharges + 1);
             player.dashCharges = Math.min(player.dashMaxCharges, player.dashCharges + 1);
-            player.maxHp += 12;
-            player.hp = Math.min(player.maxHp, player.hp + 10);
+            player.maxHp += 8;
+            player.hp = Math.min(player.maxHp, player.hp + 7);
         },
     },
     {
@@ -788,41 +788,41 @@ const UNIQUE_ITEM_DEFINITIONS = [
         detail: 'Unlock AoE pulse around player', maxStacks: 4,
         apply: () => {
             if (player.aoePulseDamage <= 0) {
-                player.aoePulseDamage = 2;
-                player.aoePulseRadius = 165;
-                player.aoePulseIntervalFrames = 34;
+                player.aoePulseDamage = 1;
+                player.aoePulseRadius = 120;
+                player.aoePulseIntervalFrames = 40;
                 player.aoePulseTimer = 10;
             } else {
-                player.aoePulseDamage = Math.min(18, player.aoePulseDamage + 1);
-                player.aoePulseRadius = Math.min(320, player.aoePulseRadius + 20);
-                player.aoePulseIntervalFrames = Math.max(12, player.aoePulseIntervalFrames - 2);
+                player.aoePulseDamage = Math.min(12, player.aoePulseDamage + 0.5);
+                player.aoePulseRadius = Math.min(260, player.aoePulseRadius + 12);
+                player.aoePulseIntervalFrames = Math.max(16, player.aoePulseIntervalFrames - 1);
                 player.aoePulseTimer = Math.min(player.aoePulseTimer, player.aoePulseIntervalFrames);
             }
         },
     },
     {
         id: 'overkill_matrix', rarity: 'epic', title: 'Overkill Matrix',
-        detail: '+1 extra shot and +8% fire rate', maxStacks: 4,
+        detail: '+1 extra shot and +5% fire rate', maxStacks: 4,
         apply: () => {
             player.extraShots = Math.min(3, (player.extraShots ?? 0) + 1);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.08);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.05);
         },
     },
     {
         id: 'soul_harvester', rarity: 'epic', title: 'Soul Harvester',
         detail: 'Kills restore HP and ammo', maxStacks: 4,
         apply: () => {
-            player.killHealFlat = Math.min(8, (player.killHealFlat ?? 0) + 2);
+            player.killHealFlat = Math.min(5, (player.killHealFlat ?? 0) + 1);
             if (grantSniperAmmoPierceBonus()) return;
-            player.killAmmoFlat = Math.min(6, (player.killAmmoFlat ?? 0) + 1);
+            player.killAmmoFlat = Math.min(4, (player.killAmmoFlat ?? 0) + 1);
         },
     },
     {
         id: 'voltaic_core', rarity: 'epic', title: 'Voltaic Core',
-        detail: '+10% chain chance and stronger chain damage', maxStacks: 4,
+        detail: '+6% chain chance and stronger chain damage', maxStacks: 4,
         apply: () => {
-            player.chainLightningChance = Math.min(0.75, (player.chainLightningChance ?? 0) + 0.1);
-            player.chainLightningDamageMult = Math.min(1, (player.chainLightningDamageMult ?? 0.55) + 0.08);
+            player.chainLightningChance = Math.min(0.65, (player.chainLightningChance ?? 0) + 0.06);
+            player.chainLightningDamageMult = Math.min(0.85, (player.chainLightningDamageMult ?? 0.55) + 0.05);
         },
     },
     {
@@ -831,15 +831,15 @@ const UNIQUE_ITEM_DEFINITIONS = [
         apply: () => {
             player.shieldMax = Math.min(10, (player.shieldMax ?? 0) + 2);
             player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 2);
-            player.shieldRegenCooldown = Math.max(60, Math.round(player.shieldRegenCooldown * 0.85));
+            player.shieldRegenCooldown = Math.max(60, Math.round(player.shieldRegenCooldown * 0.90));
         },
     },
     {
         id: 'mythic_railgun_core', rarity: 'mythical', title: 'Mythic Railgun Core',
-        detail: 'Unlock Q railgun and +5 railgun damage', maxStacks: 1,
+        detail: 'Unlock Q railgun and +3 railgun damage', maxStacks: 1,
         apply: () => {
             player.hasRailgunUlt = true;
-            player.railgunUltDamage = Math.min(80, player.railgunUltDamage + 5);
+            player.railgunUltDamage = Math.min(50, player.railgunUltDamage + 3);
             player.railgunUltCooldownFrames = RAILGUN_ULT_COOLDOWN_FRAMES;
             player.railgunUltCooldown = Math.min(player.railgunUltCooldown, RAILGUN_ULT_COOLDOWN_FRAMES);
         },
@@ -848,8 +848,8 @@ const UNIQUE_ITEM_DEFINITIONS = [
         id: 'sunflare_module', rarity: 'legendary', title: 'Sunflare Module',
         detail: 'Aura damage around you every second', maxStacks: 3,
         apply: () => {
-            player.auraDamage = Math.min(18, (player.auraDamage ?? 0) + 3);
-            player.auraRadius = Math.min(260, (player.auraRadius ?? 120) + 18);
+            player.auraDamage = Math.min(12, (player.auraDamage ?? 0) + 2);
+            player.auraRadius = Math.min(220, (player.auraRadius ?? 120) + 12);
         },
     },
     {
@@ -859,44 +859,44 @@ const UNIQUE_ITEM_DEFINITIONS = [
     },
     {
         id: 'war_machine', rarity: 'legendary', title: 'War Machine',
-        detail: '+2 extra shots, +15% fire rate, +5% crit chance', maxStacks: 2,
+        detail: '+1 extra shot, +9% fire rate, +3% crit chance', maxStacks: 2,
         apply: () => {
-            player.extraShots = Math.min(4, (player.extraShots ?? 0) + 2);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.15);
-            player.critChance = Math.min(0.8, (player.critChance ?? 0) + 0.05);
+            player.extraShots = Math.min(3, (player.extraShots ?? 0) + 1);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.09);
+            player.critChance = Math.min(0.75, (player.critChance ?? 0) + 0.03);
         },
     },
     {
         id: 'blackhole_core', rarity: 'legendary', title: 'Blackhole Core',
         detail: 'Powerful aura that drains nearby enemies', maxStacks: 2,
         apply: () => {
-            player.auraDamage = Math.min(24, (player.auraDamage ?? 0) + 6);
-            player.auraRadius = Math.min(300, (player.auraRadius ?? 120) + 28);
+            player.auraDamage = Math.min(16, (player.auraDamage ?? 0) + 4);
+            player.auraRadius = Math.min(240, (player.auraRadius ?? 120) + 18);
         },
     },
     {
         id: 'soul_battery', rarity: 'epic', title: 'Soul Battery',
-        detail: '+2% lifesteal and +12% fire rate', maxStacks: 3,
+        detail: '+1% lifesteal and +7% fire rate', maxStacks: 3,
         apply: () => {
-            player.lifestealOnKill = Math.min(0.32, player.lifestealOnKill + 0.02);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.12);
+            player.lifestealOnKill = Math.min(0.24, player.lifestealOnKill + 0.01);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.07);
         },
     },
     {
         id: 'warden_plating', rarity: 'legendary', title: 'Warden Plating',
-        detail: '-10% damage taken and +35 max HP', maxStacks: 2,
+        detail: '-7% damage taken and +24 max HP', maxStacks: 2,
         apply: () => {
-            player.damageTakenMult = Math.max(0.2, player.damageTakenMult * 0.9);
-            player.maxHp += 35;
-            player.hp = Math.min(player.maxHp, player.hp + 24);
+            player.damageTakenMult = Math.max(0.22, player.damageTakenMult * 0.93);
+            player.maxHp += 24;
+            player.hp = Math.min(player.maxHp, player.hp + 16);
         },
     },
     {
         id: 'warp_tendon', rarity: 'epic', title: 'Warp Tendon',
-        detail: '+15% speed and -14% dash recharge', maxStacks: 2,
+        detail: '+9% speed and -9% dash recharge', maxStacks: 2,
         apply: () => {
-            player.speed = Math.min(11.8, player.speed * 1.15);
-            player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.86));
+            player.speed = Math.min(11.8, player.speed * 1.09);
+            player.dashRechargeFrames = Math.max(14, Math.round(player.dashRechargeFrames * 0.91));
         },
     },
     {
@@ -904,51 +904,51 @@ const UNIQUE_ITEM_DEFINITIONS = [
         detail: 'Kills restore shield and extra ammo', maxStacks: 2,
         apply: () => {
             if (grantSniperAmmoPierceBonus()) {
-                player.killShieldFlat = Math.min(3, (player.killShieldFlat ?? 0) + 1);
+                player.killShieldFlat = Math.min(2, (player.killShieldFlat ?? 0) + 1);
                 return;
             }
-            player.killAmmoFlat = Math.min(8, (player.killAmmoFlat ?? 0) + 2);
-            player.killShieldFlat = Math.min(3, (player.killShieldFlat ?? 0) + 1);
+            player.killAmmoFlat = Math.min(4, (player.killAmmoFlat ?? 0) + 1);
+            player.killShieldFlat = Math.min(2, (player.killShieldFlat ?? 0) + 1);
         },
     },
     {
         id: 'kingmaker_core', rarity: 'mythical', title: 'Kingmaker Core',
-        detail: '+4 damage, +20% fire rate, +20 max HP', maxStacks: 1,
+        detail: '+2 damage, +12% fire rate, +14 max HP', maxStacks: 1,
         apply: () => {
-            player.bulletDamage = Math.min(34, player.bulletDamage + 4);
-            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.2);
-            player.maxHp += 20;
-            player.hp = Math.min(player.maxHp, player.hp + 18);
+            player.bulletDamage = Math.min(34, player.bulletDamage + 2);
+            player.fireRateMult = Math.min(4.8, player.fireRateMult * 1.12);
+            player.maxHp += 14;
+            player.hp = Math.min(player.maxHp, player.hp + 12);
         },
     },
     {
         id: 'apocalypse_engine', rarity: 'mythical', title: 'Apocalypse Engine',
         detail: 'Bullets pierce, chain, and explode', maxStacks: 1,
         apply: () => {
-            player.projectilePierce = Math.min(6, (player.projectilePierce ?? 0) + 2);
-            player.explosionRadius = Math.min(160, (player.explosionRadius ?? 0) + 24);
-            player.chainLightningChance = Math.min(0.85, (player.chainLightningChance ?? 0) + 0.15);
-            player.chainLightningDamageMult = Math.min(1, (player.chainLightningDamageMult ?? 0.55) + 0.1);
+            player.projectilePierce = Math.min(5, (player.projectilePierce ?? 0) + 1);
+            player.explosionRadius = Math.min(120, (player.explosionRadius ?? 0) + 16);
+            player.chainLightningChance = Math.min(0.70, (player.chainLightningChance ?? 0) + 0.10);
+            player.chainLightningDamageMult = Math.min(0.85, (player.chainLightningDamageMult ?? 0.55) + 0.06);
         },
     },
     {
         id: 'celestial_heart', rarity: 'mythical', title: 'Celestial Heart',
-        detail: '+3 shield charges, revive once, big heal', maxStacks: 1,
+        detail: '+2 shield charges, revive once, big heal', maxStacks: 1,
         apply: () => {
-            player.shieldMax = Math.min(12, (player.shieldMax ?? 0) + 3);
-            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 3);
+            player.shieldMax = Math.min(10, (player.shieldMax ?? 0) + 2);
+            player.shieldCharges = Math.min(player.shieldMax, (player.shieldCharges ?? 0) + 2);
             player.reviveCharges = Math.min(1, (player.reviveCharges ?? 0) + 1);
-            player.maxHp += 45;
-            player.hp = Math.min(player.maxHp, player.hp + 40);
+            player.maxHp += 32;
+            player.hp = Math.min(player.maxHp, player.hp + 28);
         },
     },
     {
         id: 'singularity_seed', rarity: 'mythical', title: 'Singularity Seed',
         detail: 'Massive aura damage and stronger low-health damage', maxStacks: 1,
         apply: () => {
-            player.auraDamage = Math.min(36, (player.auraDamage ?? 0) + 10);
-            player.auraRadius = Math.min(360, (player.auraRadius ?? 120) + 48);
-            player.executeBonusMult = Math.min(2.5, (player.executeBonusMult ?? 1) + 0.35);
+            player.auraDamage = Math.min(24, (player.auraDamage ?? 0) + 6);
+            player.auraRadius = Math.min(280, (player.auraRadius ?? 120) + 32);
+            player.executeBonusMult = Math.min(1.8, (player.executeBonusMult ?? 1) + 0.20);
         },
     },
 ];
