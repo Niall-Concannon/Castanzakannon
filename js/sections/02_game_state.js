@@ -177,6 +177,7 @@ let player = {
     itemLevels: {},
     inventory: [],
     lastLootText: '',
+    lastLootIcon: null,
     lastLootTimer: 0,
     critChance: 0,
     critMult: 1.75,
@@ -385,6 +386,9 @@ function registerLootGain(definition, source) {
 
     entry.level = player.itemLevels[definition.id];
     player.lastLootText = `${source === 'unique' ? 'UNIQUE' : 'ITEM'}: ${definition.title}`;
+    player.lastLootIcon = source === 'unique'
+        ? UNIQUE_PLACEHOLDER_SPRITES[definition.id] ?? null
+        : ITEM_PLACEHOLDER_SPRITES[definition.id] ?? null;
     player.lastLootTimer = 220;
     // Play item/unique pickup audio
     try {

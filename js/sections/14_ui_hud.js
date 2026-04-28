@@ -212,11 +212,24 @@ function drawMinimap() {
     }
 
 
-    ctx.fillStyle = '#ff0000';
     for (const chest of chests) {
-        ctx.fillRect(MM_X + (chest.x - viewOriginX) * scaleX - 2, MM_Y + (chest.y - viewOriginY) * scaleY - 2, 4, 4);
+        const cx = MM_X + (chest.x - viewOriginX) * scaleX;
+        const cy = MM_Y + (chest.y - viewOriginY) * scaleY;
+        const color = chest.bossChest ? '#ffe272' : '#ffd060';
+        const r = 3;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.lineTo(cx + r, cy);
+        ctx.lineTo(cx, cy + r);
+        ctx.lineTo(cx - r, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
     }
-
 
     ctx.fillStyle = '#ff0000';
     for (const e of enemies) {

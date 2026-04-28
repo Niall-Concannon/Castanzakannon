@@ -35,6 +35,7 @@ function updateChests() {
                 text: gotLoot ? text : 'CHEST EMPTY',
                 boss: !!chest.bossChest,
                 created: frameCount,
+                icon: gotLoot ? player.lastLootIcon : null,
                 particles,
             });
             chests.splice(i, 1);
@@ -180,7 +181,10 @@ function drawChestPickupEffects() {
         ctx.fill();
         ctx.stroke();
 
-        if (pickupChestSprite.complete && pickupChestSprite.naturalWidth) {
+        const icon = effect.icon;
+        if (icon?.complete && icon.naturalWidth) {
+            ctx.drawImage(icon, -halfW + 14, -22, 44, 44);
+        } else if (pickupChestSprite.complete && pickupChestSprite.naturalWidth) {
             ctx.drawImage(pickupChestSprite, -halfW + 14, -22, 44, 44);
         }
 
