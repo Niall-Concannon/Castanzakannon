@@ -396,7 +396,7 @@ function drawVoidTotemArrow() {
             glow: '#b07cff',
             arrow: '#c9a6ff',
             text: '#ddc8ff',
-            label: 'VOID TOTEM',
+            label: voidTotem?.mode === 'return' ? 'RETURN TOTEM' : 'VOID TOTEM',
         });
     }
     if (hasActiveNecromancerTotem()) {
@@ -405,7 +405,7 @@ function drawVoidTotemArrow() {
             glow: '#5fe3ad',
             arrow: '#8bf6cb',
             text: '#c9ffe4',
-            label: 'NECRO TOTEM',
+            label: necromancerTotem?.mode === 'return' ? 'RETURN TOTEM' : 'NECRO TOTEM',
         });
     }
     if (targets.length === 0) return;
@@ -487,13 +487,17 @@ function drawVoidTotemPrompt() {
     if (hasActiveVoidTotem()) {
         const distVoid = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
         if (distVoid <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
-            promptText = 'PRESS E TO ENTER VOID FIGHT';
+            promptText = voidTotem.mode === 'return'
+                ? 'PRESS E TO RETURN TO THE ARENA'
+                : 'PRESS E TO ENTER VOID FIGHT';
         }
     }
     if (!promptText && hasActiveNecromancerTotem()) {
         const distNecro = Math.hypot(player.x - necromancerTotem.x, player.y - necromancerTotem.y);
         if (distNecro <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
-            promptText = 'PRESS E TO ENTER NECROMANCER FIGHT';
+            promptText = necromancerTotem.mode === 'return'
+                ? 'PRESS E TO RETURN TO THE ARENA'
+                : 'PRESS E TO ENTER NECROMANCER FIGHT';
             stroke = 'rgba(130,230,180,0.85)';
             shadow = 'rgba(35,130,88,0.95)';
         }

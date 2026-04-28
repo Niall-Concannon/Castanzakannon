@@ -94,10 +94,11 @@ function drawBossTotemObjective(totem, sprite, label, auraColor, glowColor) {
 
 // Draw Void Totem Objective keeps the game logic moving.
 function drawVoidTotemObjective() {
+    const label = voidTotem?.mode === 'return' ? 'RETURN TOTEM' : 'VOID TOTEM';
     drawBossTotemObjective(
         voidTotem,
         voidTotemSprite,
-        'VOID TOTEM',
+        label,
         ['rgba(148,90,255,0.34)', 'rgba(105,40,210,0.2)', 'rgba(30,0,65,0)', 'rgba(236,214,255,0.95)'],
         '#9f66ff'
     );
@@ -105,10 +106,11 @@ function drawVoidTotemObjective() {
 
 // Draw Necromancer Totem Objective keeps the game logic moving.
 function drawNecromancerTotemObjective() {
+    const label = necromancerTotem?.mode === 'return' ? 'RETURN TOTEM' : 'NECRO TOTEM';
     drawBossTotemObjective(
         necromancerTotem,
         necromancerTotemSprite,
-        'NECRO TOTEM',
+        label,
         ['rgba(85,230,155,0.32)', 'rgba(50,180,110,0.18)', 'rgba(0,58,38,0)', 'rgba(215,255,230,0.95)'],
         '#5df0a0'
     );

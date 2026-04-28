@@ -394,6 +394,40 @@ function rewardChestLoot() {
     return rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique');
 }
 
+// Spawn Arena Chests keeps the game logic moving.
+function spawnArenaChests(count = 1) {
+    chests = [];
+    const placedPositions = [];
+
+    for (let i = 0; i < count; i++) {
+        let pos = null;
+
+        for (let tries = 0; tries < 24; tries++) {
+            const candidate = findRandomFloorPosition(TILE * 7);
+            if (!candidate) continue;
+            const tooClose = placedPositions.some(existing => Math.hypot(candidate.x - existing.x, candidate.y - existing.y) < TILE * 4);
+            if (tooClose) continue;
+            pos = candidate;
+            break;
+        }
+
+        if (!pos) {
+            pos = findRandomFloorPosition(TILE * 7);
+        }
+
+        if (!pos) continue;
+        placedPositions.push(pos);
+        chests.push({
+            x: pos.x,
+            y: pos.y,
+            prevX: pos.x,
+            prevY: pos.y,
+            size: CHEST_WORLD_SIZE,
+            opened: false,
+        });
+    }
+}
+
 // Find Random Floor Position keeps the game logic moving.
 function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 300) {
     for (let i = 0; i < maxTries; i++) {
@@ -417,16 +451,25 @@ function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 30
 
 // Spawn Arena Chest keeps the game logic moving.
 function spawnArenaChest() {
-    chests = [];
-    const pos = findRandomFloorPosition(TILE * 7);
-    chests.push({
+    spawnArenaChests(1);
+}
+
+// Spawn Boss Return Totem keeps the game logic moving.
+function spawnBossReturnTotem(kind) {
+    const sourceX = player.x + TILE * 3;
+    const sourceY = player.y - TILE * 3;
+    const pos = findNearestFreePosition(sourceX, sourceY, 20, 16) ?? { x: sourceX, y: sourceY };
+    return {
         x: pos.x,
         y: pos.y,
         prevX: pos.x,
         prevY: pos.y,
-        size: CHEST_WORLD_SIZE,
-        opened: false,
-    });
+        size: 22,
+        level: currentArenaLevel,
+        active: true,
+        mode: 'return',
+        kind,
+    };
 }
 
 // Returns the arena boss HP for the current level.
@@ -622,6 +665,7 @@ function spawnVoidTotemForLevel(forceSpawn = false) {
         size: 22,
         level: currentArenaLevel,
         active: true,
+        mode: 'enter',
     };
 }
 
@@ -660,17 +704,18 @@ function spawnNecromancerTotemForLevel(forceSpawn = false) {
         size: 22,
         level: currentArenaLevel,
         active: true,
+        mode: 'enter',
     };
 }
 
 // Returns true if the totem can currently be activated.
 function hasActiveVoidTotem() {
-    return !!voidTotem && voidTotem.active && !voidEncounter.active;
+    return !!voidTotem && voidTotem.active && (voidTotem.mode === 'return' || !voidEncounter.active);
 }
 
 // Returns true if the necromancer totem can currently be activated.
 function hasActiveNecromancerTotem() {
-    return !!necromancerTotem && necromancerTotem.active && !necromancerEncounter.active;
+    return !!necromancerTotem && necromancerTotem.active && (necromancerTotem.mode === 'return' || !necromancerEncounter.active);
 }
 
 // Attempts to trigger the encounter when the player presses E.
@@ -679,14 +724,22 @@ function tryActivateVoidTotem() {
     if (hasActiveVoidTotem()) {
         const dist = Math.hypot(player.x - voidTotem.x, player.y - voidTotem.y);
         if (dist <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
-            beginVoidEncounter();
+            if (voidTotem.mode === 'return') {
+                returnFromVoidEncounter();
+            } else {
+                beginVoidEncounter();
+            }
             return true;
         }
     }
     if (hasActiveNecromancerTotem()) {
         const dist = Math.hypot(player.x - necromancerTotem.x, player.y - necromancerTotem.y);
         if (dist <= player.size + VOID_BOSS_TRIGGER_RADIUS) {
-            beginNecromancerEncounter();
+            if (necromancerTotem.mode === 'return') {
+                returnFromNecromancerEncounter();
+            } else {
+                beginNecromancerEncounter();
+            }
             return true;
         }
     }
@@ -781,6 +834,7 @@ function spawnVoidBossEnemy() {
     enemy.isVoidEncounterEnemy = true;
     enemy.isBossEncounterEnemy = true;
     enemy.bossName = 'Void Sniper';
+    enemy.noXpDrop = true;
     enemy.voidAttackTimer = 0;
     enemy.voidBurstCooldown = 78;
     enemy.voidSpikeCooldown = 62;
@@ -802,15 +856,23 @@ function grantVoidBossXpReward() {
     }
 }
 
-// Completes the void encounter and restores the previous arena state.
+// Completes the void encounter and leaves the return totem behind.
 function completeVoidEncounterVictory() {
     if (!voidEncounter.active || !voidEncounter.returnContext) return;
 
-    voidEncounter.state = 'transition_out';
-    gamePaused = true;
-
-    grantVoidBossXpReward();
     voidEncounter.completedLevels[currentArenaLevel] = true;
+
+    voidEncounter.state = 'return_to_arena';
+    gamePaused = false;
+    voidTotem = spawnBossReturnTotem('void');
+    necromancerTotem = null;
+    chests = [];
+    spawnArenaChests(2);
+}
+
+// Restores the saved arena after leaving the void boss room.
+function returnFromVoidEncounter() {
+    if (!voidEncounter.active || voidEncounter.state !== 'return_to_arena' || !voidEncounter.returnContext) return;
 
     const ctxSaved = voidEncounter.returnContext;
     mapTiles = ctxSaved.mapTiles ?? [];
@@ -841,8 +903,6 @@ function completeVoidEncounterVictory() {
     voidEncounter.returnContext = null;
     voidEncounter.active = false;
     voidEncounter.state = 'inactive';
-    voidTotem = null;
-    gamePaused = false;
 }
 
 // Starts the teleport flow into the necromancer boss arena.
@@ -922,6 +982,7 @@ function spawnNecromancerBossEnemy() {
     enemy.isNecromancerBoss = true;
     enemy.isBossEncounterEnemy = true;
     enemy.bossName = 'Necromancer';
+    enemy.noXpDrop = true;
     enemy.necromancerSummonTimer = 0;
     enemy.necromancerSummonCooldown = 130;
     enemy.necromancerVolleyCooldown = 74;
@@ -944,15 +1005,23 @@ function grantNecromancerBossXpReward() {
     }
 }
 
-// Completes the necromancer encounter and restores the previous arena state.
+// Completes the necromancer encounter and leaves the return totem behind.
 function completeNecromancerEncounterVictory() {
     if (!necromancerEncounter.active || !necromancerEncounter.returnContext) return;
 
-    necromancerEncounter.state = 'transition_out';
-    gamePaused = true;
-
-    grantNecromancerBossXpReward();
     necromancerEncounter.completedLevels[currentArenaLevel] = true;
+
+    necromancerEncounter.state = 'return_to_arena';
+    gamePaused = false;
+    necromancerTotem = spawnBossReturnTotem('necromancer');
+    voidTotem = null;
+    chests = [];
+    spawnArenaChests(2);
+}
+
+// Restores the saved arena after leaving the necromancer boss room.
+function returnFromNecromancerEncounter() {
+    if (!necromancerEncounter.active || necromancerEncounter.state !== 'return_to_arena' || !necromancerEncounter.returnContext) return;
 
     const ctxSaved = necromancerEncounter.returnContext;
     mapTiles = ctxSaved.mapTiles ?? [];
@@ -983,8 +1052,6 @@ function completeNecromancerEncounterVictory() {
     necromancerEncounter.returnContext = null;
     necromancerEncounter.active = false;
     necromancerEncounter.state = 'inactive';
-    necromancerTotem = null;
-    gamePaused = false;
 }
 
 // Get Player Xp Attract Radius keeps the game logic moving.
