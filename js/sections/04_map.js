@@ -41,6 +41,10 @@ function generateMap() {
         placeLevel5TumorTurrets();
     }
 
+    if (currentArenaLevel === 2) {
+        placeLevel2TumorTurrets();
+    }
+
     applyCornerTiles();
 
     clearSpawnArea();
@@ -50,8 +54,17 @@ function generateMap() {
         placeLevel1SkullCandles();
     }
 
+    if (currentArenaLevel === 3) {
+        placeLevel3Puddles();
+        placeLevel3Pots();
+    }
+
     if (currentArenaLevel === 4) {
         placeLevel4MushroomTrees();
+    }
+
+    if (currentArenaLevel === 2) {
+        placeLevel2MushroomTrees();
     }
 
     buildNavGrid();
@@ -345,6 +358,136 @@ function placeLevel1Pots() {
     levelDecorations.sort((a, b) => a.y - b.y);
 }
 
+// Is Level3 Puddle Tile Valid keeps the game logic moving.
+function isLevel3PuddleTileValid(tx, ty, widthTiles, heightTiles) {
+    if (!isInteriorTile(tx, ty)) return false;
+
+    for (let y = ty; y < ty + heightTiles; y++) {
+        for (let x = tx; x < tx + widthTiles; x++) {
+            if (!isInteriorTile(x, y)) return false;
+            if (mapTiles[y]?.[x] !== TILE_FLOOR) return false;
+        }
+    }
+
+    const cx = Math.floor(MAP_W / 2);
+    const cy = Math.floor(MAP_H / 2);
+    const rectCenterX = tx + widthTiles / 2;
+    const rectCenterY = ty + heightTiles / 2;
+    if (Math.abs(rectCenterX - cx) <= LEVEL4_MUSHROOM_SPAWN_BUFFER && Math.abs(rectCenterY - cy) <= LEVEL4_MUSHROOM_SPAWN_BUFFER) {
+        return false;
+    }
+
+    for (const deco of levelDecorations) {
+        const decoWidth = deco.widthTiles ?? 1;
+        const decoHeight = deco.heightTiles ?? 1;
+        const overlapX = tx < deco.tx + decoWidth && tx + widthTiles > deco.tx;
+        const overlapY = ty < deco.ty + decoHeight && ty + heightTiles > deco.ty;
+        if (overlapX && overlapY) return false;
+    }
+
+    return true;
+}
+
+// Try Place Level3 Puddle keeps the game logic moving.
+function tryPlaceLevel3Puddle(tx, ty, widthTiles, heightTiles) {
+    if (!isLevel3PuddleTileValid(tx, ty, widthTiles, heightTiles)) return false;
+
+    const variantIndex = Math.floor(Math.random() * 3);
+    const drawWidth = widthTiles * TILE;
+    const drawHeight = heightTiles * TILE;
+
+    levelDecorations.push({
+        type: 'puddle',
+        variantIndex,
+        widthTiles,
+        heightTiles,
+        drawWidth,
+        drawHeight,
+        tx,
+        ty,
+        x: tx * TILE + drawWidth * 0.5,
+        y: ty * TILE + drawHeight * 0.5,
+    });
+
+    return true;
+}
+
+// Place Level3 Puddles keeps the game logic moving.
+function placeLevel3Puddles() {
+    const attempts = LEVEL3_PUDDLE_COUNT * 18;
+    let placed = 0;
+
+    for (let i = 0; i < attempts && placed < LEVEL3_PUDDLE_COUNT; i++) {
+        const widthTiles = LEVEL3_PUDDLE_MIN_WIDTH_TILES + Math.floor(Math.random() * (LEVEL3_PUDDLE_MAX_WIDTH_TILES - LEVEL3_PUDDLE_MIN_WIDTH_TILES + 1));
+        const heightTiles = LEVEL3_PUDDLE_MIN_HEIGHT_TILES + Math.floor(Math.random() * (LEVEL3_PUDDLE_MAX_HEIGHT_TILES - LEVEL3_PUDDLE_MIN_HEIGHT_TILES + 1));
+        const tx = 4 + Math.floor(Math.random() * (MAP_W - 8 - widthTiles));
+        const ty = 4 + Math.floor(Math.random() * (MAP_H - 8 - heightTiles));
+        if (tryPlaceLevel3Puddle(tx, ty, widthTiles, heightTiles)) placed++;
+    }
+
+    levelDecorations.sort((a, b) => a.y - b.y);
+}
+
+// Is Level3 Pot Tile Valid keeps the game logic moving.
+function isLevel3PotTileValid(tx, ty) {
+    if (!isLevel1PotTileValid(tx, ty)) return false;
+
+    for (const deco of levelDecorations) {
+        if (deco.type !== 'puddle') continue;
+        const puddleWidth = deco.widthTiles ?? 1;
+        const puddleHeight = deco.heightTiles ?? 1;
+        const overlapX = tx < deco.tx + puddleWidth && tx + 1 > deco.tx;
+        const overlapY = ty < deco.ty + puddleHeight && ty + 1 > deco.ty;
+        if (overlapX && overlapY) return false;
+    }
+
+    return true;
+}
+
+// Try Place Level3 Pot keeps the game logic moving.
+function tryPlaceLevel3Pot(tx, ty) {
+    if (!isLevel3PotTileValid(tx, ty)) return false;
+
+    const potVariants = MAP_THEME_SPRITES[3]?.pots?.length || 1;
+    const variantIndex = Math.floor(Math.random() * potVariants);
+    const drawHeight = 34 + Math.floor(Math.random() * 10);
+    const drawWidth = 25 + Math.floor(Math.random() * 9);
+    const jitterX = Math.round((Math.random() - 0.5) * 12);
+    const jitterY = Math.round((Math.random() - 0.5) * 8);
+
+    levelDecorations.push({
+        type: 'pot',
+        variantIndex,
+        drawWidth,
+        drawHeight,
+        tx,
+        ty,
+        x: tx * TILE + TILE * 0.5 + jitterX,
+        y: ty * TILE + TILE * 0.5 + jitterY,
+    });
+
+    return true;
+}
+
+// Place Level3 Pots keeps the game logic moving.
+function placeLevel3Pots() {
+    const anchors = collectLevel1WallPotAnchors();
+    const borderAnchors = collectLevel1BorderPotAnchors();
+    const primaryAnchors = anchors.length ? anchors : borderAnchors;
+    if (!primaryAnchors.length) return;
+
+    const attempts = LEVEL3_POT_COUNT * 16;
+    let placed = 0;
+    for (let i = 0; i < attempts && placed < LEVEL3_POT_COUNT; i++) {
+        const anchor = primaryAnchors[Math.floor(Math.random() * primaryAnchors.length)];
+        const tx = anchor.tx + Math.floor(Math.random() * 3) - 1;
+        const ty = anchor.ty + Math.floor(Math.random() * 3) - 1;
+        if (tryPlaceLevel3Pot(tx, ty)) placed++;
+    }
+
+    levelDecorations.sort((a, b) => a.y - b.y);
+}
+
 // Try Place Level4 Mushroom Tree keeps the game logic moving.
 function tryPlaceLevel4MushroomTree(tx, ty) {
     if (!isLevel4DecorationTileValid(tx, ty)) return false;
@@ -373,10 +516,18 @@ function tryPlaceLevel4MushroomTree(tx, ty) {
 
 // Place Level4 Mushroom Trees keeps the game logic moving.
 function placeLevel4MushroomTrees() {
-    const clusterAttempts = LEVEL4_MUSHROOM_CLUSTER_COUNT * 8;
+    placeMushroomTrees({
+        clusterCount: LEVEL4_MUSHROOM_CLUSTER_COUNT,
+        singleCount: LEVEL4_MUSHROOM_SINGLE_COUNT,
+    });
+}
+
+// Place Mushroom Trees keeps the game logic moving.
+function placeMushroomTrees({ clusterCount, singleCount }) {
+    const clusterAttempts = clusterCount * 8;
     let clustersPlaced = 0;
 
-    for (let i = 0; i < clusterAttempts && clustersPlaced < LEVEL4_MUSHROOM_CLUSTER_COUNT; i++) {
+    for (let i = 0; i < clusterAttempts && clustersPlaced < clusterCount; i++) {
         const cx = 4 + Math.floor(Math.random() * (MAP_W - 8));
         const cy = 4 + Math.floor(Math.random() * (MAP_H - 8));
         if (!isLevel4DecorationTileValid(cx, cy)) continue;
@@ -392,15 +543,23 @@ function placeLevel4MushroomTrees() {
         if (plantedInCluster > 0) clustersPlaced++;
     }
 
-    const singleAttempts = LEVEL4_MUSHROOM_SINGLE_COUNT * 6;
+    const singleAttempts = singleCount * 6;
     let singlesPlaced = 0;
-    for (let i = 0; i < singleAttempts && singlesPlaced < LEVEL4_MUSHROOM_SINGLE_COUNT; i++) {
+    for (let i = 0; i < singleAttempts && singlesPlaced < singleCount; i++) {
         const tx = 4 + Math.floor(Math.random() * (MAP_W - 8));
         const ty = 4 + Math.floor(Math.random() * (MAP_H - 8));
         if (tryPlaceLevel4MushroomTree(tx, ty)) singlesPlaced++;
     }
 
     levelDecorations.sort((a, b) => a.y - b.y);
+}
+
+// Place Level2 Mushroom Trees keeps the game logic moving.
+function placeLevel2MushroomTrees() {
+    placeMushroomTrees({
+        clusterCount: LEVEL2_MUSHROOM_CLUSTER_COUNT,
+        singleCount: LEVEL2_MUSHROOM_SINGLE_COUNT,
+    });
 }
 
 // Clear Spawn Area keeps the game logic moving.
@@ -568,11 +727,11 @@ function canPlaceTumorTurretAt(tx, ty) {
     return !hasSolidTileWithin(tx, ty, 1);
 }
 
-// Place Level5 Tumor Turrets keeps the game logic moving.
-function placeLevel5TumorTurrets() {
+// Places tumor turrets with a shared spawn pattern and variant-specific tuning.
+function placeTumorTurrets({ count, projectileSpeed, projectileSize, spriteSet, size = TUMOR_SIZE, hp = TUMOR_HP }) {
     const maxAttempts = 800;
 
-    for (let attempt = 0; attempt < maxAttempts && tumorTurrets.length < TUMOR_TURRETS_LEVEL5; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts && tumorTurrets.length < count; attempt++) {
         const tx = 4 + Math.floor(Math.random() * (MAP_W - 8));
         const ty = 4 + Math.floor(Math.random() * (MAP_H - 8));
         if (!canPlaceTumorTurretAt(tx, ty)) continue;
@@ -586,17 +745,42 @@ function placeLevel5TumorTurrets() {
             y,
             prevX: x,
             prevY: y,
-            size: TUMOR_SIZE,
-            hp: TUMOR_HP,
-            maxHp: TUMOR_HP,
+            size,
+            hp,
+            maxHp: hp,
             chargeFrames: preload,
             cooldownFrames: 0,
             shootAnimFrames: 0,
             hitFlash: 0,
             hpBarTimer: 0,
             alive: true,
+            projectileSpeed,
+            projectileSize,
+            spriteSet,
         });
     }
+}
+
+// Place Level2 Tumor Turrets keeps the game logic moving.
+function placeLevel2TumorTurrets() {
+    placeTumorTurrets({
+        count: LEVEL2_TUMOR_TURRETS,
+        projectileSpeed: LEVEL2_TUMOR_PROJECTILE_SPEED,
+        projectileSize: LEVEL2_TUMOR_PROJECTILE_SIZE,
+        spriteSet: 'level2',
+        size: LEVEL2_TUMOR_SIZE,
+        hp: LEVEL2_TUMOR_HP,
+    });
+}
+
+// Place Level5 Tumor Turrets keeps the game logic moving.
+function placeLevel5TumorTurrets() {
+    placeTumorTurrets({
+        count: TUMOR_TURRETS_LEVEL5,
+        projectileSpeed: TUMOR_PROJECTILE_SPEED,
+        projectileSize: TUMOR_PROJECTILE_SIZE,
+        spriteSet: 'base',
+    });
 }
 
 // Is Solid Tile Type keeps the game logic moving.
@@ -1085,13 +1269,15 @@ function drawLevelDecorations() {
     const pots = currentMapTheme.pots;
     const skullCandles = currentMapTheme.skullCandles;
     const mushrooms = currentMapTheme.mushroomTrees;
-    if ((!pots || !pots.length) && (!skullCandles || !skullCandles.length) && (!mushrooms || !mushrooms.length)) return;
+    const puddles = currentMapTheme.puddles;
+    if ((!pots || !pots.length) && (!skullCandles || !skullCandles.length) && (!mushrooms || !mushrooms.length) && (!puddles || !puddles.length)) return;
 
     for (const deco of levelDecorations) {
         let spriteSet = null;
         if (deco.type === 'pot') spriteSet = pots;
         else if (deco.type === 'skullCandle') spriteSet = skullCandles;
         else if (deco.type === 'mushroomTree') spriteSet = mushrooms;
+        else if (deco.type === 'puddle') spriteSet = puddles;
         else continue;
         if (!spriteSet || !spriteSet.length) continue;
         const sprite = spriteSet[deco.variantIndex % spriteSet.length];
@@ -1099,8 +1285,8 @@ function drawLevelDecorations() {
 
         const width = deco.drawWidth ?? (deco.wallTall === 3 ? 90 : 72);
         const height = deco.drawHeight ?? (deco.wallTall ? deco.wallTall * TILE : 44);
-        const worldX = deco.x - width * 0.5;
-        const worldY = deco.y - height + TILE * 0.5;
+        const worldX = deco.type === 'puddle' ? deco.tx * TILE : deco.x - width * 0.5;
+        const worldY = deco.type === 'puddle' ? deco.ty * TILE : deco.y - height + TILE * 0.5;
         const s = toScreen(worldX, worldY);
         const sx = Math.round(s.x);
         const sy = Math.round(s.y);

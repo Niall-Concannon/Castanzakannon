@@ -1228,6 +1228,7 @@ function updateTumorTurrets() {
         t.chargeFrames++;
 
         if (t.chargeFrames >= TUMOR_CHARGE_FRAMES) {
+            const projectileSpeed = t.projectileSpeed ?? TUMOR_PROJECTILE_SPEED;
             const playerVx = player.x - (player.prevX ?? player.x);
             const playerVy = player.y - (player.prevY ?? player.y);
 
@@ -1238,7 +1239,7 @@ function updateTumorTurrets() {
                 player.y,
                 playerVx,
                 playerVy,
-                TUMOR_PROJECTILE_SPEED
+                projectileSpeed
             );
             const sx = t.x + Math.cos(angle) * (t.size + 8);
             const sy = t.y + Math.sin(angle) * (t.size + 8);
@@ -1247,9 +1248,9 @@ function updateTumorTurrets() {
                 y: sy,
                 prevX: sx,
                 prevY: sy,
-                velocityX: Math.cos(angle) * TUMOR_PROJECTILE_SPEED,
-                velocityY: Math.sin(angle) * TUMOR_PROJECTILE_SPEED,
-                size: TUMOR_PROJECTILE_SIZE,
+                velocityX: Math.cos(angle) * projectileSpeed,
+                velocityY: Math.sin(angle) * projectileSpeed,
+                size: t.projectileSize ?? TUMOR_PROJECTILE_SIZE,
                 framesLeft: TUMOR_PROJECTILE_FRAMES,
                 projectileType: 'tumor',
                 damage: TUMOR_PROJECTILE_DAMAGE,
@@ -1400,8 +1401,9 @@ function drawTumorTurrets() {
         const rx  = (t.prevX ?? t.x) + (t.x - (t.prevX ?? t.x)) * renderAlpha;
         const ry  = (t.prevY ?? t.y) + (t.y - (t.prevY ?? t.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
-        const sprite = t.shootAnimFrames > 0 ? tumorShootSprite : tumorIdleSprite;
-        const sizePx = t.size * 2.2;
+        const spriteSet = TUMOR_TURRET_SPRITES[t.spriteSet] ?? TUMOR_TURRET_SPRITES.base;
+        const sprite = t.shootAnimFrames > 0 ? spriteSet.shoot : spriteSet.idle;
+        const sizePx = (t.size ?? TUMOR_SIZE) * 2.2;
 
         const chargeProgress = t.cooldownFrames > 0
             ? 0
@@ -1410,8 +1412,9 @@ function drawTumorTurrets() {
         if (chargeProgress > 0.04) {
 
             const auraIntensity = 0.6 + chargeProgress * 0.35;
-            const innerAuraRadius = t.size * 0.8;
-            const outerAuraRadius = t.size * (1.2 + chargeProgress * 0.8);
+            const baseSize = t.size ?? TUMOR_SIZE;
+            const innerAuraRadius = baseSize * 0.8;
+            const outerAuraRadius = baseSize * (1.2 + chargeProgress * 0.8);
 
             const auraGradient = ctx.createRadialGradient(sc.x, sc.y, innerAuraRadius, sc.x, sc.y, outerAuraRadius);
             auraGradient.addColorStop(0, `rgba(255,100,100,${auraIntensity.toFixed(3)})`);
@@ -1429,7 +1432,7 @@ function drawTumorTurrets() {
 
 
             const corePulse = 0.8 + 0.2 * Math.sin(frameCount * 0.15 + (t.x + t.y) * 0.01);
-            const coreGlowRadius = t.size * 0.5 * corePulse;
+            const coreGlowRadius = baseSize * 0.5 * corePulse;
             const coreGlow = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, coreGlowRadius);
             coreGlow.addColorStop(0, `rgba(255,150,100,${(chargeProgress * 0.8).toFixed(3)})`);
             coreGlow.addColorStop(1, 'rgba(255,80,80,0)');
@@ -1452,11 +1455,11 @@ function drawTumorTurrets() {
         ctx.restore();
 
         if (alpha > 0.15 && t.hpBarTimer > 0) {
-            const bw = t.size * 2.2;
+            const bw = (t.size ?? TUMOR_SIZE) * 2.2;
             const bh = 4;
             const hf = t.hp / t.maxHp;
             const bx = sc.x - bw / 2;
-            const by = sc.y - t.size - 16;
+            const by = sc.y - (t.size ?? TUMOR_SIZE) - 16;
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.fillStyle = '#000000';

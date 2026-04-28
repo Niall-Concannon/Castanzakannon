@@ -88,6 +88,7 @@ function confirmWeaponAndStart() {
     player.killAmmoFlat = 0;
     player.killShieldFlat = 0;
     player.reviveCharges = 0;
+    player.puddleDamageAccumulator = 0;
     currentLevelUpChoices = [];
     player.dashMaxCharges = Math.max(1, chosen.dashCharges ?? 1);
     player.dashCharges = player.dashMaxCharges;
@@ -108,6 +109,7 @@ function confirmWeaponAndStart() {
     player.instakillTimer = 0;
     player.xp    = 0;
     player.level = 1;
+    player.puddleDamageAccumulator = 0;
     elapsedGameMs = 0;
     gamePaused   = false;
 
@@ -230,6 +232,38 @@ function setMapThemeForCurrentLevel() {
     currentMapTheme = MAP_THEME_SPRITES[currentMapThemeId] ?? MAP_THEME_SPRITES[1];
 }
 
+// Applies level 3 puddle damage when the player is standing in a hazard tile.
+function applyLevel3PuddleDamage() {
+    if (currentArenaLevel !== 3 || !levelDecorations.length) return;
+
+    const playerRadius = player.size * 0.5;
+    const hazardDamagePerFrame = player.maxHp * LEVEL3_PUDDLE_DAMAGE_PER_SECOND * (FIXED_STEP / 1000);
+    let standingInPuddle = false;
+
+    for (const deco of levelDecorations) {
+        if (deco.type !== 'puddle') continue;
+        const widthTiles = deco.widthTiles ?? 1;
+        const heightTiles = deco.heightTiles ?? 1;
+        const centerX = (deco.tx + widthTiles * 0.5) * TILE;
+        const centerY = (deco.ty + heightTiles * 0.5) * TILE;
+        const halfWidth = (widthTiles * TILE) * 0.5;
+        const halfHeight = (heightTiles * TILE) * 0.5;
+
+        if (Math.abs(player.x - centerX) <= halfWidth + playerRadius && Math.abs(player.y - centerY) <= halfHeight + playerRadius) {
+            standingInPuddle = true;
+            break;
+        }
+    }
+
+    if (!standingInPuddle) return;
+
+    player.puddleDamageAccumulator = (player.puddleDamageAccumulator ?? 0) + hazardDamagePerFrame;
+    while (player.puddleDamageAccumulator >= 1) {
+        applyPlayerDamage(1);
+        player.puddleDamageAccumulator -= 1;
+    }
+}
+
 // Get Wave Enemy Total keeps the game logic moving.
 function getWaveEnemyTotal(waveNumber) {
 
@@ -344,6 +378,7 @@ function updateWaveProgression() {
     player.y = (MAP_H * TILE) / 2;
     player.prevX = player.x;
     player.prevY = player.y;
+    player.puddleDamageAccumulator = 0;
 
     spawnDevModePowerupLine();
     // Totems reset per level; wave 1 of new level gets the 10% roll
@@ -692,6 +727,8 @@ function updatePlayer() {
     if (player.dashPhasesWalls && !player.dashing && wallCollision(player.x, player.y, player.size)) {
         rescuePlayerFromWall();
     }
+
+    applyLevel3PuddleDamage();
 
     if ((player.dashLockFrames ?? 0) > 0) {
         player.dashLockFrames--;

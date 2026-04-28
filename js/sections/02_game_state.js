@@ -198,6 +198,7 @@ let player = {
     killAmmoFlat: 0,
     killShieldFlat: 0,
     reviveCharges: 0,
+    puddleDamageAccumulator: 0,
     xp: 0, xpToNextLevel: 100, level: 1,
     swordExtension: 0,
     swordPhase: 'idle',

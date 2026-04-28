@@ -80,14 +80,19 @@ const CORNER_RAIL_INSET = 12;
 const SAUSAGE_INSET = 16;
 const SAUSAGE_RAIL_INSET = 0;
 const TUMOR_TURRETS_LEVEL5 = 12;
+const LEVEL2_TUMOR_TURRETS = 16;
 const TUMOR_SIZE = 20;
 const TUMOR_HP = 14;
+const LEVEL2_TUMOR_SIZE = TUMOR_SIZE * 2;
+const LEVEL2_TUMOR_HP = TUMOR_HP * 7;
 const TUMOR_RANGE = 760;
 const TUMOR_CHARGE_FRAMES = 80;
 const TUMOR_COOLDOWN_FRAMES = 30;
 const TUMOR_SHOOT_ANIM_FRAMES = 12;
 const TUMOR_PROJECTILE_SPEED = 6;
+const LEVEL2_TUMOR_PROJECTILE_SPEED = 4.5;
 const TUMOR_PROJECTILE_SIZE = 16;
+const LEVEL2_TUMOR_PROJECTILE_SIZE = TUMOR_PROJECTILE_SIZE * 2;
 const TUMOR_PROJECTILE_DAMAGE = 12;
 const TUMOR_PROJECTILE_FRAMES = 170;
 const SNIPER_RANGE = 620;
@@ -173,8 +178,17 @@ const LEVEL1_POT_SPAWN_BUFFER = SPAWN_CLEAR_RADIUS + 2;
 const LEVEL1_SKULL_CANDLE_COUNT = 18;
 const LEVEL1_SKULL_CANDLE_MIN_GAP_TILES = 6;
 const LEVEL1_SKULL_CANDLE_POT_MIN_GAP_TILES = 6;
+const LEVEL3_POT_COUNT = 100;
+const LEVEL3_PUDDLE_COUNT = 40;
+const LEVEL3_PUDDLE_DAMAGE_PER_SECOND = 0.075;
+const LEVEL3_PUDDLE_MIN_WIDTH_TILES = 1;
+const LEVEL3_PUDDLE_MAX_WIDTH_TILES = 6;
+const LEVEL3_PUDDLE_MIN_HEIGHT_TILES = 1;
+const LEVEL3_PUDDLE_MAX_HEIGHT_TILES = 5;
 const LEVEL4_MUSHROOM_CLUSTER_COUNT = 20;
 const LEVEL4_MUSHROOM_SINGLE_COUNT = 45;
+const LEVEL2_MUSHROOM_CLUSTER_COUNT = Math.floor(LEVEL4_MUSHROOM_CLUSTER_COUNT * 0.75);
+const LEVEL2_MUSHROOM_SINGLE_COUNT = Math.floor(LEVEL4_MUSHROOM_SINGLE_COUNT * 0.75);
 const LEVEL4_MUSHROOM_MIN_GAP_TILES = 1;
 const LEVEL4_MUSHROOM_SPAWN_BUFFER = SPAWN_CLEAR_RADIUS + 2;
 const RAIL_RADIUS = 52;
@@ -1396,6 +1410,23 @@ const tumorShootSprite = imgWithFallback([
     'assets/sprites/levels/level5/egg_face.png',
     'assets/sprites/levels/level5/egg_wall.png',
 ]);
+const TUMOR_TURRET_SPRITES = {
+    base: {
+        idle: tumorIdleSprite,
+        shoot: tumorShootSprite,
+    },
+    level2: {
+        idle: imgWithFallback([
+            'assets/sprites/levels/level2/tumor_turret_idle.png',
+            'assets/sprites/levels/level5/egg_wall.png',
+        ]),
+        shoot: imgWithFallback([
+            'assets/sprites/levels/level2/tumor_turret_shoot.png',
+            'assets/sprites/levels/level5/egg_face.png',
+            'assets/sprites/levels/level5/egg_wall.png',
+        ]),
+    },
+};
 const pickupXpSprite     = img('assets/sprites/pickups/pickup_xp.png');
 const pickupXpBlueSprite = img('assets/sprites/pickups/pickup_xp_blue.png');
 const pickupAmmoSprite = imgWithFallback([
@@ -1663,12 +1694,29 @@ const MAP_THEME_SPRITES = {
         wall: imgWithFallback(['assets/sprites/levels/level2/wall_level2.png', 'assets/sprites/levels/level1/wall.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level2/wall_face_level2.png', 'assets/sprites/levels/level1/wall_face.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level2/wall_corner_face_level2.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
+        mushroomTrees: [
+            imgWithFallback(['assets/sprites/levels/level2/mushroom_tree_2a.png', 'assets/sprites/levels/level4/mushroom_tree_2a.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level2/mushroom_tree_2b.png', 'assets/sprites/levels/level4/mushroom_tree_2b.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level2/mushroom_tree_3a.png', 'assets/sprites/levels/level4/mushroom_tree_3a.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level2/mushroom_tree_3b.png', 'assets/sprites/levels/level4/mushroom_tree_3b.png', 'assets/sprites/levels/level1/wall.png']),
+        ],
     },
     3: {
         floor: imgWithFallback(['assets/sprites/levels/level3/floor_level3.png', 'assets/sprites/levels/level1/floor1.png']),
         wall: imgWithFallback(['assets/sprites/levels/level3/wall_level3.png', 'assets/sprites/levels/level1/wall.png']),
         wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
+        pots: [
+            imgWithFallback(['assets/sprites/levels/level1/pot1_clay_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot2_urn_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/pot3_vase_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potD_sandy_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potE_orange_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level1/potF_ochre_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+        ],
+        puddles: [
+            imgWithFallback(['assets/sprites/levels/level3/puddle_green_1.png', 'assets/sprites/levels/level3/floor_level3.png']),
+        ],
     },
     4: {
         floor: imgWithFallback(['assets/sprites/levels/level4/floor_level4.png', 'assets/sprites/levels/level1/floor1.png']),
