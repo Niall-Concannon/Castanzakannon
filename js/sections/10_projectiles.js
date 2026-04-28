@@ -177,10 +177,10 @@ function drawProjectiles() {
 function updateEnemyProjectiles() {
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         const p = enemyProjectiles[i];
-        const oldX = p.x;
-        const oldY = p.y;
+        let oldX = p.x;
+        let oldY = p.y;
 
-        if (p.projectileType === 'void_skull' || p.projectileType === 'necro_orb') {
+        if (p.projectileType === 'void_skull' || p.projectileType === 'necro_orb' || p.projectileType === 'water_homing') {
             const aim = Math.atan2(player.y - p.y, player.x - p.x);
             const speed = Math.hypot(p.velocityX, p.velocityY);
             const steer = p.homingStrength ?? 0.06;
@@ -188,12 +188,22 @@ function updateEnemyProjectiles() {
             p.velocityY += (Math.sin(aim) * speed - p.velocityY) * steer;
         }
 
-        if (p.projectileType === 'void_wave_aoe') {
+        if (p.projectileType === 'void_wave_aoe' || p.projectileType === 'water_wave_aoe') {
             const maxRadius = p.waveMaxRadius ?? VOID_WAVE_AOE_MAX_RADIUS;
-            const lifeUsed = Math.max(0, VOID_WAVE_AOE_FRAMES - p.framesLeft);
-            const progress = Math.max(0, Math.min(1, lifeUsed / Math.max(1, VOID_WAVE_AOE_FRAMES)));
+            const waveFrames = p.projectileType === 'water_wave_aoe' ? 60 : VOID_WAVE_AOE_FRAMES;
+            const lifeUsed = Math.max(0, waveFrames - p.framesLeft);
+            const progress = Math.max(0, Math.min(1, lifeUsed / Math.max(1, waveFrames)));
             p.size = 18 + maxRadius * progress;
             p.waveAnimTimer = (p.waveAnimTimer ?? 0) + 1;
+            if (p.projectileType === 'water_wave_aoe') {
+                const waterBoss = enemies.find(e => e.alive && e.isWaterBoss);
+                if (waterBoss) {
+                    oldX = waterBoss.x;
+                    oldY = waterBoss.y;
+                    p.x = waterBoss.x;
+                    p.y = waterBoss.y;
+                }
+            }
             p.velocityX = 0;
             p.velocityY = 0;
         }
@@ -202,7 +212,7 @@ function updateEnemyProjectiles() {
         p.y += p.velocityY;
         p.framesLeft--;
 
-        const ignoreWalls = p.projectileType === 'void_wave_aoe';
+        const ignoreWalls = p.projectileType === 'void_wave_aoe' || p.projectileType === 'water_wave_aoe' || p.ignoreWalls;
         if ((!ignoreWalls && wallCollision(p.x, p.y, p.size)) || p.framesLeft <= 0) {
             enemyProjectiles.splice(i, 1);
             continue;
@@ -217,7 +227,7 @@ function updateEnemyProjectiles() {
                     player.dashCooldown = Math.max(player.dashCooldown ?? 0, player.dashRechargeFrames ?? 120);
                 }
             }
-            if (p.projectileType !== 'void_wave_aoe') {
+            if (p.projectileType !== 'void_wave_aoe' && p.projectileType !== 'water_wave_aoe') {
                 enemyProjectiles.splice(i, 1);
             }
         }
@@ -240,10 +250,13 @@ function drawEnemyProjectiles() {
         else if (p.projectileType === 'necro_bolt') sprite = p.sprite ?? necromancerProjectileSprite;
         else if (p.projectileType === 'necro_orb') sprite = p.sprite ?? necromancerBurstProjectileSprite;
         else if (p.projectileType === 'necro_rift') sprite = p.sprite ?? necromancerSpikeProjectileSprite;
+        else if (p.projectileType === 'water_shot') sprite = p.sprite ?? waterShotProjectileSprite;
+        else if (p.projectileType === 'water_homing') sprite = p.sprite ?? waterHomingProjectileSprite;
 
-        if (p.projectileType === 'void_wave_aoe') {
-            const animIndex = Math.floor((p.waveAnimTimer ?? 0) / 4) % voidWaveAoeFrames.length;
-            const waveSprite = voidWaveAoeFrames[animIndex] ?? voidWaveAoeFrames[0];
+        if (p.projectileType === 'void_wave_aoe' || p.projectileType === 'water_wave_aoe') {
+            const frames = p.projectileType === 'water_wave_aoe' ? waterWaveAoeFrames : voidWaveAoeFrames;
+            const animIndex = Math.floor((p.waveAnimTimer ?? 0) / 4) % frames.length;
+            const waveSprite = frames[animIndex] ?? frames[0];
             ctx.save();
             ctx.globalAlpha = 0.86;
             ctx.translate(sc.x, sc.y);

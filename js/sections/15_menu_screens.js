@@ -199,14 +199,23 @@ function getEncyclopediaEnemyEntries() {
         kind: 'enemy',
     });
 
-    const bossTank = ENEMY_VARIANT_STATS.d?.tank ?? ENEMY_TYPES.tank;
     entries.push({
-        title: `Boss - ${getBossName(currentArenaLevel + currentWave)}`,
+        title: 'Fire Boss',
         rarity: 'legendary',
-        detail: `HP x9.5 of tank variant (about ${Math.round((bossTank.hp ?? 16) * 9.5)})`,
-        extra: `Names: ${BOSS_NAME_OPTIONS.join(' / ')}`,
+        detail: `Base HP 100 at level 1  Size 90  Wall phase enabled`,
+        extra: 'Attacks: shotgun spread, line stream, homing shot',
         icon: BOSS_ENEMY_SPRITE_FRAMES[0] ?? null,
         iconFrames: BOSS_ENEMY_SPRITE_FRAMES,
+        kind: 'enemy',
+    });
+
+    entries.push({
+        title: 'Water Boss',
+        rarity: 'legendary',
+        detail: 'Base HP 100 at level 1  Size 78  Wall phase enabled',
+        extra: 'Attacks: wave bursts, capped 2 homing shots, 3-shot spread',
+        icon: waterBossSpriteFrames[0] ?? null,
+        iconFrames: waterBossSpriteFrames,
         kind: 'enemy',
     });
 

@@ -429,19 +429,59 @@ function spawnArenaChest() {
     });
 }
 
+// Returns the arena boss HP for the current level.
+function getArenaBossHp(level = currentArenaLevel) {
+    const bossLevel = Math.max(1, Math.min(MAX_ARENA_LEVELS, level));
+    return [0, 100, 120, 140, 160, 180][bossLevel] ?? 100;
+}
+
 // Spawn Boss Enemy keeps the game logic moving.
 function spawnBossEnemy() {
+    const bossVariant = Math.random() < 0.5 ? 'fire' : 'water';
+
+    if (bossVariant === 'water') {
+        spawnWaterBossEnemy();
+        return;
+    }
+
     const enemy = { alive: true };
     recycleEnemy(enemy, 'tank');
     enemy.isBoss = true;
-    enemy.bossName = getBossName(currentArenaLevel + currentWave);
-    enemy.maxHp = Math.round(enemy.maxHp * 9.5);
+    enemy.bossName = 'Fire Boss';
+    enemy.maxHp = getArenaBossHp(currentArenaLevel);
     enemy.hp = enemy.maxHp;
-    enemy.size = 30;
-    enemy.wallSize = 24;
+    enemy.size = 90;
+    enemy.wallSize = 0;
     enemy.speed = Math.max(0.7, enemy.speed * 0.78);
     enemy.color = '#b84cff';
     enemy.hpBarTimer = 999999;
+    enemy.bossAttackCooldown = 60;
+    enemy.bossStreamCooldown = 150;
+    enemy.bossStreamShotsLeft = 0;
+    enemy.bossStreamAngle = 0;
+    enemy.bossStreamGap = 0;
+    enemy.bossHomingCooldown = 110;
+    enemies.push(enemy);
+    enemiesRemainingInWave++;
+}
+
+// Spawn Water Boss Enemy keeps the game logic moving.
+function spawnWaterBossEnemy() {
+    const enemy = { alive: true };
+    recycleEnemy(enemy, 'tank');
+    enemy.isBoss = true;
+    enemy.isWaterBoss = true;
+    enemy.bossName = 'Water Boss';
+    enemy.maxHp = getArenaBossHp(currentArenaLevel);
+    enemy.hp = enemy.maxHp;
+    enemy.size = 78;
+    enemy.wallSize = 0;
+    enemy.speed = Math.max(0.72, enemy.speed * 0.84);
+    enemy.color = '#38bdf8';
+    enemy.hpBarTimer = 999999;
+    enemy.waterWaveCooldown = 64;
+    enemy.waterHomingCooldown = 112;
+    enemy.waterAttackCooldown = 52;
     enemies.push(enemy);
     enemiesRemainingInWave++;
 }

@@ -460,6 +460,8 @@ function updateEnemies() {
         const distMult = Math.min(4.0, 1.0 + Math.max(0, distToPlayer - 500) / 350);
         let speedMult = distMult * sanSlowMult;
         let shouldMove = true;
+        const isWaterBoss = e.isBoss && e.isWaterBoss;
+        const isFloorBoss = e.isBoss && !e.isVoidBoss && !e.isNecromancerBoss && !e.isWaterBoss;
 
         if (e.isNecromancerMinion && e.type === 'tank') {
             const boss = getActiveNecromancerBoss();
@@ -470,6 +472,154 @@ function updateEnemies() {
                 shouldMove = true;
                 speedMult = 1.45 * sanSlowMult;
             }
+        }
+
+        if (isWaterBoss) {
+            if (e.waterAttackCooldown > 0) e.waterAttackCooldown--;
+            if (e.waterWaveCooldown > 0) e.waterWaveCooldown--;
+            if (e.waterHomingCooldown > 0) e.waterHomingCooldown--;
+
+            const attackAngle = Math.atan2(player.y - e.y, player.x - e.x);
+
+            if (e.waterAttackCooldown <= 0) {
+                const roll = Math.random();
+                let activeWaterHomings = 0;
+                for (const p of enemyProjectiles) {
+                    if (p.projectileType === 'water_homing') activeWaterHomings++;
+                }
+
+                if (e.waterWaveCooldown <= 0 && roll > 0.65) {
+                    enemyProjectiles.push({
+                        x: e.x,
+                        y: e.y,
+                        prevX: e.x,
+                        prevY: e.y,
+                        velocityX: 0,
+                        velocityY: 0,
+                        size: 26,
+                        framesLeft: 60,
+                        projectileType: 'water_wave_aoe',
+                        damage: 15,
+                        sprite: waterWaveAoeFrames[0],
+                        waveMaxRadius: 250,
+                        waveAnimTimer: 0,
+                    });
+                    e.waterWaveCooldown = 118;
+                    e.waterAttackCooldown = 42;
+                } else if (activeWaterHomings < 2 && e.waterHomingCooldown <= 0 && roll > 0.3) {
+                    const spawnCount = Math.min(2 - activeWaterHomings, 2);
+                    for (let hi = 0; hi < spawnCount; hi++) {
+                        const homingOffset = spawnCount === 2 ? (hi === 0 ? -0.12 : 0.12) : 0;
+                        fireVoidBossProjectile(
+                            e,
+                            attackAngle + homingOffset,
+                            'water_homing',
+                            7.2,
+                            12,
+                            10,
+                            260,
+                            waterHomingProjectileSprite,
+                            { ignoreWalls: true, homingStrength: 0.032 }
+                        );
+                    }
+                    e.waterHomingCooldown = 170;
+                    e.waterAttackCooldown = 58;
+                } else {
+                    for (let bi = -1; bi <= 1; bi++) {
+                        fireVoidBossProjectile(
+                            e,
+                            attackAngle + bi * 0.1,
+                            'water_shot',
+                            9.2,
+                            10,
+                            8,
+                            190,
+                            waterShotProjectileSprite,
+                            { ignoreWalls: true }
+                        );
+                    }
+                    e.waterAttackCooldown = 72;
+                }
+            }
+
+            const bossStep = e.speed * 0.95 * sanSlowMult;
+            e.x += Math.cos(attackAngle) * bossStep;
+            e.y += Math.sin(attackAngle) * bossStep;
+            shouldMove = false;
+        }
+
+        if (isFloorBoss) {
+            if (e.bossAttackCooldown > 0) e.bossAttackCooldown--;
+            if (e.bossStreamCooldown > 0) e.bossStreamCooldown--;
+            if (e.bossHomingCooldown > 0) e.bossHomingCooldown--;
+            if (e.bossStreamGap > 0) e.bossStreamGap--;
+
+            const attackAngle = Math.atan2(player.y - e.y, player.x - e.x);
+
+            if (e.bossStreamShotsLeft > 0) {
+                if (e.bossStreamGap <= 0) {
+                    fireVoidBossProjectile(
+                        e,
+                        e.bossStreamAngle,
+                        'void_spike',
+                        8.6,
+                        11,
+                        7,
+                        180,
+                        bossStreamProjectileSprite,
+                        { ignoreWalls: true }
+                    );
+                    e.bossStreamShotsLeft--;
+                    e.bossStreamGap = 5;
+                }
+            } else if (e.bossAttackCooldown <= 0) {
+                const roll = Math.random();
+                if (e.bossHomingCooldown <= 0 && roll > 0.72) {
+                    fireVoidBossProjectile(
+                        e,
+                        attackAngle,
+                        'void_skull',
+                        8.0,
+                        16,
+                        14,
+                        240,
+                        bossHomingProjectileSprite,
+                        { ignoreWalls: true, homingStrength: 0.08 }
+                    );
+                    e.bossHomingCooldown = 185;
+                    e.bossAttackCooldown = 72;
+                } else if (e.bossStreamCooldown <= 0 && roll > 0.36) {
+                    e.bossStreamShotsLeft = 6;
+                    e.bossStreamAngle = attackAngle;
+                    e.bossStreamGap = 0;
+                    e.bossStreamCooldown = 150;
+                    e.bossAttackCooldown = 20;
+                } else {
+                    const pellets = 5;
+                    const spread = 0.34;
+                    for (let pi = 0; pi < pellets; pi++) {
+                        const t = pellets === 1 ? 0 : pi / (pellets - 1);
+                        const angle = attackAngle + (t - 0.5) * spread;
+                        fireVoidBossProjectile(
+                            e,
+                            angle,
+                            'void_spike',
+                            9.1,
+                            10,
+                            6,
+                            180,
+                            bossShotgunProjectileSprite,
+                            { ignoreWalls: true }
+                        );
+                    }
+                    e.bossAttackCooldown = 84;
+                }
+            }
+
+            const bossStep = e.speed * 1.05 * sanSlowMult;
+            e.x += Math.cos(attackAngle) * bossStep;
+            e.y += Math.sin(attackAngle) * bossStep;
+            shouldMove = false;
         }
 
         if (e.type === 'void_sniper') {
@@ -547,7 +697,6 @@ function updateEnemies() {
                             waveMaxRadius: VOID_WAVE_AOE_MAX_RADIUS,
                             waveAnimTimer: 0,
                         });
-                        e.voidWaveCooldown = Math.max(48, 126 - currentArenaLevel * 12);
                         e.cooldownFrames = Math.max(10, e.sniperCooldownFrames - 12);
                         e.shootAnimFrames = SNIPER_SHOOT_ANIM_FRAMES + 6;
                     } else if (e.voidSpikeCooldown <= 0 && roll > 0.4) {
@@ -1124,6 +1273,8 @@ function drawEnemies() {
             ? (NECROMANCER_MINION_SPRITES[e.necromancerMinionKind] ?? getEnemySpriteFrames(e.type))
             : e.isNecromancerBoss
             ? NECROMANCER_BOSS_SPRITE_FRAMES
+            : e.isWaterBoss
+            ? waterBossSpriteFrames
             : (e.isBoss && !e.isVoidBoss) ? BOSS_ENEMY_SPRITE_FRAMES : getEnemySpriteFrames(e.type);
         const walkFrameCount = (e.type === 'sniper' || e.type === 'void_sniper' || e.type === 'necromancer')
             ? Math.max(1, Math.min(3, frames.length))
@@ -1163,6 +1314,7 @@ function drawEnemies() {
         ctx.globalAlpha = isSniperType && e.teleporting ? alpha * 0.3 : alpha;
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
         else if (e.type === 'necromancer' || e.isNecromancerMinion) ctx.filter = 'hue-rotate(115deg) saturate(1.25)';
+        else if (e.isWaterBoss) ctx.filter = 'hue-rotate(185deg) saturate(1.1)';
 
         const half = sz / 2;
         if (player.x < e.x) {

@@ -1188,6 +1188,61 @@ const necromancerSpikeProjectileSprite = imgWithFallback([
     'assets/sprites/projectiles/projectile_void.png',
     'assets/sprites/projectiles/projectile.png',
 ]);
+const bossShotgunProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/boss_proj_shotgun.png',
+    'assets/sprites/projectiles/void_proj_spike.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+const bossStreamProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/boss_proj_stream.png',
+    'assets/sprites/projectiles/necro_proj_spike.png',
+    'assets/sprites/projectiles/projectile_necromancer.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+const bossHomingProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/boss_proj_homing.png',
+    'assets/sprites/projectiles/void_proj_skull.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+const waterBossSpriteFrames = [
+    imgWithFallback([
+        'assets/sprites/enemies/base/water_boss_frame1.png',
+        'assets/sprites/enemies/base/enemy_boss_frame1.png',
+        'assets/sprites/enemies/base/enemy_tank_frame1.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/base/water_boss_frame2.png',
+        'assets/sprites/enemies/base/enemy_boss_frame2.png',
+        'assets/sprites/enemies/base/enemy_tank_frame2.png',
+    ]),
+    imgWithFallback([
+        'assets/sprites/enemies/base/water_boss_frame3.png',
+        'assets/sprites/enemies/base/enemy_boss_frame3.png',
+        'assets/sprites/enemies/base/enemy_tank_frame3.png',
+    ]),
+];
+const waterWaveAoeFrames = [
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame1.png', 'assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame2.png', 'assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame3.png', 'assets/sprites/projectiles/void_wave_aoe_frame3.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame4.png', 'assets/sprites/projectiles/void_wave_aoe_frame4.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame5.png', 'assets/sprites/projectiles/void_wave_aoe_frame5.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+    imgWithFallback(['assets/sprites/projectiles/water_wave_aoe_frame6.png', 'assets/sprites/projectiles/void_wave_aoe_frame6.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
+];
+const waterShotProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/water_proj_shot.png',
+    'assets/sprites/projectiles/necro_proj_spike.png',
+    'assets/sprites/projectiles/void_proj_spike.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
+const waterHomingProjectileSprite = imgWithFallback([
+    'assets/sprites/projectiles/water_proj_homing.png',
+    'assets/sprites/projectiles/void_proj_skull.png',
+    'assets/sprites/projectiles/projectile_void.png',
+    'assets/sprites/projectiles/projectile.png',
+]);
 const voidWaveAoeFrames = [
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame1.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
     imgWithFallback(['assets/sprites/projectiles/void_wave_aoe_frame2.png', 'assets/sprites/projectiles/projectile_void.png', 'assets/sprites/projectiles/projectile.png']),
