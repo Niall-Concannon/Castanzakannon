@@ -1,4 +1,4 @@
-// Game state, loot logic, and shared helpers live in this file.
+// all the global game state variables, loot and upgrade logic, boss encounters, and audio setup
 
 
 
@@ -216,17 +216,15 @@ function getUpgradeLevel(upgradeId) {
     return player.upgradeLevels?.[upgradeId] ?? 0;
 }
 
-// Looks up the rarity weight for upgrades.
 function getUpgradeRarityWeight(rarity) {
     return UPGRADE_RARITY_WEIGHTS[rarity] ?? 0;
 }
 
-// Looks up the rarity weight for items.
 function getItemRarityWeight(rarity) {
     return ITEM_RARITY_WEIGHTS[rarity] ?? 0;
 }
 
-// Converts sniper ammo-related bonuses into tiny pierce progress increments.
+// for the sniper, ammo bonuses accumulate as pierce progress instead of refilling ammo directly
 function grantSniperAmmoPierceBonus(progress = SNIPER_AMMO_PIERCE_PROGRESS_STEP) {
     if (player.weaponType !== 'sniper') return false;
 
@@ -238,7 +236,6 @@ function grantSniperAmmoPierceBonus(progress = SNIPER_AMMO_PIERCE_PROGRESS_STEP)
     return true;
 }
 
-// Chooses a UI colour for the given rarity.
 function getRarityUiColor(rarity) {
     if (rarity === 'mythical') return '#ff79c6';
     if (rarity === 'legendary') return '#ffcb66';
@@ -248,7 +245,7 @@ function getRarityUiColor(rarity) {
     return '#b6ffb6';
 }
 
-// Applies execute damage rules to a projectile hit.
+// damage gets multiplied when the target is below 40% hp if the player has execute bonus
 function getCurrentProjectileDamage(baseDamage, target = null) {
     let damage = baseDamage;
     const healthRatio = target?.maxHp > 0 ? target.hp / target.maxHp : 1;
@@ -258,7 +255,7 @@ function getCurrentProjectileDamage(baseDamage, target = null) {
     return damage;
 }
 
-// Finds the nearest living hostile unit.
+// searches both enemies and turrets for the closest alive thing within maxDistance
 function findNearestHostile(x, y, maxDistance = 260, exclude = null) {
     let best = null;
     let bestDist = maxDistance;
@@ -284,7 +281,7 @@ function findNearestHostile(x, y, maxDistance = 260, exclude = null) {
     return best;
 }
 
-// Applies damage and triggers any on-hit effects.
+// deals damage to an enemy and fires off explosion/chain procs if the projectile has them
 function applyEnemyDamage(target, damage, { sourceX, sourceY, sourceProjectile = null, allowTriggers = true } = {}) {
     if (!target || !target.alive) return false;
 
@@ -312,7 +309,7 @@ function applyEnemyDamage(target, damage, { sourceX, sourceY, sourceProjectile =
     return false;
 }
 
-// Trigger Explosion Proc keeps the game logic moving.
+// splash damage falloff — does less damage the further enemies are from the center
 function triggerExplosionProc(centerX, centerY, radius, damage, excludeTarget = null) {
     for (const e of enemies) {
         if (!e.alive || e === excludeTarget) continue;
@@ -331,7 +328,7 @@ function triggerExplosionProc(centerX, centerY, radius, damage, excludeTarget = 
     }
 }
 
-// Trigger Chain Lightning Proc keeps the game logic moving.
+// arcs damage from a hit enemy to the closest other target nearby
 function triggerChainLightningProc(origin, damage) {
     const arcTarget = findNearestHostile(origin.x, origin.y, 280, origin);
     if (!arcTarget) return;
@@ -339,12 +336,11 @@ function triggerChainLightningProc(origin, damage) {
     applyEnemyDamage(arcTarget, arcDamage, { sourceX: origin.x, sourceY: origin.y, allowTriggers: false });
 }
 
-// Get Item Level keeps the game logic moving.
 function getItemLevel(itemId) {
     return player.itemLevels?.[itemId] ?? 0;
 }
 
-// Roll By Rarity keeps the game logic moving.
+// weighted random pick from a pool — higher rarity weight means more likely to roll it
 function rollByRarity(pool, weightFn) {
     if (!pool.length) return null;
     let totalWeight = 0;
@@ -359,7 +355,7 @@ function rollByRarity(pool, weightFn) {
     return pool[pool.length - 1] ?? null;
 }
 
-// Register Loot Gain keeps the game logic moving.
+// applies a loot item to the player, updates inventory, and shows the pickup toast
 function registerLootGain(definition, source) {
     if (!definition) return false;
 
@@ -403,7 +399,7 @@ function registerLootGain(definition, source) {
     return true;
 }
 
-// Roll Random Stackable Loot keeps the game logic moving.
+// picks a random item from the pool and tries to apply it, skipping ones already at max stacks
 function rollRandomStackableLoot(pool, source, maxTries = 12) {
     for (let i = 0; i < maxTries; i++) {
         const definition = rollByRarity(pool, getItemRarityWeight);
@@ -413,7 +409,6 @@ function rollRandomStackableLoot(pool, source, maxTries = 12) {
     return false;
 }
 
-// Reward Boss Loot keeps the game logic moving.
 function rewardBossLoot() {
     const gotUnique = rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique');
     if (Math.random() < 0.55) {
@@ -422,7 +417,6 @@ function rewardBossLoot() {
     return gotUnique;
 }
 
-// Reward Chest Loot keeps the game logic moving.
 function rewardChestLoot() {
     const rollUnique = Math.random() < 0.26;
     if (rollUnique && rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique')) return true;
@@ -430,7 +424,7 @@ function rewardChestLoot() {
     return rollRandomStackableLoot(UNIQUE_ITEM_DEFINITIONS, 'unique');
 }
 
-// Spawn Arena Chests keeps the game logic moving.
+// places chests randomly around the map, tries to keep them spread apart
 function spawnArenaChests(count = 1) {
     chests = [];
     const placedPositions = [];
@@ -486,7 +480,7 @@ function spawnBossChest(x, y) {
     });
 }
 
-// Spawn Boss Return Totem keeps the game logic moving.
+// finds a random floor tile that isnt too close to the player and doesnt collide with walls
 function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 300) {
     for (let i = 0; i < maxTries; i++) {
         const tx = 3 + Math.floor(Math.random() * (MAP_W - 6));
@@ -507,12 +501,10 @@ function findRandomFloorPosition(minDistanceFromPlayer = TILE * 5, maxTries = 30
     };
 }
 
-// Spawn Arena Chest keeps the game logic moving.
 function spawnArenaChest() {
     spawnArenaChests(1);
 }
 
-// Spawn Boss Return Totem keeps the game logic moving.
 function spawnBossReturnTotem(kind) {
     const sourceX = player.x + TILE * 3;
     const sourceY = player.y - TILE * 3;
@@ -536,7 +528,7 @@ function getArenaBossHp(level = currentArenaLevel) {
     return [0, 100, 120, 140, 160, 180][bossLevel] ?? 100;
 }
 
-// Spawn Boss Enemy keeps the game logic moving.
+// randomly picks fire or water boss and spawns it, also plays the boss music stinger
 function spawnBossEnemy() {
     const bossVariant = Math.random() < 0.5 ? 'fire' : 'water';
 
@@ -575,7 +567,6 @@ function spawnBossEnemy() {
     }
 }
 
-// Spawn Water Boss Enemy keeps the game logic moving.
 function spawnWaterBossEnemy() {
     const enemy = { alive: true };
     recycleEnemy(enemy, 'tank');
@@ -605,7 +596,7 @@ function spawnWaterBossEnemy() {
     }
 }
 
-// Roll Level Up Choices keeps the game logic moving.
+// picks 3 random upgrades weighted by rarity, no duplicates in the same roll
 function rollLevelUpChoices(count = 3) {
     const available = LEVEL_UPGRADES.slice();
     const picks = [];
@@ -640,14 +631,12 @@ function rollLevelUpChoices(count = 3) {
     return picks;
 }
 
-// Begin Level Up keeps the game logic moving.
 function beginLevelUp() {
     currentLevelUpChoices = rollLevelUpChoices(3);
     gameState = 'levelUp';
     levelUpInputDelay = 120; // 2 seconds — prevents accidental clicks
 }
 
-// Apply Upgrade By Id keeps the game logic moving.
 function applyUpgradeById(upgradeId) {
     const upgrade = LEVEL_UPGRADES.find(u => u.id === upgradeId);
     if (!upgrade) return false;
@@ -656,7 +645,6 @@ function applyUpgradeById(upgradeId) {
     return true;
 }
 
-// Apply Upgrade Choice keeps the game logic moving.
 function applyUpgradeChoice(choiceIndex) {
     const upgrade = currentLevelUpChoices[choiceIndex];
     if (!upgrade) return;
@@ -666,7 +654,7 @@ function applyUpgradeChoice(choiceIndex) {
     gameState = 'playing';
 }
 
-// Apply Player Damage keeps the game logic moving.
+// applies damage to the player, shields absorb first, revive charges kick in before death
 function applyPlayerDamage(baseDamage) {
     if ((player.shieldCharges ?? 0) > 0) {
         player.shieldCharges--;
@@ -689,13 +677,13 @@ function applyPlayerDamage(baseDamage) {
     screenShake = 20;
 }
 
-// Clones plain data used in encounter save/restore.
+// deep copies plain data via json, used to snapshot game state before entering a boss room
 function clonePlain(value) {
     if (value == null) return value;
     return JSON.parse(JSON.stringify(value));
 }
 
-// Rebuilds projectile records restored from JSON so runtime-only fields are safe again.
+// json cloning strips sprite references and Sets, this patches them back with safe defaults
 function sanitizeRestoredProjectiles(list) {
     if (!Array.isArray(list)) return [];
     const out = [];
@@ -718,7 +706,7 @@ function sanitizeRestoredProjectiles(list) {
     return out;
 }
 
-// Rebuilds enemy projectile records restored from JSON so runtime-only fields are safe again.
+// same as sanitizeRestoredProjectiles but for enemy projectiles
 function sanitizeRestoredEnemyProjectiles(list) {
     if (!Array.isArray(list)) return [];
     const out = [];
@@ -738,7 +726,7 @@ function sanitizeRestoredEnemyProjectiles(list) {
     return out;
 }
 
-// Finds a boss totem spawn point near the arena center.
+// tries a list of candidate positions and returns the first one not inside a wall
 function pickBossTotemPosition(candidates, fallbackX, fallbackY) {
     for (const pos of candidates) {
         if (wallCollision(pos.x, pos.y, 20)) continue;
@@ -749,12 +737,12 @@ function pickBossTotemPosition(candidates, fallbackX, fallbackY) {
     return fallback ?? { x: fallbackX, y: fallbackY };
 }
 
-// Returns true when a level still needs its void totem fight.
+// returns false if the void encounter was already completed on this level
 function shouldSpawnVoidTotemForLevel(level = currentArenaLevel) {
     return !(voidEncounter.completedLevels?.[level]);
 }
 
-// Spawns one totem objective for the active level — 10% chance per wave, instant in dev mode.
+// 10% chance each wave to place a void totem on the map, dev mode forces it immediately
 function spawnVoidTotemForLevel(forceSpawn = false) {
     if (!shouldSpawnVoidTotemForLevel(currentArenaLevel) || voidEncounter.active) {
         voidTotem = null;
@@ -788,12 +776,12 @@ function spawnVoidTotemForLevel(forceSpawn = false) {
     };
 }
 
-// Returns true when a level still needs its necromancer totem fight.
+// returns false if the necromancer encounter was already completed on this level
 function shouldSpawnNecromancerTotemForLevel(level = currentArenaLevel) {
     return !(necromancerEncounter.completedLevels?.[level]);
 }
 
-// Spawns the necromancer objective for the active level — 10% chance per wave, instant in dev mode.
+// same as the void totem spawn but for the necromancer encounter
 function spawnNecromancerTotemForLevel(forceSpawn = false) {
     if (!shouldSpawnNecromancerTotemForLevel(currentArenaLevel) || necromancerEncounter.active) {
         necromancerTotem = null;
@@ -827,17 +815,17 @@ function spawnNecromancerTotemForLevel(forceSpawn = false) {
     };
 }
 
-// Returns true if the totem can currently be activated.
+// checks that the totem exists and is in a state where the player can interact with it
 function hasActiveVoidTotem() {
     return !!voidTotem && voidTotem.active && (voidTotem.mode === 'return' || !voidEncounter.active);
 }
 
-// Returns true if the necromancer totem can currently be activated.
+// same check but for the necromancer totem
 function hasActiveNecromancerTotem() {
     return !!necromancerTotem && necromancerTotem.active && (necromancerTotem.mode === 'return' || !necromancerEncounter.active);
 }
 
-// Attempts to trigger the encounter when the player presses E.
+// called on E press, starts the boss encounter or handles the return totem depending on mode
 function tryActivateVoidTotem() {
     if (gameState !== 'playing' || gamePaused) return false;
     if (hasActiveVoidTotem()) {
@@ -865,17 +853,15 @@ function tryActivateVoidTotem() {
     return false;
 }
 
-// Returns true when the run is currently in the isolated void encounter.
 function isVoidEncounterActive() {
     return !!voidEncounter.active;
 }
 
-// Returns true when the run is currently in any isolated boss encounter.
 function isAnyBossEncounterActive() {
     return !!voidEncounter.active || !!necromancerEncounter.active;
 }
 
-// Starts the teleport flow into the void boss arena.
+// snapshots the entire arena state then swaps to the void boss room — player gets sent back after winning
 function beginVoidEncounter() {
     if (voidEncounter.active) return;
 
@@ -933,7 +919,7 @@ function beginVoidEncounter() {
     gamePaused = false;
 }
 
-// Spawns the void sniper boss entity for the encounter.
+// spawns the void sniper boss with scaled hp and speed based on current arena level
 function spawnVoidBossEnemy() {
     const enemy = { alive: true };
     recycleEnemy(enemy, 'void_sniper');
@@ -964,7 +950,6 @@ function spawnVoidBossEnemy() {
     enemies.push(enemy);
 }
 
-// Grants the configured void boss XP reward for the current level.
 function grantVoidBossXpReward() {
     const reward = VOID_BOSS_XP_REWARDS[currentArenaLevel] ?? VOID_BOSS_XP_REWARDS[1];
     player.xp += reward * player.xpGainMult;
@@ -976,7 +961,8 @@ function grantVoidBossXpReward() {
     }
 }
 
-// Completes the void encounter and leaves the return totem behind.
+// called when the void boss dies — marks it complete and drops the return totem
+// the player still has to walk to the totem to go back to the main arena
 function completeVoidEncounterVictory() {
     if (!voidEncounter.active || !voidEncounter.returnContext) return;
 
@@ -993,7 +979,7 @@ function completeVoidEncounterVictory() {
     spawnArenaChests(2);
 }
 
-// Restores the saved arena after leaving the void boss room.
+// swaps everything back from the snapshot taken before entering the void room
 function returnFromVoidEncounter() {
     if (!voidEncounter.active || voidEncounter.state !== 'return_to_arena' || !voidEncounter.returnContext) return;
 
@@ -1030,7 +1016,7 @@ function returnFromVoidEncounter() {
     playRandomMusicTrack();
 }
 
-// Starts the teleport flow into the necromancer boss arena.
+// same as beginVoidEncounter but for the necromancer boss room
 function beginNecromancerEncounter() {
     if (necromancerEncounter.active) return;
 
@@ -1088,7 +1074,7 @@ function beginNecromancerEncounter() {
     gamePaused = false;
 }
 
-// Spawns the necromancer boss entity for the encounter.
+// spawns the necromancer boss with scaled hp and speed, starts its summon/attack timers
 function spawnNecromancerBossEnemy() {
     const enemy = { alive: true };
     recycleEnemy(enemy, 'necromancer');
@@ -1119,7 +1105,6 @@ function spawnNecromancerBossEnemy() {
     enemies.push(enemy);
 }
 
-// Grants the configured necromancer boss XP reward for the current level.
 function grantNecromancerBossXpReward() {
     const reward = NECROMANCER_BOSS_XP_REWARDS[currentArenaLevel] ?? NECROMANCER_BOSS_XP_REWARDS[1];
     player.xp += reward * player.xpGainMult;
@@ -1131,7 +1116,7 @@ function grantNecromancerBossXpReward() {
     }
 }
 
-// Completes the necromancer encounter and leaves the return totem behind.
+// same as completeVoidEncounterVictory but for the necromancer
 function completeNecromancerEncounterVictory() {
     if (!necromancerEncounter.active || !necromancerEncounter.returnContext) return;
 
@@ -1148,7 +1133,7 @@ function completeNecromancerEncounterVictory() {
     spawnArenaChests(2);
 }
 
-// Restores the saved arena after leaving the necromancer boss room.
+// swaps everything back from the snapshot taken before entering the necromancer room
 function returnFromNecromancerEncounter() {
     if (!necromancerEncounter.active || necromancerEncounter.state !== 'return_to_arena' || !necromancerEncounter.returnContext) return;
 
@@ -1185,12 +1170,11 @@ function returnFromNecromancerEncounter() {
     playRandomMusicTrack();
 }
 
-// Get Player Xp Attract Radius keeps the game logic moving.
 function getPlayerXpAttractRadius() {
     return XP_ATTRACT_RADIUS * player.xpAttractMult;
 }
 
-// Get Dev Cheat Menu Entries keeps the game logic moving.
+// returns the list of items/upgrades shown in the debug cheat panel
 function getDevCheatMenuEntries(tab) {
     if (tab === 'upgrades') {
         return LEVEL_UPGRADES.map(upgrade => ({
@@ -1230,7 +1214,7 @@ function getDevCheatMenuEntries(tab) {
     return [...items, ...uniques].sort((a, b) => a.title.localeCompare(b.title));
 }
 
-// Get Cheat Menu Zones keeps the game logic moving.
+// calculates all the click zones for the cheat menu panel including the grid of entry buttons
 function getCheatMenuZones() {
     const entries = getDevCheatMenuEntries(devCheatMenuTab);
     const panelW = 640;
@@ -1265,7 +1249,7 @@ function getCheatMenuZones() {
     };
 }
 
-// Handle Enemy Defeat keeps the game logic moving.
+// called when an enemy reaches 0 hp — handles boss completions, lifesteal, xp/ammo drops etc
 function handleEnemyDefeat(e) {
     if (!e.alive) return;
 
@@ -1391,7 +1375,7 @@ function handleEnemyDefeat(e) {
     }
 }
 
-// Trigger Chrono Pulse keeps the game logic moving.
+// the aoe pulse item — damages everything in a radius every N frames
 function triggerChronoPulse() {
     if (player.aoePulseDamage <= 0 || player.aoePulseRadius <= 0) return;
 
@@ -1425,7 +1409,7 @@ function triggerChronoPulse() {
     }
 }
 
-// Activate Railgun Ult keeps the game logic moving.
+// fires the railgun ultimate — draws a beam in the aim direction and damages everything it hits
 function activateRailgunUlt() {
     if (!player.hasRailgunUlt || player.railgunUltCooldown > 0 || player.hp <= 0) return false;
 
@@ -1462,7 +1446,6 @@ function activateRailgunUlt() {
     return true;
 }
 
-// Update Railgun Beams keeps the game logic moving.
 function updateRailgunBeams() {
     for (let i = railgunBeams.length - 1; i >= 0; i--) {
         railgunBeams[i].life--;
@@ -1479,19 +1462,17 @@ let playerAnim = {
     dashFlipX:  false,
 };
 
-// Start Splash Transition keeps the game logic moving.
 function startSplashTransition() {
     if (gameState !== 'splash') return;
     gameState = 'splashTransition';
     splashFadeTimerMs = 0;
 }
 
-// Clamp01 keeps the game logic moving.
 function clamp01(value) {
     return Math.max(0, Math.min(1, value));
 }
 
-// Read Stored Volume keeps the game logic moving.
+// reads volume from localstorage, returns fallback if its missing or invalid
 function readStoredVolume(storageKey, fallback) {
     try {
         const raw = localStorage.getItem(storageKey);
@@ -1505,7 +1486,6 @@ function readStoredVolume(storageKey, fallback) {
     }
 }
 
-// Save Volume keeps the game logic moving.
 function saveVolume(storageKey, value) {
     try {
         localStorage.setItem(storageKey, String(clamp01(value)));
@@ -1514,7 +1494,6 @@ function saveVolume(storageKey, value) {
     }
 }
 
-// Style Audio Controls keeps the game logic moving.
 function styleAudioControls() {
     audioControlPanel.style.position = 'fixed';
     audioControlPanel.style.right = '16px';
@@ -1538,7 +1517,8 @@ function styleAudioControls() {
     }
 }
 
-// Create Audio With Fallback keeps the game logic moving.
+// creates an audio element that tries each source path in order until one loads
+// browsers can be picky about audio formats so having fallbacks helps
 function createAudioWithFallback(sources, { loop = false } = {}) {
     const audio = new Audio();
     let srcIndex = 0;
@@ -1560,23 +1540,20 @@ const bossSpawnAudio = createAudioWithFallback(['assets/audio/sfx/boss_spawn.mp3
 // Item/unique pickup audio (save attachment as assets/audio/sfx/gta-pick-up.mp3)
 const itemPickupAudio = createAudioWithFallback(['assets/audio/sfx/gta-pick-up.mp3']);
 
-// Update Audio Label Text keeps the game logic moving.
 function updateAudioLabelText() {
     musicVolumeLabel.textContent = `Music Volume: ${Math.round(musicVolume * 100)}%`;
     sfxVolumeLabel.textContent = `Game Audio Volume: ${Math.round(sfxVolume * 100)}%`;
 }
 
-// Apply Music Volume keeps the game logic moving.
 function applyMusicVolume() {
     if (currentMusicTrack) currentMusicTrack.volume = musicVolume;
 }
 
-// Scaled Sfx Volume keeps the game logic moving.
 function scaledSfxVolume(multiplier = 1) {
     return clamp01(sfxVolume * multiplier);
 }
 
-// Apply Sfx Volume keeps the game logic moving.
+// pushes the current sfx volume out to every audio pool channel
 function applySfxVolume() {
     for (const channel of laserShotPool) channel.volume = scaledSfxVolume(LASER_VOLUME_MULT);
     for (const channel of shotgunShotPool) channel.volume = scaledSfxVolume(SHOTGUN_VOLUME_MULT);
@@ -1592,7 +1569,6 @@ function applySfxVolume() {
     for (const channel of expOrbPool) channel.volume = sfxVolume;
 }
 
-// Set Music Volume keeps the game logic moving.
 function setMusicVolume(value, { persist = true } = {}) {
     musicVolume = clamp01(value);
     musicVolumeSlider.value = String(Math.round(musicVolume * 100));
@@ -1601,7 +1577,6 @@ function setMusicVolume(value, { persist = true } = {}) {
     updateAudioLabelText();
 }
 
-// Set Sfx Volume keeps the game logic moving.
 function setSfxVolume(value, { persist = true } = {}) {
     sfxVolume = clamp01(value);
     sfxVolumeSlider.value = String(Math.round(sfxVolume * 100));
@@ -1610,7 +1585,6 @@ function setSfxVolume(value, { persist = true } = {}) {
     updateAudioLabelText();
 }
 
-// Pick Random Music Track Index keeps the game logic moving.
 function pickRandomMusicTrackIndex() {
     if (!MUSIC_TRACK_PATHS.length) return -1;
     if (MUSIC_TRACK_PATHS.length === 1) return 0;
@@ -1620,7 +1594,7 @@ function pickRandomMusicTrackIndex() {
     return idx;
 }
 
-// Pick Random Track Index keeps the game logic moving.
+// picks a random track index, avoids repeating the same track back to back
 function pickRandomTrackIndex(trackPaths, lastTrackIndex) {
     if (!trackPaths.length) return -1;
     if (trackPaths.length === 1) return 0;
@@ -1630,14 +1604,12 @@ function pickRandomTrackIndex(trackPaths, lastTrackIndex) {
     return idx;
 }
 
-// Stop Current Music keeps the game logic moving.
 function stopCurrentMusic() {
     if (!currentMusicTrack) return;
     currentMusicTrack.pause();
     currentMusicTrack.currentTime = 0;
 }
 
-// Play Current Music Track keeps the game logic moving.
 function playCurrentMusicTrack() {
     if (!currentMusicTrack) return;
     currentMusicTrack.currentTime = 0;
@@ -1646,7 +1618,7 @@ function playCurrentMusicTrack() {
     });
 }
 
-// Play Random Music Track keeps the game logic moving.
+// picks a random non-repeating track and starts it, auto-chains to another track when it ends
 function playRandomMusicTrack() {
     const idx = pickRandomTrackIndex(MUSIC_TRACK_PATHS, lastMusicTrackIndex);
     if (idx < 0) return;
@@ -1668,7 +1640,7 @@ function playRandomMusicTrack() {
     }
 }
 
-// Play Random Boss Music Track keeps the game logic moving.
+// same as playRandomMusicTrack but pulls from the boss music pool instead
 function playRandomBossMusicTrack() {
     const idx = pickRandomTrackIndex(BOSS_MUSIC_TRACK_PATHS, lastBossMusicTrackIndex);
     if (idx < 0) return;
@@ -1689,7 +1661,7 @@ function playRandomBossMusicTrack() {
     }
 }
 
-// Initialize Laser Shot Pool keeps the game logic moving.
+// audio pools pre-create multiple channels so sounds can overlap without cutting each other off
 function initializeLaserShotPool() {
     laserShotPool = [];
     for (let i = 0; i < LASER_POOL_SIZE; i++) {
@@ -1700,7 +1672,6 @@ function initializeLaserShotPool() {
     laserShotPoolIndex = 0;
 }
 
-// Initialize Shotgun Shot Pool keeps the game logic moving.
 function initializeShotgunShotPool() {
     shotgunShotPool = [];
     for (let i = 0; i < SHOTGUN_POOL_SIZE; i++) {
@@ -1711,7 +1682,6 @@ function initializeShotgunShotPool() {
     shotgunShotPoolIndex = 0;
 }
 
-// Initialize Smg Shot Pool keeps the game logic moving.
 function initializeSmgShotPool() {
     smgShotPool = [];
     for (let i = 0; i < SMG_POOL_SIZE; i++) {
@@ -1722,7 +1692,6 @@ function initializeSmgShotPool() {
     smgShotPoolIndex = 0;
 }
 
-// Initialize Sniper Shot Pool keeps the game logic moving.
 function initializeSniperShotPool() {
     sniperShotPool = [];
     for (let i = 0; i < SNIPER_POOL_SIZE; i++) {
@@ -1733,7 +1702,6 @@ function initializeSniperShotPool() {
     sniperShotPoolIndex = 0;
 }
 
-// Initialize Sniper Ping Audio keeps the game logic moving.
 function initializeSniperPingAudio() {
     sniperPingAudio = createAudioWithFallback(SNIPER_PING_PATHS);
     sniperPingAudio.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
@@ -1741,7 +1709,6 @@ function initializeSniperPingAudio() {
     sniperPingAudioLayer.volume = scaledSfxVolume(SNIPER_PING_VOLUME_MULT);
 }
 
-// Initialize Necromancer Shot Pool keeps the game logic moving.
 function initializeNecroShotPool() {
     necroShotPool = [];
     for (let i = 0; i < NECRO_POOL_SIZE; i++) {
@@ -1752,7 +1719,6 @@ function initializeNecroShotPool() {
     necroShotPoolIndex = 0;
 }
 
-// Initialize Void Sword Pool keeps the game logic moving.
 function initializeVoidSwordPool() {
     voidSwordPool = [];
     for (let i = 0; i < VOID_SWORD_POOL_SIZE; i++) {
@@ -1763,7 +1729,6 @@ function initializeVoidSwordPool() {
     voidSwordPoolIndex = 0;
 }
 
-// Initialize Dash Pool keeps the game logic moving.
 function initializeDashPool() {
     dashPool = [];
     for (let i = 0; i < DASH_POOL_SIZE; i++) {
@@ -1774,7 +1739,6 @@ function initializeDashPool() {
     dashPoolIndex = 0;
 }
 
-// Initialize Ammo Pickup Pool keeps the game logic moving.
 function initializeAmmoPickupPool() {
     ammoPickupPool = [];
     for (let i = 0; i < AMMO_PICKUP_POOL_SIZE; i++) {
@@ -1785,7 +1749,6 @@ function initializeAmmoPickupPool() {
     ammoPickupPoolIndex = 0;
 }
 
-// Initialize Heal Pickup Pool keeps the game logic moving.
 function initializeHealPickupPool() {
     healPickupPool = [];
     for (let i = 0; i < HEAL_PICKUP_POOL_SIZE; i++) {
@@ -1796,7 +1759,6 @@ function initializeHealPickupPool() {
     healPickupPoolIndex = 0;
 }
 
-// Initialize Instakill Pickup Pool keeps the game logic moving.
 function initializeInstakillPickupPool() {
     instakillPickupPool = [];
     for (let i = 0; i < INSTAKILL_PICKUP_POOL_SIZE; i++) {
@@ -1807,7 +1769,6 @@ function initializeInstakillPickupPool() {
     instakillPickupPoolIndex = 0;
 }
 
-// Initialize Ui Click Pool keeps the game logic moving.
 function initializeUiClickPool() {
     uiClickPool = [];
     for (let i = 0; i < UI_CLICK_POOL_SIZE; i++) {
@@ -1818,7 +1779,6 @@ function initializeUiClickPool() {
     uiClickPoolIndex = 0;
 }
 
-// Initialize Exp Orb Pool keeps the game logic moving.
 function initializeExpOrbPool() {
     expOrbPool = [];
     for (let i = 0; i < EXP_ORB_POOL_SIZE; i++) {
@@ -1829,7 +1789,6 @@ function initializeExpOrbPool() {
     expOrbPoolIndex = 0;
 }
 
-// Play Laser Shot keeps the game logic moving.
 function playLaserShot() {
     if (!audioUnlocked || !laserShotPool.length) return;
 
@@ -1940,7 +1899,6 @@ function stopVoidSwordLoop() {
     voidSwordLoopActive = false;
 }
 
-// Play Shotgun Shot keeps the game logic moving.
 function playShotgunShot() {
     if (!audioUnlocked || !shotgunShotPool.length) return;
 
@@ -1952,7 +1910,6 @@ function playShotgunShot() {
     });
 }
 
-// Play Smg Shot keeps the game logic moving.
 function playSmgShot() {
     if (!audioUnlocked || !smgShotPool.length) return;
 
@@ -1964,7 +1921,6 @@ function playSmgShot() {
     });
 }
 
-// Play Sniper Shot keeps the game logic moving.
 function playSniperShot() {
     if (!audioUnlocked || !sniperShotPool.length) return;
 
@@ -1976,7 +1932,7 @@ function playSniperShot() {
     });
 }
 
-// Play Sniper Ping keeps the game logic moving.
+// plays two layers of the sniper ping at the same time for a fatter sound
 function playSniperPing() {
     if (!audioUnlocked || !sniperPingAudio || !sniperPingAudioLayer) return;
     if (!sniperPingAudio.paused) return;
@@ -1992,7 +1948,6 @@ function playSniperPing() {
     });
 }
 
-// Play Necromancer Staff Shot keeps the game logic moving.
 function playNecroShot() {
     if (!audioUnlocked || !necroShotPool.length) return;
 
@@ -2011,7 +1966,6 @@ function playVoidSwordExtend() {
     channel.play().catch(() => {});
 }
 
-// Play Dash Sound keeps the game logic moving.
 function playDashSound() {
     if (!audioUnlocked || !dashPool.length) return;
 
@@ -2025,7 +1979,6 @@ function playDashSound() {
     }
 }
 
-// Play Ammo Pickup Sound keeps the game logic moving.
 function playAmmoPickupSound() {
     if (!audioUnlocked || !ammoPickupPool.length) return;
 
@@ -2037,7 +1990,6 @@ function playAmmoPickupSound() {
     });
 }
 
-// Play Heal Pickup Sound keeps the game logic moving.
 function playHealPickupSound() {
     if (!audioUnlocked || !healPickupPool.length) return;
 
@@ -2049,7 +2001,6 @@ function playHealPickupSound() {
     });
 }
 
-// Play Instakill Pickup Sound keeps the game logic moving.
 function playInstakillPickupSound() {
     if (!audioUnlocked || !instakillPickupPool.length) return;
 
@@ -2061,7 +2012,6 @@ function playInstakillPickupSound() {
     });
 }
 
-// Play Ui Click keeps the game logic moving.
 function playUiClick() {
     if (!audioUnlocked || !uiClickPool.length) return;
 
@@ -2073,7 +2023,6 @@ function playUiClick() {
     });
 }
 
-// Play Exp Orb Pickup keeps the game logic moving.
 function playExpOrbPickup() {
     if (!audioUnlocked || !expOrbPool.length) return;
 
@@ -2085,7 +2034,7 @@ function playExpOrbPickup() {
     });
 }
 
-// Unlock Audio If Needed keeps the game logic moving.
+// browsers block audio until the first user interaction, this unlocks it on first click/touch
 function unlockAudioIfNeeded() {
     if (audioUnlocked) return;
     audioUnlocked = true;
@@ -2096,7 +2045,6 @@ function unlockAudioIfNeeded() {
     }
 }
 
-// Sync Audio Control Panel keeps the game logic moving.
 function syncAudioControlPanel() {
     const visible = false;
     audioControlPanel.style.display = visible ? 'flex' : 'none';

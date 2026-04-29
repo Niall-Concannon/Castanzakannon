@@ -1,9 +1,9 @@
-// Menu screens selection panels and encyclopedia views live here.
+// all the menu drawing code, button layouts, character/weapon selection, and the encyclopedia
 
 
 
 
-// Get Main Menu Layout keeps the game logic moving.
+// builds all the button rects for the main menu, sizes scale with canvas so it works on any screen
 function getMainMenuLayout() {
     const buttonW = Math.min(380, Math.max(280, Math.floor(canvas.width * 0.27)));
     const buttonH = Math.min(68, Math.max(52, Math.floor(canvas.height * 0.08)));
@@ -34,52 +34,40 @@ function getMainMenuLayout() {
     };
 }
 
-// Get Perf Button keeps the game logic moving.
 function getPerfButton() {
     return getMainMenuLayout().buttons.graphicsTutorial;
 }
-// Get Fps Toggle Button keeps the game logic moving.
 function getFpsToggleButton() {
     return getMainMenuLayout().buttons.fpsToggle;
 }
-// Get Dev Test Button keeps the game logic moving.
 function getDevTestButton() {
     return getMainMenuLayout().buttons.devTest;
 }
-// Get Dev Cheat Button keeps the game logic moving.
 function getDevCheatButton() {
     return getMainMenuLayout().buttons.devCheat;
 }
-// Get Map Config Button keeps the game logic moving.
 function getMapConfigButton() {
     return getMainMenuLayout().buttons.mapConfig;
 }
-// Get Audio Config Button keeps the game logic moving.
 function getAudioConfigButton() {
     return getMainMenuLayout().buttons.audioConfig;
 }
-// Get Dev Test Wave Control Rect keeps the game logic moving.
 function getDevTestWaveControlRect() {
     const anchor = getDevCheatButton();
     return { x: anchor.x, y: anchor.y + anchor.h + 8, w: anchor.w, h: 28 };
 }
-// Get Fog Toggle Button keeps the game logic moving.
 function getFogToggleButton() {
     return getMainMenuLayout().buttons.fogToggle;
 }
-// Get Select Cursor Button keeps the game logic moving.
 function getSelectCursorButton() {
     return getMainMenuLayout().buttons.selectCursor;
 }
-// Get Select Character Button keeps the game logic moving.
 function getSelectCharacterButton() {
     return getMainMenuLayout().buttons.selectCharacter;
 }
-// Get Encyclopedia Button keeps the game logic moving.
 function getEncyclopediaButton() {
     return getMainMenuLayout().buttons.encyclopedia;
 }
-// Get Back Button keeps the game logic moving.
 function getBackButton() {
     return { x: canvas.width / 2 - 60, y: canvas.height / 2 + 150, w: 120, h: 36 };
 }
@@ -108,7 +96,6 @@ function getEncyclopediaPanel() {
     };
 }
 
-// Get Encyclopedia Tab Buttons keeps the game logic moving.
 function getEncyclopediaTabButtons() {
     const panel = getEncyclopediaPanel();
     const tabY = panel.y + 72;
@@ -119,7 +106,6 @@ function getEncyclopediaTabButtons() {
     };
 }
 
-// Get Encyclopedia Back Button keeps the game logic moving.
 function getEncyclopediaBackButton() {
     const panel = getEncyclopediaPanel();
     return { x: panel.x + panel.w / 2 - 72, y: panel.y + panel.h - 50, w: 144, h: 34 };
@@ -127,7 +113,7 @@ function getEncyclopediaBackButton() {
 
 const ENCYCLOPEDIA_RARITY_FILTERS = ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'];
 
-// Get Encyclopedia Filter Buttons keeps the game logic moving.
+// builds the row of rarity filter buttons, spread evenly across the panel width
 function getEncyclopediaFilterButtons() {
     const panel = getEncyclopediaPanel();
     const listX = panel.x + 26;
@@ -143,7 +129,6 @@ function getEncyclopediaFilterButtons() {
     }));
 }
 
-// Get Encyclopedia Entries For Tab keeps the game logic moving.
 function getEncyclopediaEntriesForTab() {
     if (encyclopediaTab === 'enemies') return getEncyclopediaEnemyEntries();
     if (encyclopediaTab === 'items') return getEncyclopediaItemEntries();
@@ -151,7 +136,7 @@ function getEncyclopediaEntriesForTab() {
     return [];
 }
 
-// Get Encyclopedia Scroll Metrics keeps the game logic moving.
+// figures out how tall the list content is and how much scroll room there is
 function getEncyclopediaScrollMetrics(entries) {
     const panel = getEncyclopediaPanel();
     const listX = panel.x + 26;
@@ -170,14 +155,13 @@ function getEncyclopediaScrollMetrics(entries) {
     return { panel, listX, listY, listW, listH, entryH, gap, contentH, maxScroll, cols };
 }
 
-// Filter Encyclopedia Entries keeps the game logic moving.
 function filterEncyclopediaEntries(entries) {
     if (encyclopediaTab === 'achievements') return entries;
     if (encyclopediaRarityFilter === 'all') return entries;
     return entries.filter(entry => entry.rarity === encyclopediaRarityFilter);
 }
 
-// Get Encyclopedia Enemy Entries keeps the game logic moving.
+// builds the list of enemy entries shown in the encyclopedia tab, pulls stats from the constants
 function getEncyclopediaEnemyEntries() {
     const entries = [];
     const nameMap = { basic: 'Basic', fast: 'Fast', tank: 'Tank', sniper: 'Sniper' };
@@ -245,7 +229,7 @@ function getEncyclopediaEnemyEntries() {
     return entries;
 }
 
-// Get Encyclopedia Item Entries keeps the game logic moving.
+// builds the combined list of items and uniques for the items tab, sorted alphabetically
 function getEncyclopediaItemEntries() {
     const items = ITEM_DEFINITIONS.map(def => ({
         title: ITEM_PLACEHOLDER_NAMES[def.id] ?? def.title,
@@ -270,7 +254,6 @@ function getEncyclopediaItemEntries() {
     return [...items, ...uniques].sort((a, b) => a.title.localeCompare(b.title));
 }
 
-// Get Encyclopedia Filter Button At keeps the game logic moving.
 function getEncyclopediaFilterButtonAt(x, y) {
     const buttons = getEncyclopediaFilterButtons();
     for (const button of buttons) {
@@ -281,7 +264,7 @@ function getEncyclopediaFilterButtonAt(x, y) {
     return null;
 }
 
-// Draw Encyclopedia Menu keeps the game logic moving.
+// draws the full encyclopedia overlay panel with tabs, filters, and scrollable entries
 function drawEncyclopediaMenu() {
     const panel = getEncyclopediaPanel();
     const tabs = getEncyclopediaTabButtons();

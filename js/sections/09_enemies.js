@@ -24,6 +24,7 @@ function pickRandomEnemyType() {
         4: 0.3,
         5: 0.38,
     };
+    // sniper weight grows slightly each wave within a level, capped so it doesnt get out of hand
     const waveBonus = Math.min(0.14, Math.max(0, currentWave - 1) * 0.03);
     const sniperWeight = sniperUnlocked ? ((baseSniperWeights[level] ?? 0.38) + waveBonus) : 0;
     const weights = {
@@ -171,11 +172,12 @@ function hasLineOfSight(x1, y1, x2, y2, size) {
     return true;
 }
 
-// moves an enemy toward (tx, ty) by step amount, slides along walls if it cant go straight
+// moves an enemy toward (tx, ty) by step amount, slides along walls if it cant go stright
 function moveEnemyToward(e, tx, ty, step) {
     const baseAngle = Math.atan2(ty - e.y, tx - e.x);
 
 
+    // try progressively wider angles until we find one that doesnt collide with a wall
     const steerOffsets = [
         0,
         0.2, -0.2, 0.4, -0.4,
@@ -337,7 +339,7 @@ function getNecromancerSniperSpreadTarget(sniper) {
     };
 }
 
-// Returns an orbit target around the active necromancer boss for tank minions.
+// tank minions orbit around the necromancer boss in an arc facing the player
 function getNecromancerTankOrbitTarget(tank, boss) {
     if (tank.orbitAngle === undefined) tank.orbitAngle = Math.random() * Math.PI * 2;
     if (tank.orbitDir === undefined) tank.orbitDir = Math.random() < 0.5 ? -1 : 1;
@@ -357,7 +359,7 @@ function getNecromancerTankOrbitTarget(tank, boss) {
     };
 }
 
-// Spawns one encounter summon that does not drop XP.
+// spawns a minion near the necromancer, these dont give xp and are flagged as encounter enemies
 function spawnNecromancerSummon(centerX, centerY) {
     const type = pickNecromancerSummonType();
     if (!type) return false;
@@ -404,9 +406,10 @@ function spawnNecromancerSummon(centerX, centerY) {
     return true;
 }
 
-// Updates movement targeting and enemy state each frame.
+// main enemy update loop — handles pathfinding, boss attacks, sniper AI, and push-apart for all enemies
 function updateEnemies() {
 
+    // enemies move at 15% speed while the player is dashing (the san slow effect)
     const sanSlowMult = player.dashing ? 0.15 : 1.0;
 
     for (const e of enemies) {
@@ -1141,6 +1144,7 @@ function updateEnemies() {
         }
 
 
+        // push enemies apart so they dont stack on top of each other
         for (const o of enemies) {
             if (o === e || !o.alive) continue;
             const dx = e.x - o.x, dy = e.y - o.y;
@@ -1169,7 +1173,8 @@ function updateEnemies() {
     }
 }
 
-// Solves the intercept angle for a moving target.
+// solves for where to aim so the projectile actually intersects the moving target, not where they are now
+// uses the quadratic formula to get the lead time then aims at that future position
 function getInterceptAimAngle(sourceX, sourceY, targetX, targetY, targetVx, targetVy, projectileSpeed) {
     const rx = targetX - sourceX;
     const ry = targetY - sourceY;
@@ -1204,7 +1209,7 @@ function getInterceptAimAngle(sourceX, sourceY, targetX, targetY, targetVx, targ
     return Math.atan2(aimY - sourceY, aimX - sourceX);
 }
 
-// Advances turret targeting charge and firing.
+// ticks the tumor turret charge timer and fires when ready, uses lead aiming to hit moving players
 function updateTumorTurrets() {
     if (tumorTurrets.length === 0) return;
 
@@ -1263,7 +1268,7 @@ function updateTumorTurrets() {
     }
 }
 
-// Draws regular enemies and boss enemies.
+// draws all alive enemies with fog of war fading, flip for facing direction, and hp bars
 function drawEnemies() {
     const innerR = 120, outerR = 420;
 
@@ -1391,7 +1396,7 @@ function drawEnemies() {
     }
 }
 
-// Draws tumor turrets and their charge effects.
+// draws turrets with a glowing charge aura that gets brighter the closer they are to firing
 function drawTumorTurrets() {
     const innerR = 120, outerR = 420;
 

@@ -1,4 +1,4 @@
-// Supabase auth and cloud save bootstrap for account data and unlockables.
+// handles cloud accounts, saving progress, achievements, and character/weapon unlocks via supabase
 
 const SUPABASE_PROJECT_URL = 'https://lknltlcslvqoatwtfdlm.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_FbxRRzWOsFiG1Oh_Q2YF7g_WfgFswvD';
@@ -203,6 +203,7 @@ cloudAuthToggleButton.title = 'Toggle Cloud Account';
 document.body.appendChild(cloudAuthPanel);
 document.body.appendChild(cloudAuthToggleButton);
 
+// updates the status text in the auth panel and the global var
 function setCloudStatus(message) {
     cloudStatusMessage = message;
     cloudAuthStatus.textContent = message;
@@ -222,6 +223,7 @@ function getAuthEmailFromUsername(username) {
     return `${username}@${CLOUD_AUTH_EMAIL_DOMAIN}`;
 }
 
+// wraps a promise so it fails after ms milliseconds instead of hanging forever
 function withCloudTimeout(promise, label = 'request', ms = 4500) {
     return Promise.race([
         promise,
@@ -242,6 +244,7 @@ function getAuthInputCredentials() {
     };
 }
 
+// converts level+wave into one big wave number so we can track best progress across levels
 function getAbsoluteWaveProgress() {
     const level = typeof currentArenaLevel === 'number' ? currentArenaLevel : 1;
     const wave = typeof currentWave === 'number' ? currentWave : 1;
@@ -263,6 +266,7 @@ function getCharacterUnlockRule(index) {
     };
 }
 
+// checks the extra unlock conditions beyond just wave progress (lifesteal found, extra dash, etc)
 function isSecondaryUnlockRequirementMet(rule) {
     if (!rule) return true;
     if (rule.requiresLifesteal && !cloudUnlockProgressState.hasLifestealPickup) return false;
@@ -394,6 +398,7 @@ function normalizeSelectedWeapon() {
     selectedWeaponIndex = 0;
 }
 
+// called after a boss totem kill to grant the matching weapon unlock and sync it to cloud
 function unlockWeaponByBossType(type) {
     const bossType = String(type ?? '').trim().toLowerCase();
     if (!bossType) return false;
@@ -465,6 +470,7 @@ function normalizeSelectedCharacter() {
     }
 }
 
+// checks all wave/secondary conditions and adds unlock keys for any characters the player has earned
 function unlockCharactersFromProgress() {
     const newlyUnlocked = [];
     cloudUnlockState.keys.add('character_1');
@@ -498,6 +504,8 @@ function getAchievementProgressValue(def) {
     return Math.max(0, Number.isNaN(value) ? 0 : value);
 }
 
+// goes through every achievement definition and marks any that are newly completed
+// if queuePopup is true it also adds a popup notification for the unlocked ones
 function evaluateAchievements({ queuePopup = false } = {}) {
     const newlyUnlocked = [];
     for (const def of ACHIEVEMENT_DEFINITIONS) {
@@ -599,6 +607,7 @@ function resetAchievementProgress() {
     cloudAchievementState.pendingPopups = [];
 }
 
+// rate-limits how often achievement data gets saved to cloud so we dont spam requests
 function queueAchievementProgressSave(reason = 'achievement') {
     if (!supabaseClient || !cloudUser) return;
     const now = Date.now();
@@ -708,6 +717,7 @@ async function persistUnlockKeys(unlockKeys) {
     }
 }
 
+// packages up all the current game state into something we can shove into the database
 function serializeCloudSavePayload() {
     const nowIso = new Date().toISOString();
     const stats = {
@@ -743,6 +753,7 @@ function serializeCloudSavePayload() {
     return { stats, progression, settings, nowIso };
 }
 
+// called during gameplay to update best wave/level records and unlock characters if criteria are met
 function updateCloudProgressMilestones() {
     if (typeof currentArenaLevel !== 'number' || typeof currentWave !== 'number') return;
 
@@ -954,6 +965,7 @@ async function loadCloudData() {
     normalizeSelectedWeapon();
 }
 
+// saves everything to supabase, one save at a time — if a save is already running it queues up and retries
 async function queueCloudSave(reason = 'manual') {
     if (!supabaseClient || !cloudUser) return;
     if (!cloudDataHydrated) {
@@ -1067,6 +1079,7 @@ function resetCloudRunState() {
     cloudRunOutcomeSaved = false;
 }
 
+// runs whenever a user successfully signs in — loads their cloud data and syncs everything
 async function handleSignedIn(session) {
     const user = session?.user ?? null;
     if (!user) return;
@@ -1108,6 +1121,7 @@ async function handleSignedIn(session) {
     await cloudSessionSyncPromise;
 }
 
+// cleans up all cloud state when logging out, resets unlocks back to defaults
 function handleSignedOut() {
     cloudUser = null;
     cloudLoginName = '';
@@ -1292,6 +1306,7 @@ async function tryLogout() {
     }
 }
 
+// sets up supabase, wires the buttons, and restores any existing session on page load
 function initializeCloudAuth() {
     if (cloudAuthInitialized) return;
 
@@ -1384,6 +1399,7 @@ function initializeCloudAuth() {
     });
 }
 
+// called every game tick, triggers an autosave every 30 seconds if logged in
 function tickCloudAutosave() {
     if (!cloudUser || !supabaseClient) return;
     const now = Date.now();

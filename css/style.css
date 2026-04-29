@@ -1,25 +1,23 @@
-/* quick note this styles * and shows how it looks no punctuation */
+/* reset defaults for everything */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* quick note this styles body and shows how it looks no punctuation */
 body {
     background: #222;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
 
-/* quick note this styles canvas and shows how it looks no punctuation */
 canvas {
     display: block;
     background: #000;
-    cursor: none;
+    cursor: none; /* hide the real cursor, we draw our own in game */
 }
 
-/* quick note this styles #devTestWaveControl and shows how it looks no punctuation */
+/* dev tool panel for picking wave count, hidden unless dev mode is on */
 #devTestWaveControl {
     position: fixed;
     z-index: 20;
@@ -29,7 +27,6 @@ canvas {
     pointer-events: auto;
 }
 
-/* quick note this styles #devTestWaveLabel and shows how it looks no punctuation */
 #devTestWaveLabel {
     color: #fff;
     font-size: 12px;
@@ -37,7 +34,6 @@ canvas {
     white-space: nowrap;
 }
 
-/* quick note this styles #devTestWaveSelect and shows how it looks no punctuation */
 #devTestWaveSelect {
     flex: 1;
     min-width: 0;

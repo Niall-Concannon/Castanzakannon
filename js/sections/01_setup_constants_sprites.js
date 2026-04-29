@@ -1,4 +1,4 @@
-// Canvas setup, shared constants, and sprite loading live in this file.
+// canvas setup, all the game constants, weapon definitions, and sprite loading
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -6,7 +6,7 @@ ctx.imageSmoothingEnabled = false;
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 canvas.style.willChange = 'transform';
-canvas.style.transform = 'translateZ(0)';
+canvas.style.transform = 'translateZ(0)'; // forces gpu layer so the browser doesnt composite it every frame
 canvas.style.imageRendering = 'pixelated';
 document.body.style.background = '#000000';
 document.body.style.overflow = 'hidden';
@@ -195,6 +195,7 @@ const RAIL_RADIUS = 52;
 const GUN_W = 48;
 const GUN_H = 18;
 
+// fixed timestep in ms — all frame-based timers assume 60fps so this converts to real time
 const FIXED_STEP = 1000 / 60;
 const SPLASH_FADE_DURATION_MS = 1500;
 const MENU_TITLE_FONT_FAMILY = '"Orbitron", "Segoe UI", sans-serif';
@@ -208,7 +209,7 @@ const MENU_TEXT_COLORS = {
     systemHeader: '#ffd58c',
 };
 
-// ── Weapon Loadouts ─────────────────────────────────────────────────────────
+// each weapon loadout has its stats, description, and an apply() that sets the player fields
 const WEAPON_LOADOUTS = [
     {
         id: 'assault_rifle',
@@ -369,7 +370,7 @@ const WEAPON_LOADOUTS = [
     },
 ];
 
-// Necromancer Staff tuning
+// necromancer staff projectile constants — the snake bouncing logic uses these
 const NECRO_SNAKE_PROJECTILE_SPEED = 9;
 const NECRO_SNAKE_PROJECTILE_FRAMES = 220;
 const NECRO_SNAKE_PROJECTILE_SIZE = 7;
@@ -380,7 +381,7 @@ const SNAKE_BOUNCE_RANGE = 360;
 const VOID_SNAKE_SLOW_FRAMES = 90;
 const VOID_SNAKE_SLOW_MULT = 0.55;
 
-// Void Sword tuning
+// void sword blade geometry — mid segments grow as you get projectile upgrades
 const VOID_SWORD_BASE_MID_SEGMENTS = 2;
 const VOID_SWORD_BLADE_THICKNESS = 26;
 const VOID_SWORD_BOT_LEN = 24;
@@ -455,6 +456,7 @@ const SNIPER_PING_PATHS = [
     'u_awm9pwrwxi-m1-garand-clip-ejection-sound-214386.mp3',
 ];
 const SNIPER_PING_VOLUME_MULT = 1.0;
+// how many frames after firing the sniper ping sound plays (the clip ejection sound)
 const SNIPER_PING_DELAY_FRAMES = Math.max(1, Math.round(200 / FIXED_STEP));
 const SNIPER_RELOAD_MIN_FRAMES = Math.round(3000 / FIXED_STEP);
 const SNIPER_AMMO_PIERCE_PROGRESS_STEP = 0.08;
@@ -534,6 +536,7 @@ const INSTAKILL_PICKUP_WORLD_SIZE = 12;
 const INSTAKILL_PICKUP_DRAW_SCALE = 1.28;
 const INSTAKILL_DURATION_FRAMES = Math.round(5000 / FIXED_STEP);
 
+// base stats for each enemy type — variant stats override these per level
 const ENEMY_TYPES = {
     basic: { hp: 3, size: 14, speed: 2,   color: '#00ff00', animSpeed: 10 },
     fast:  { hp: 2, size: 12, speed: 3.5, color: '#ffff00', animSpeed: 6  },
@@ -546,6 +549,7 @@ const ENEMY_TYPES = {
 
 
 
+// scales enemy stats up per arena level — base is level 1, d is level 5
 const ENEMY_VARIANT_STATS = {
 
     base: { basic: { hp: 3, speed: 2 },      fast: { hp: 2, speed: 3.5 },   tank: { hp: 8, speed: 1.2 },  sniper: { hp: 3, speed: 1.55, projectileDamage: 8, chargeFrames: 62, cooldownFrames: 68 } },
@@ -566,6 +570,7 @@ const RAILGUN_ULT_COOLDOWN_FRAMES = Math.round(30000 / FIXED_STEP);
 const RAILGUN_ULT_RANGE = 1800;
 const RAILGUN_BEAM_LIFE_FRAMES = 9;
 
+// weighted rarity table — higher number means more likely to roll that rarity
 const UPGRADE_RARITY_WEIGHTS = {
 
     common: 42,
