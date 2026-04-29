@@ -1324,7 +1324,6 @@ function drawEnemies() {
         ctx.globalAlpha = isSniperType && e.teleporting ? alpha * 0.3 : alpha;
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
         else if (e.type === 'necromancer' || e.isNecromancerMinion) ctx.filter = 'hue-rotate(115deg) saturate(1.25)';
-        else if (e.isWaterBoss) ctx.filter = 'hue-rotate(185deg) saturate(1.1)';
 
         const half = sz / 2;
         if (player.x < e.x) {
@@ -1351,7 +1350,11 @@ function drawEnemies() {
             ctx.restore();
         }
 
-        if (e.isBoss) {
+        const isWaterBoss = e.isBoss && e.isWaterBoss;
+        const isFloorBoss = e.isBoss && !e.isVoidBoss && !e.isNecromancerBoss && !e.isWaterBoss;
+
+        // Draw the purple ring for boss types except the fire & water floor bosses
+        if (e.isBoss && !isWaterBoss && !isFloorBoss) {
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.strokeStyle = 'rgba(210,120,255,0.9)';
