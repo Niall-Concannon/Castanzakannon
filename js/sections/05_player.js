@@ -23,7 +23,9 @@ function confirmWeaponAndStart() {
 
     showPerfGuide = false;
     showCheatMenu = false;
-    currentArenaLevel = 1;
+    currentArenaLevel = devTestMode
+        ? Math.max(1, Math.min(MAX_ARENA_LEVELS, devTestStartLevel))
+        : 1;
     currentWave = 1;
     enemiesRemainingInWave = 0;
     enemiesToSpawn = 0;
@@ -267,6 +269,7 @@ function applyLevel3PuddleDamage() {
 // how many enemies should spawn for this wave, scales up over time
 function getWaveEnemyTotal(waveNumber) {
 
+    if (devTestMode && devTestEnemyCount > 0) return devTestEnemyCount;
     if (devTestMode) return 1;
     return WAVE_BASE_ENEMIES + (waveNumber - 1) * WAVE_STEP_ENEMIES;
 }

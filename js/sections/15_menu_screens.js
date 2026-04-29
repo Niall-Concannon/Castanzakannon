@@ -479,13 +479,46 @@ function getDevTestConfigControls() {
         chips.push({ wave: i, x: startX + (i - 1) * (chipW + chipGap), y: chipY, w: chipW, h: chipH });
     }
 
-    const back = { x: canvas.width / 2 - 70, y: panel.y + panel.h - 54, w: 140, h: 38 };
-    return { panel, toggle, minus, plus, value, chips, back };
+    // Start Level chips (dev override for which arena level to begin at)
+    const levelChipW = 56;
+    const levelChipH = 34;
+    const levelGap = 10;
+    const levelTotalW = MAX_ARENA_LEVELS * levelChipW + Math.max(0, MAX_ARENA_LEVELS - 1) * levelGap;
+    const levelStartX = canvas.width / 2 - levelTotalW / 2;
+    const levelChipY = chipY + chipH + 44;
+    const levelChips = [];
+    for (let i = 1; i <= MAX_ARENA_LEVELS; i++) {
+        levelChips.push({ level: i, x: levelStartX + (i - 1) * (levelChipW + levelGap), y: levelChipY, w: levelChipW, h: levelChipH });
+    }
+
+    // Enemy count row (-/+, value, and quick chips)
+    const enemyRowY = levelChipY + levelChipH + 50;
+    const enemyValue = { x: canvas.width / 2 - valueW / 2, y: enemyRowY, w: valueW, h: stepH };
+    const enemyMinus = { x: enemyValue.x - stepW - 12, y: enemyRowY, w: stepW, h: stepH };
+    const enemyPlus = { x: enemyValue.x + valueW + 12, y: enemyRowY, w: stepW, h: stepH };
+    const enemyChipPresets = [0, 1, 5, 25, 50, 100];
+    const enemyChipW = 56;
+    const enemyChipH = 34;
+    const enemyChipGap = 10;
+    const enemyTotalW = enemyChipPresets.length * enemyChipW + (enemyChipPresets.length - 1) * enemyChipGap;
+    const enemyChipStartX = canvas.width / 2 - enemyTotalW / 2;
+    const enemyChipY = enemyRowY + stepH + 22;
+    const enemyChips = enemyChipPresets.map((count, i) => ({
+        count,
+        x: enemyChipStartX + i * (enemyChipW + enemyChipGap),
+        y: enemyChipY,
+        w: enemyChipW,
+        h: enemyChipH,
+    }));
+
+    const backY = Math.max(panel.y + panel.h - 54, enemyChipY + enemyChipH + 18);
+    const back = { x: canvas.width / 2 - 70, y: backY, w: 140, h: 38 };
+    return { panel, toggle, minus, plus, value, chips, levelChips, enemyMinus, enemyPlus, enemyValue, enemyChips, back };
 }
 
 function drawDevTestConfigScreen() {
     const controls = getDevTestConfigControls();
-    const { panel, toggle, minus, plus, value, chips, back } = controls;
+    const { panel, toggle, minus, plus, value, chips, levelChips, enemyMinus, enemyPlus, enemyValue, enemyChips, back } = controls;
 
     ctx.fillStyle = 'rgba(0,0,0,0.93)';
     ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
@@ -553,6 +586,54 @@ function drawDevTestConfigScreen() {
         ctx.fillStyle = '#e1edf8';
         ctx.font = 'bold 14px Arial';
         ctx.fillText(String(chip.wave), chip.x + chip.w / 2, chip.y + chip.h / 2 + 5);
+    }
+
+    // Start Level section
+    ctx.textAlign = 'center';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillText('Start Level', canvas.width / 2, levelChips[0].y - 10);
+    for (const chip of levelChips) {
+        const selected = chip.level === devTestStartLevel;
+        ctx.fillStyle = selected ? '#4a9eff' : '#202020';
+        ctx.fillRect(chip.x, chip.y, chip.w, chip.h);
+        ctx.strokeStyle = selected ? '#8fc0ff' : '#606060';
+        ctx.lineWidth = selected ? 2 : 1;
+        ctx.strokeRect(chip.x, chip.y, chip.w, chip.h);
+        ctx.fillStyle = '#e1edf8';
+        ctx.font = 'bold 14px Arial';
+        ctx.fillText(String(chip.level), chip.x + chip.w / 2, chip.y + chip.h / 2 + 5);
+    }
+
+    // Enemies/Wave override
+    ctx.fillStyle = '#e1edf8';
+    ctx.font = '17px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('Enemies / Wave (0 = default)', enemyValue.x, enemyValue.y - 14);
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(enemyValue.x, enemyValue.y, enemyValue.w, enemyValue.h);
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(enemyValue.x, enemyValue.y, enemyValue.w, enemyValue.h);
+    ctx.fillStyle = '#e1edf8';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText(devTestEnemyCount === 0 ? 'default' : String(devTestEnemyCount), enemyValue.x + enemyValue.w / 2, enemyValue.y + enemyValue.h / 2 + 6);
+
+    drawStep(enemyMinus, '-');
+    drawStep(enemyPlus, '+');
+
+    for (const chip of enemyChips) {
+        const selected = chip.count === devTestEnemyCount;
+        ctx.fillStyle = selected ? '#4a9eff' : '#202020';
+        ctx.fillRect(chip.x, chip.y, chip.w, chip.h);
+        ctx.strokeStyle = selected ? '#8fc0ff' : '#606060';
+        ctx.lineWidth = selected ? 2 : 1;
+        ctx.strokeRect(chip.x, chip.y, chip.w, chip.h);
+        ctx.fillStyle = '#e1edf8';
+        ctx.font = 'bold 13px Arial';
+        ctx.fillText(chip.count === 0 ? 'def' : String(chip.count), chip.x + chip.w / 2, chip.y + chip.h / 2 + 5);
     }
 
     ctx.fillStyle = '#0a0a0a';
