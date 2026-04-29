@@ -415,6 +415,34 @@ window.addEventListener('mousedown', e => {
                 }
             }
 
+            for (const chip of controls.levelChips) {
+                if (mouseX >= chip.x && mouseX <= chip.x + chip.w && mouseY >= chip.y && mouseY <= chip.y + chip.h) {
+                    playUiClick();
+                    devTestStartLevel = chip.level;
+                    return;
+                }
+            }
+
+            if (mouseX >= controls.enemyMinus.x && mouseX <= controls.enemyMinus.x + controls.enemyMinus.w && mouseY >= controls.enemyMinus.y && mouseY <= controls.enemyMinus.y + controls.enemyMinus.h) {
+                playUiClick();
+                devTestEnemyCount = Math.max(0, devTestEnemyCount - 1);
+                return;
+            }
+
+            if (mouseX >= controls.enemyPlus.x && mouseX <= controls.enemyPlus.x + controls.enemyPlus.w && mouseY >= controls.enemyPlus.y && mouseY <= controls.enemyPlus.y + controls.enemyPlus.h) {
+                playUiClick();
+                devTestEnemyCount = Math.min(500, devTestEnemyCount + 1);
+                return;
+            }
+
+            for (const chip of controls.enemyChips) {
+                if (mouseX >= chip.x && mouseX <= chip.x + chip.w && mouseY >= chip.y && mouseY <= chip.y + chip.h) {
+                    playUiClick();
+                    devTestEnemyCount = chip.count;
+                    return;
+                }
+            }
+
             if (mouseX >= controls.back.x && mouseX <= controls.back.x + controls.back.w && mouseY >= controls.back.y && mouseY <= controls.back.y + controls.back.h) {
                 playUiClick();
                 menuPage = 'main';
