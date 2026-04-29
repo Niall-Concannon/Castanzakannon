@@ -1282,11 +1282,16 @@ function drawLevelDecorations() {
         else if (deco.type === 'puddle') spriteSet = puddles;
         else continue;
         if (!spriteSet || !spriteSet.length) continue;
-        const sprite = spriteSet[deco.variantIndex % spriteSet.length];
+        const variantIdx = deco.variantIndex % spriteSet.length;
+        const sprite = spriteSet[variantIdx];
         if (!sprite) continue;
 
-        const width = deco.drawWidth ?? (deco.wallTall === 3 ? 90 : 72);
-        const height = deco.drawHeight ?? (deco.wallTall ? deco.wallTall * TILE : 44);
+        let width = deco.drawWidth ?? (deco.wallTall === 3 ? 90 : 72);
+        let height = deco.drawHeight ?? (deco.wallTall ? deco.wallTall * TILE : 44);
+        if (deco.type === 'pot' && currentArenaLevel === 3 && variantIdx === 4) {
+            width *= 1.7;
+            height *= 1.7;
+        }
         const worldX = deco.type === 'puddle' ? deco.tx * TILE : deco.x - width * 0.5;
         const worldY = deco.type === 'puddle' ? deco.ty * TILE : deco.y - height + TILE * 0.5;
         const s = toScreen(worldX, worldY);
