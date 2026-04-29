@@ -1332,7 +1332,6 @@ function drawEnemies() {
         ctx.save();
         ctx.globalAlpha = isSniperType && e.teleporting ? alpha * 0.3 : alpha;
         if (e.hitFlash > 0) ctx.filter = 'brightness(10)';
-        else if (e.type === 'necromancer' || e.isNecromancerMinion) ctx.filter = 'hue-rotate(115deg) saturate(1.25)';
 
         const half = sz / 2;
         if (player.x < e.x) {
