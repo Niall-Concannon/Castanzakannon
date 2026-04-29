@@ -1283,7 +1283,11 @@ function drawEnemies() {
         const ry  = (e.prevY ?? e.y) + (e.y - (e.prevY ?? e.y)) * renderAlpha;
         const sc  = toScreen(rx, ry);
         const isSniperType = e.type === 'sniper';
-        const drawScale = isSniperType ? 1.6 : 1.0;
+        let drawScale = isSniperType ? 1.6 : 1.0;
+        const isBasicOnB = e.type === 'basic'
+            && getEnemyVariantForLevel(currentArenaLevel) === 'b'
+            && !e.isBoss && !e.isNecromancerMinion && !e.isNecromancerBoss && !e.isWaterBoss;
+        if (isBasicOnB) drawScale *= 1.5;
         const sz  = e.size * 2 * drawScale;
         const frames = e.isNecromancerMinion
             ? (NECROMANCER_MINION_SPRITES[e.necromancerMinionKind] ?? getEnemySpriteFrames(e.type))

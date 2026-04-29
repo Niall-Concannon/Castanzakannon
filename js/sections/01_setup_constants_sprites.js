@@ -1509,6 +1509,7 @@ const NECROMANCER_MINION_SPRITES = {
 const ENEMY_LEVEL_VARIANTS = {
     1: 'base',
     2: 'a',
+    3: 'b',
     4: 'c',
     5: 'd',
 };
