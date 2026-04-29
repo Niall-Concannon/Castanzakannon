@@ -1707,12 +1707,12 @@ const MAP_THEME_SPRITES = {
         wallFace: imgWithFallback(['assets/sprites/levels/level3/wall_face_level3.png', 'assets/sprites/levels/level1/wall_face.png']),
         cornerFace: imgWithFallback(['assets/sprites/levels/level3/wall_corner_face_level3.png', 'assets/sprites/levels/level1/wall_corner_face.png']),
         pots: [
-            imgWithFallback(['assets/sprites/levels/level1/pot1_clay_pixel.png', 'assets/sprites/levels/level1/wall.png']),
-            imgWithFallback(['assets/sprites/levels/level1/pot2_urn_pixel.png', 'assets/sprites/levels/level1/wall.png']),
-            imgWithFallback(['assets/sprites/levels/level1/pot3_vase_pixel.png', 'assets/sprites/levels/level1/wall.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potD_sandy_pixel.png', 'assets/sprites/levels/level1/wall.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potE_orange_pixel.png', 'assets/sprites/levels/level1/wall.png']),
-            imgWithFallback(['assets/sprites/levels/level1/potF_ochre_pixel.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/pot1_clay_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/pot2_urn_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/pot3_vase_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/potD_sandy_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/potE_orange_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
+            imgWithFallback(['assets/sprites/levels/level3/potF_ochre_pixel_level3.png', 'assets/sprites/levels/level1/wall.png']),
         ],
         puddles: [
             imgWithFallback(['assets/sprites/levels/level3/puddle_green_1.png', 'assets/sprites/levels/level3/floor_level3.png']),
