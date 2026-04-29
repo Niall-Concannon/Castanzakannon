@@ -7,4 +7,4 @@
 
 ## Slide Preview
 
-<img width="1652" height="932" alt="image" src="https://github.com/user-attachments/assets/7c8405cb-94d3-4aa7-b255-afdceb92c138" />
+<img width="1645" height="931" alt="image" src="https://github.com/user-attachments/assets/9b5e2285-d026-4032-8098-4a8af830cea1" />
