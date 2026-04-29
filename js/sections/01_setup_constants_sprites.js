@@ -1540,14 +1540,17 @@ const BOSS_NAME_OPTIONS = [
 
 const BOSS_ENEMY_SPRITE_FRAMES = [
     imgWithFallback([
+        'assets/sprites/enemies/base/fire_boss_frame1.png',
         'assets/sprites/enemies/base/enemy_boss_frame1.png',
         'assets/sprites/enemies/base/enemy_tank_frame1.png',
     ]),
     imgWithFallback([
+        'assets/sprites/enemies/base/fire_boss_frame2.png',
         'assets/sprites/enemies/base/enemy_boss_frame2.png',
         'assets/sprites/enemies/base/enemy_tank_frame2.png',
     ]),
     imgWithFallback([
+        'assets/sprites/enemies/base/fire_boss_frame3.png',
         'assets/sprites/enemies/base/enemy_boss_frame3.png',
         'assets/sprites/enemies/base/enemy_tank_frame3.png',
     ]),
