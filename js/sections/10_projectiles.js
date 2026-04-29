@@ -335,11 +335,13 @@ function drawEnemyProjectiles() {
         ctx.translate(sc.x, sc.y);
         ctx.rotate(Math.atan2(p.velocityY, p.velocityX));
         if (p.projectileType === 'necro_bolt' || p.projectileType === 'necro_orb' || p.projectileType === 'necro_rift') {
-            ctx.filter = 'hue-rotate(115deg) saturate(1.2)';
+            ctx.filter = 'sepia(1) saturate(3.8) hue-rotate(55deg) brightness(1.08)';
+        } else if (p.projectileType === 'sniper' && p.necromancerMinionProjectile) {
+            ctx.filter = 'sepia(1) saturate(3.8) hue-rotate(55deg) brightness(1.08)';
         }
-        if (p.projectileType === 'void_burst' || p.projectileType === 'necro_orb') {
+        if (p.projectileType === 'void_burst') {
             const pulse = 0.75 + Math.sin((p.framesLeft ?? 0) * 0.28) * 0.25;
-            ctx.shadowColor = p.projectileType === 'necro_orb' ? '#5ae6b0' : '#b060ff';
+            ctx.shadowColor = '#b060ff';
             ctx.shadowBlur = 28 * pulse;
             ctx.globalAlpha = 0.92;
             const s = p.size * (1 + pulse * 0.18);

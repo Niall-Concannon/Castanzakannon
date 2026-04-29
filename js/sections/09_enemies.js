@@ -985,6 +985,7 @@ function updateEnemies() {
                             projectileType: 'sniper',
                             damage: e.projectileDamage,
                             sprite: getSniperProjectileSpriteForLevel(),
+                            necromancerMinionProjectile: true,
                         });
 
                         e.chargeFrames = 0;
@@ -1301,8 +1302,7 @@ function drawEnemies() {
 
         if (e.isNecromancerBoss) {
             const auraRadius = 230 + currentArenaLevel * 18;
-            const auraCycle = ((e.necromancerAuraCooldown ?? 0) % 32) / 32;
-            const auraPulse = 1 + Math.sin(auraCycle * Math.PI * 2) * 0.05;
+            const auraPulse = 1 + Math.sin(frameCount * 0.035) * 0.05;
             const auraDrawRadius = auraRadius * auraPulse;
             const auraDrawSize = auraDrawRadius * 2;
 
