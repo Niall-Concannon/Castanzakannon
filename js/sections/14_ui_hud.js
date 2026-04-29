@@ -115,7 +115,7 @@ function drawUI() {
     drawUpgradeHud();
     drawInventoryHud();
     drawLootToast();
-    drawAmmoPickupArrow();
+    drawSpecialPickupArrows();
     drawLastEnemyArrow();
     drawVoidTotemArrow();
     drawVoidTotemPrompt();

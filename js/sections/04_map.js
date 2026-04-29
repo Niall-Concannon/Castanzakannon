@@ -450,8 +450,10 @@ function tryPlaceLevel3Pot(tx, ty) {
 
     const potVariants = MAP_THEME_SPRITES[3]?.pots?.length || 1;
     const variantIndex = Math.floor(Math.random() * potVariants);
-    const drawHeight = 34 + Math.floor(Math.random() * 10);
-    const drawWidth = 25 + Math.floor(Math.random() * 9);
+    const doubleSizeVariant = variantIndex === 2 || variantIndex === 5;
+    const sizeMultiplier = doubleSizeVariant ? 2 : (variantIndex === 1 ? 1.5 : 1);
+    const drawHeight = (34 + Math.floor(Math.random() * 10)) * sizeMultiplier;
+    const drawWidth = (25 + Math.floor(Math.random() * 9)) * sizeMultiplier;
     const jitterX = Math.round((Math.random() - 0.5) * 12);
     const jitterY = Math.round((Math.random() - 0.5) * 8);
 

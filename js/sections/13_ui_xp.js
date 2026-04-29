@@ -314,26 +314,34 @@ function drawLastEnemyArrow() {
     ctx.restore();
 }
 
-// returns the first ammo pickup currently on the floor, or null if none
-function getActiveAmmoPickup() {
+// returns the first pickup of a type currently on the floor, or null if none
+function getActivePickupByType(type) {
     for (const p of pickups) {
-        if (p.type === 'ammo') return p;
+        if (p.type === type) return p;
     }
     return null;
 }
 
-// off-screen arrow pointing at an ammo pickup so you know where to grab one
-function drawAmmoPickupArrow() {
-    const ammoPickup = getActiveAmmoPickup();
-    if (!ammoPickup) return;
+// off-screen arrow pointing at a special pickup so you know where to grab one
+function drawSpecialPickupArrow(type, label, color) {
+    const pickup = getActivePickupByType(type);
+    if (!pickup) return;
 
     const playerX = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * renderAlpha;
     const playerY = (player.prevY ?? player.y) + (player.y - (player.prevY ?? player.y)) * renderAlpha;
-    const pickupX = (ammoPickup.prevX ?? ammoPickup.x) + (ammoPickup.x - (ammoPickup.prevX ?? ammoPickup.x)) * renderAlpha;
-    const pickupY = (ammoPickup.prevY ?? ammoPickup.y) + (ammoPickup.y - (ammoPickup.prevY ?? ammoPickup.y)) * renderAlpha;
+    const pickupX = (pickup.prevX ?? pickup.x) + (pickup.x - (pickup.prevX ?? pickup.x)) * renderAlpha;
+    const pickupY = (pickup.prevY ?? pickup.y) + (pickup.y - (pickup.prevY ?? pickup.y)) * renderAlpha;
 
     const playerScreen = toScreen(playerX, playerY);
     const pickupScreen = toScreen(pickupX, pickupY);
+    const pickupScreenMargin = 28;
+    const pickupOnScreen =
+        pickupScreen.x >= pickupScreenMargin &&
+        pickupScreen.x <= canvas.width - pickupScreenMargin &&
+        pickupScreen.y >= pickupScreenMargin &&
+        pickupScreen.y <= canvas.height - pickupScreenMargin;
+    if (pickupOnScreen) return;
+
     const dx = pickupScreen.x - playerScreen.x;
     const dy = pickupScreen.y - playerScreen.y;
     const dist = Math.hypot(dx, dy);
@@ -356,7 +364,7 @@ function drawAmmoPickupArrow() {
     ctx.translate(ax, ay);
     ctx.rotate(angle);
     ctx.globalAlpha = 0.96;
-    ctx.shadowColor = '#ff0000';
+    ctx.shadowColor = color;
     ctx.shadowBlur = 16 * pulse;
 
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
@@ -364,7 +372,7 @@ function drawAmmoPickupArrow() {
     ctx.arc(0, 0, 20, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(19, 0);
     ctx.lineTo(-11, -10);
@@ -380,11 +388,17 @@ function drawAmmoPickupArrow() {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.font = 'bold 13px Arial';
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = color;
     ctx.shadowColor = 'rgba(0,0,0,0.95)';
     ctx.shadowBlur = 6;
-    ctx.fillText('MAX AMMO PICKUP', ax, ay - 24);
+    ctx.fillText(label, ax, ay - 24);
     ctx.restore();
+}
+
+function drawSpecialPickupArrows() {
+    drawSpecialPickupArrow('ammo', 'MAX AMMO PICKUP', '#ff0000');
+    drawSpecialPickupArrow('heal', 'MEDKIT PICKUP', '#00ff00');
+    drawSpecialPickupArrow('instakill', 'INSTAKILL PICKUP', '#ff0000');
 }
 
 // arrow that points to the void/necro totem when its active and offscreen
