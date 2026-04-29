@@ -1,14 +1,14 @@
-// Shared coordinate and camera helpers are kept here.
+// little helpers for the camera and turning world coords into screen coords
 
 
 
 
-// To Screen keeps the game logic moving.
+// converts a world position into where it should be drawn on the canvas
 function toScreen(x, y) {
     return { x: Math.round(x - camera.x), y: Math.round(y - camera.y) };
 }
 
-// Update Camera keeps the game logic moving.
+// keeps the camera centered on the player. alpha is used to smooth between frames
 function updateCamera(alpha) {
     const a  = alpha ?? 1;
     const px = (player.prevX ?? player.x) + (player.x - (player.prevX ?? player.x)) * a;
@@ -16,6 +16,7 @@ function updateCamera(alpha) {
     camera.x = px - canvas.width  / 2;
     camera.y = py - canvas.height / 2;
 
+    // if something triggered a shake, jitter the camera a bit each frame
     if (screenShake > 0) {
     const shake = screenShake * 0.8;
     camera.x += (Math.random() - 0.5) * shake;
@@ -24,7 +25,7 @@ function updateCamera(alpha) {
 }
 }
 
-// Save Prev Positions keeps the game logic moving.
+// stash where everything was last frame so the renderer can interpolate smoothly
 function savePrevPositions() {
     player.prevX = player.x;
     player.prevY = player.y;

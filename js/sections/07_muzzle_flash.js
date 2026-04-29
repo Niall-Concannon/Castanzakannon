@@ -1,21 +1,24 @@
-// Muzzle flash drawing and spark effects live here.
+// the little fire flash + sparks that show up in front of the gun when you shoot
 
 
 
 
-// Draw Muzzle Flashes keeps the game logic moving.
+// loops through every active flash, draws it, and removes it once its too old
 function drawMuzzleFlashes() {
     for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
         const f    = muzzleFlashes[i];
         f.age++;
+        // too old, kill it
         if (f.age >= MUZZLE_LIFE) { muzzleFlashes.splice(i, 1); continue; }
 
+        // life is 1 when fresh and goes down to 0 so the flash fades out
         const life = 1 - f.age / MUZZLE_LIFE;
         const sc   = toScreen(f.x, f.y);
 
         ctx.save();
 
 
+        // round glow circle right at the gun tip
         const flashR = 10 * life;
         const flashG = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, flashR);
         flashG.addColorStop(0,   `rgba(255,240,180,${life})`);
@@ -27,6 +30,7 @@ function drawMuzzleFlashes() {
         ctx.fill();
 
 
+        // the streak that shoots forward out of the barrel
         const flareLen = 18 * life;
         const flareG   = ctx.createLinearGradient(
             sc.x, sc.y,
@@ -48,6 +52,7 @@ function drawMuzzleFlashes() {
         ctx.stroke();
 
 
+        // every spark is a little line with a glowing dot at the end, flying outward
         for (const sp of f.sparks) {
             const tx = sc.x + sp.vx * f.age;
             const ty = sc.y + sp.vy * f.age;

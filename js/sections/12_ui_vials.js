@@ -1,9 +1,10 @@
-// The health and dash vials are drawn in this file.
+// the HP and DASH bottle/vial things on the top left corner of the HUD
 
 
 
 
-// Vial Interior Path keeps the game logic moving.
+// builds the path for the inside of the vial (neck + shoulders + rounded body)
+// used as a clip so liquid stays inside the bottle shape
 function vialInteriorPath(sc) {
     const ncx = VCX * sc, nW2 = (VNECK_W / 2) * sc;
     const nY1 = VNECK_Y1 * sc, nY2 = VNECK_Y2 * sc;
@@ -20,11 +21,12 @@ function vialInteriorPath(sc) {
     ctx.lineTo(bX1, bY1 + br); ctx.arcTo(bX1, bY1, bX1 + br, bY1, br); ctx.closePath();
 }
 
-// Draw Vial keeps the game logic moving.
+// draws one full vial: glow behind, glass back, liquid w/ wave, bubbles, glass front, label
 function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valueText = '') {
     const sc = VIAL_SCALE;
     const W  = VSRC_W * sc, H = VSRC_H * sc;
     const GW = (VSRC_W + 40) * sc, GH = (VSRC_H + 40) * sc;
+    // pulsing glow alpha so the vial breathes a bit
     const gp = 0.75 + 0.25 * Math.sin(frameCount * 0.04);
 
     ctx.save();
@@ -42,9 +44,11 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
     vialInteriorPath(sc);
     ctx.clip();
 
+    // figure out where the top of the liquid should be based on fill percent
     const lat = VSHOULDER_Y1 * sc, lab = VBODY_Y2 * sc;
     const lh  = (lab - lat) * Math.max(0, Math.min(1, fillPercent));
     const lty = lab - lh;
+    // wave params, two sine waves stacked so the surface looks more natural
     const wA  = 3.5 * sc, wF = 0.10 / sc, wP = frameCount * 0.055;
     const w2F = wF * 1.6,  w2P = frameCount * 0.038;
     const bx1s = (VCX - VBODY_W / 2 - 2) * sc, bx2s = (VCX + VBODY_W / 2 + 2) * sc;
@@ -73,6 +77,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
     }
     ctx.lineTo(bx2s, lty + 18 * sc); ctx.lineTo(bx1s, lty + 18 * sc); ctx.closePath(); ctx.fill();
 
+    // bubble animation, only show when theres enough liquid. 4 frame sprite sheet
     if (fillPercent > 0.08 && vialBubblesSprite.complete && vialBubblesSprite.naturalWidth) {
         const bf = Math.floor(frameCount / 7) % 4;
         ctx.globalAlpha = 0.45 * fillPercent;
@@ -83,6 +88,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
 
     ctx.drawImage(vialFrameSprite, 0, 0, W, H);
 
+    // low health warning flash, only flickers when hp is below 25%
     if (colors.bot === '#ff0000' && fillPercent < 0.25) {
         const fl = 0.12 + 0.12 * Math.sin(frameCount * 0.35);
         ctx.save();
@@ -111,7 +117,7 @@ function drawVial(screenX, screenY, fillPercent, colors, glowSprite, label, valu
     ctx.restore();
 }
 
-// Draw Vials keeps the game logic moving.
+// draws both vials side by side: HP on the left, dash charges on the right
 function drawVials() {
     const lp = 12, tp = 18, gap = 12;
     const hpY   = tp;
@@ -129,6 +135,7 @@ function drawVials() {
     const hpValue = `${Math.ceil(player.hp)} / ${player.maxHp}`;
     drawVial(hpX, hpY, hf, hc, vialGlowHpSprite, 'HP', hpValue);
 
+    // dash fill is full charges plus the partial recharge progress for the next charge
     const baseCharges = player.dashCharges;
     const hasPartial = player.dashCharges < player.dashMaxCharges;
     const partial = hasPartial ? Math.max(0, Math.min(1, 1 - player.dashCooldown / player.dashRechargeFrames)) : 0;
@@ -141,6 +148,7 @@ function drawVials() {
     const dashValue = `${player.dashCharges}/${player.dashMaxCharges}`;
     drawVial(dashX, dashY, df, dc, vialGlowDashSprite, 'DASH', dashValue);
 
+    // little blinking READY label above dash vial when at least one charge is available
     if (dr) {
         const ra = 0.55 + 0.45 * Math.abs(Math.sin(frameCount * 0.07));
         ctx.save();

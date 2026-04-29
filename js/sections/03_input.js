@@ -1,6 +1,8 @@
-// Keyboard mouse and touch input are wired up here.
+// all the key/mouse/touch event listeners and their input handling
 
 
+// step thru the weapons in a direction (+1 or -1) and return the next one thats unlocked
+// gives up after looping all the way around so it doesnt freeze
 function findNextUnlockedWeaponIndex(startIndex, step) {
     if (!Array.isArray(WEAPON_LOADOUTS) || WEAPON_LOADOUTS.length === 0) return 0;
     const count = WEAPON_LOADOUTS.length;
@@ -17,13 +19,16 @@ function findNextUnlockedWeaponIndex(startIndex, step) {
 
 
 
+// big keyboard handler. checks game state and routes the key to whatever needs it
 window.addEventListener('keydown', e => {
     unlockAudioIfNeeded();
 
+    // if user is typing in the cloud auth box dont steal their key presses
     if (typeof isCloudAuthInputFocused === 'function' && isCloudAuthInputFocused()) {
         return;
     }
 
+    // any key on splash kicks off the transition into the menu
     if (gameState === 'splash') {
         startSplashTransition();
         return;
@@ -33,8 +38,10 @@ window.addEventListener('keydown', e => {
         return;
     }
 
+    // remember whats held down so movement can read it every frame
     keys[e.key.toLowerCase()] = true;
 
+    // escape on any sub menu page just bounces back to the main menu page
     if (e.key === 'Escape' && gameState === 'menu' && (menuPage === 'cursors' || menuPage === 'characters' || menuPage === 'encyclopedia' || menuPage === 'mapConfig' || menuPage === 'audioConfig' || menuPage === 'devTestConfig')) {
         menuPage = 'main';
         playUiClick();
@@ -47,6 +54,7 @@ window.addEventListener('keydown', e => {
         return;
     }
 
+    // weapon select screen keys: A/D or arrows to move, space/enter to confirm
     if (gameState === 'weaponSelect') {
         if (e.key === 'ArrowLeft'  || e.key.toLowerCase() === 'a') {
             selectedWeaponIndex = findNextUnlockedWeaponIndex(selectedWeaponIndex, -1);
@@ -65,6 +73,7 @@ window.addEventListener('keydown', e => {
         return;
     }
 
+    // escape while playing toggles pause, but if cheat menu is open it closes that first
     if (e.key === 'Escape' && gameState === 'playing') {
         if (showCheatMenu) {
             showCheatMenu = false;
@@ -82,6 +91,7 @@ window.addEventListener('keydown', e => {
         return;
     }
 
+    // space/enter does different things depending on current screen, also dash while playing
     if (e.key === ' ' || e.key === 'Enter') {
         if      (gameState === 'menu'    && menuPage === 'main') { playUiClick(); startGame(); }
         else if (gameState === 'gameOver') { playUiClick(); gameState = 'menu'; menuPage = 'main'; }
@@ -90,14 +100,17 @@ window.addEventListener('keydown', e => {
         else if (gameState === 'playing')  playerDash();
     }
 
+    // Q = railgun ult
     if (gameState === 'playing' && !gamePaused && e.key.toLowerCase() === 'q') {
         activateRailgunUlt();
     }
 
+    // E = use the void totem if youre on top of one
     if (gameState === 'playing' && !gamePaused && e.key.toLowerCase() === 'e') {
         tryActivateVoidTotem();
     }
 
+    // K toggles the dev cheat menu when its enabled
     if (gameState === 'playing' && devCheatMenuEnabled) {
         const lower = e.key.toLowerCase();
         if (lower === 'k') {
@@ -108,6 +121,7 @@ window.addEventListener('keydown', e => {
         }
     }
 
+    // 1/2/3 picks an upgrade card on the level up screen. delay stops accidental clicks
     if (gameState === 'levelUp' && levelUpInputDelay <= 0) {
         if (e.key === '1') { playUiClick(); applyUpgradeChoice(0); }
         if (e.key === '2') { playUiClick(); applyUpgradeChoice(1); }
@@ -115,15 +129,18 @@ window.addEventListener('keydown', e => {
     }
 });
 
+// when a key is released mark it as not held
 window.addEventListener('keyup',     e  => { keys[e.key.toLowerCase()] = false; });
-window.addEventListener('mousemove', e  => { 
-    mouseX = e.clientX; 
+// track the cursor and let any sliders being dragged update their values
+window.addEventListener('mousemove', e  => {
+    mouseX = e.clientX;
     mouseY = e.clientY;
     updateMapConfigSliders();
     updateAudioConfigSliders();
     updatePauseMenuSliders();
 });
 window.addEventListener('mouseup',   () => { mouseDown = false; });
+// scrolling the encyclopedia list. wheelStep handles different deltaMode values from browsers
 window.addEventListener('wheel', e => {
     if (gameState !== 'menu' || menuPage !== 'encyclopedia') return;
 
@@ -136,7 +153,9 @@ window.addEventListener('wheel', e => {
     e.preventDefault();
 }, { passive: false });
 
+// big mouse click handler. checks the cursor against every UI button thats currently visible
 window.addEventListener('mousedown', e => {
+    // ignore clicks inside the cloud auth/dev/audio panels, those have their own DOM handlers
     if (cloudAuthPanel.contains(e.target)) return;
     if (typeof cloudAuthToggleButton !== 'undefined' && cloudAuthToggleButton.contains(e.target)) return;
     if (devTestWaveControl.contains(e.target)) return;
@@ -158,6 +177,7 @@ window.addEventListener('mousedown', e => {
         return;
     }
 
+    // cheat menu click handling, close button, tabs, then the entries grid
     if (gameState === 'playing' && showCheatMenu) {
         const zones = getCheatMenuZones();
         const inPanel = mouseX >= zones.panel.x && mouseX <= zones.panel.x + zones.panel.w && mouseY >= zones.panel.y && mouseY <= zones.panel.y + zones.panel.h;
@@ -188,7 +208,7 @@ window.addEventListener('mousedown', e => {
         if (inPanel) return;
     }
 
-    // Weapon select screen clicks
+    // weapon select screen, click a card to pick it, click again to confirm
     if (gameState === 'weaponSelect') {
         const cards = getWeaponSelectCards();
         for (let i = 0; i < cards.length; i++) {
@@ -199,7 +219,7 @@ window.addEventListener('mousedown', e => {
                     return;
                 }
                 if (selectedWeaponIndex === i) {
-                    // Second click on already-selected card = confirm
+                    // already selected so a second click confirms
                     playUiClick();
                     confirmWeaponAndStart();
                 } else {
@@ -222,7 +242,7 @@ window.addEventListener('mousedown', e => {
         return;
     }
 
-    // Pause menu clicks (Resume / Main Menu / sliders)
+    // pause menu, resume button, main menu button, sliders are dragged separately
     if (gamePaused && gameState === 'playing') {
         const lay = getPauseMenuLayout();
         const rb  = lay.resumeBtn;
@@ -240,10 +260,11 @@ window.addEventListener('mousedown', e => {
             playUiClick();
             return;
         }
-        // Still allow slider dragging (handled by updatePauseMenuSliders on mousemove)
+        // still let sliders work, the mousemove handler reads mouseDown
         return;
     }
 
+    // huge block for menu clicks. each menu page has its own set of buttons to hit-test
     if (gameState === 'menu') {
         if (menuPage === 'main') {
             const charBtn = getSelectCharacterButton();
@@ -295,6 +316,7 @@ window.addEventListener('mousedown', e => {
                 playUiClick();
                 menuPage = 'cursors';
             } else {
+                // clicked anywhere else on main menu means start the game
                 playUiClick();
                 startGame();
             }
@@ -456,12 +478,13 @@ window.addEventListener('mousedown', e => {
     }
 });
 
+// touch on splash also kicks off the splash transition (mobile support)
 window.addEventListener('touchstart', () => {
     unlockAudioIfNeeded();
     if (gameState === 'splash') startSplashTransition();
 }, { passive: true });
 
-// Update Map Config Sliders keeps the game logic moving.
+// drags the map size + opacity sliders on the map config menu while mouse is held
 function updateMapConfigSliders() {
     if (gameState !== 'menu' || menuPage !== 'mapConfig' || !mouseDown) return;
 
@@ -480,6 +503,7 @@ function updateMapConfigSliders() {
     }
 }
 
+// same idea but for the music + sfx sliders on the audio config menu
 function updateAudioConfigSliders() {
     if (gameState !== 'menu' || menuPage !== 'audioConfig' || !mouseDown) return;
 
@@ -498,7 +522,7 @@ function updateAudioConfigSliders() {
     }
 }
 
-// Handles slider dragging inside the pause menu.
+// drags the music + sfx sliders that show up in the pause menu
 function updatePauseMenuSliders() {
     if (!gamePaused || gameState !== 'playing' || !mouseDown) return;
 

@@ -1,11 +1,11 @@
-// Player flow wave progress and combat actions are managed here.
+// player movement, dash, shooting, wave progress and the start/restart flow
 
 
 
 
-// Start Game keeps the game logic moving.
+// called from the menu when you hit start. just goes to weapon select first
 function startGame() {
-    // Go to weapon selection before actually starting
+    // go to weapon select before the actual game starts
     gameState = 'weaponSelect';
     selectedWeaponIndex = 0; // default to Assault Rifle
 }
@@ -147,7 +147,7 @@ function confirmWeaponAndStart() {
     startWave(1);
 }
 
-// Draw Cheat Menu keeps the game logic moving.
+// dev cheat menu. lets you grab any item or upgrade. only available with cheats enabled
 function drawCheatMenu() {
     if (!showCheatMenu || gameState !== 'playing') return;
 
@@ -226,7 +226,7 @@ function drawCheatMenu() {
     ctx.restore();
 }
 
-// Set Map Theme For Current Level keeps the game logic moving.
+// picks the right tileset for whichever level were on, level 3 is the special one
 function setMapThemeForCurrentLevel() {
     currentMapThemeId = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
     currentMapTheme = MAP_THEME_SPRITES[currentMapThemeId] ?? MAP_THEME_SPRITES[1];
@@ -264,20 +264,20 @@ function applyLevel3PuddleDamage() {
     }
 }
 
-// Get Wave Enemy Total keeps the game logic moving.
+// how many enemies should spawn for this wave, scales up over time
 function getWaveEnemyTotal(waveNumber) {
 
     if (devTestMode) return 1;
     return WAVE_BASE_ENEMIES + (waveNumber - 1) * WAVE_STEP_ENEMIES;
 }
 
-// Get Configured Waves Per Level keeps the game logic moving.
+// how many waves per level. uses dev test override if its on, otherwise the normal count
 function getConfiguredWavesPerLevel() {
     if (!devTestMode) return WAVES_PER_LEVEL;
     return Math.max(1, Math.min(WAVES_PER_LEVEL, devTestWaveLimit));
 }
 
-// Start Wave keeps the game logic moving.
+// kicks off a new wave, resets counters and spawn timers
 function startWave(waveNumber) {
 
     currentWave = waveNumber;
@@ -298,14 +298,14 @@ function startWave(waveNumber) {
     }
 }
 
-// Get Alive Enemy Count keeps the game logic moving.
+// counts enemies still alive on the field
 function getAliveEnemyCount() {
     let alive = 0;
     for (const e of enemies) if (e.alive) alive++;
     return alive;
 }
 
-// Update Wave Spawner keeps the game logic moving.
+// drips out enemies at the spawn rate until the wave has spawned its quota
 function updateWaveSpawner() {
     if (isAnyBossEncounterActive()) return;
     if (waveSpawnDelayFrames > 0) {
@@ -325,7 +325,7 @@ function updateWaveSpawner() {
     }
 }
 
-// Update Wave Progression keeps the game logic moving.
+// once all enemies in a wave are dead this advances to the next wave or level/win
 function updateWaveProgression() {
     if (isAnyBossEncounterActive()) return;
     const alive = getAliveEnemyCount();
@@ -410,12 +410,12 @@ function startEndlessFromWin() {
     startEndlessWave(endlessWave);
 }
 
-// Cleanup Dead Enemies keeps the game logic moving.
+// removes any enemies marked not alive at the end of the frame
 function cleanupDeadEnemies() {
     enemies = enemies.filter(e => e.alive);
 }
 
-// Player Dash keeps the game logic moving.
+// dashes the player a fixed distance in their input direction. spawns the trail too
 function playerDash() {
     if (player.dashing || player.dashCharges <= 0 || (player.dashLockFrames ?? 0) > 0) return;
 
@@ -539,7 +539,7 @@ function updateVoidSword() {
     for (const t of tumorTurrets) hitTarget(t);
 }
 
-// Player Shoot keeps the game logic moving.
+// fires the equipped weapon. handles spread, ammo, recoil/cooldown, sounds and muzzle flash
 function playerShoot() {
     if (player.weaponType === 'void_sword') return;
     if (!mouseDown || player.shootCooldown > 0) return;
@@ -651,7 +651,7 @@ function playerShoot() {
     muzzleFlashes.push({ x: bx, y: by, angle, age: 0, sparks });
 }
 
-// Update Player keeps the game logic moving.
+// runs every fixed step. handles WASD movement, weapon aim, dash, shooting and timers
 function updatePlayer() {
     let dirX = 0, dirY = 0;
     if (keys['w'] || keys['arrowup'])    dirY = -1;
@@ -887,7 +887,7 @@ function updatePlayer() {
     updatePlayerAnim();
 }
 
-// Update Player Anim keeps the game logic moving.
+// flips between idle/walk frames based on whether the player is moving
 function updatePlayerAnim() {
     const moving = keys['w'] || keys['s'] || keys['a'] || keys['d'] ||
                    keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];

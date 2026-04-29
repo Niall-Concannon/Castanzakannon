@@ -1,9 +1,10 @@
-// Projectile motion hits and beam effects are handled here.
+// all the bullet/projectile logic for both player and enemy shots, plus drawing them
 
 
 
 
-// Segment Circle Hit keeps the game logic moving.
+// checks if the line from (x1,y1) to (x2,y2) clips through a circle at (cx,cy) with given radius
+// used so fast bullets dont skip past enemies between frames
 function segmentCircleHit(x1, y1, x2, y2, cx, cy, radius) {
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -19,7 +20,7 @@ function segmentCircleHit(x1, y1, x2, y2, cx, cy, radius) {
     return Math.hypot(cx - nx, cy - ny) <= radius;
 }
 
-// Has Active Ammo Pickup keeps the game logic moving.
+// quick check, true if theres at least one ammo pickup currently on the ground
 function hasActiveAmmoPickup() {
     for (const p of pickups) {
         if (p.type === 'ammo') return true;
@@ -27,7 +28,7 @@ function hasActiveAmmoPickup() {
     return false;
 }
 
-// Has Active Heal Pickup keeps the game logic moving.
+// same but for heal pickups
 function hasActiveHealPickup() {
     for (const p of pickups) {
         if (p.type === 'heal') return true;
@@ -35,7 +36,7 @@ function hasActiveHealPickup() {
     return false;
 }
 
-// Has Active Instakill Pickup keeps the game logic moving.
+// same but for instakill pickups
 function hasActiveInstakillPickup() {
     for (const p of pickups) {
         if (p.type === 'instakill') return true;
@@ -43,7 +44,7 @@ function hasActiveInstakillPickup() {
     return false;
 }
 
-// Spawn Dev Mode Powerup Line keeps the game logic moving.
+// dev tool. drops a heal/ammo/instakill in a row above the player so you can grab whatever
 function spawnDevModePowerupLine() {
     if (!devTestMode) return;
 
@@ -74,7 +75,7 @@ function spawnDevModePowerupLine() {
     });
 }
 
-// Picks the next bounce target for a snake projectile (nearest hostile not visited yet).
+// finds the closest enemy/turret the snake projectile hasnt already hit, within range
 function pickBounceTarget(p, originX, originY) {
     const range = p.bounceRange ?? SNAKE_BOUNCE_RANGE;
     let best = null;
@@ -92,7 +93,8 @@ function pickBounceTarget(p, originX, originY) {
     return best;
 }
 
-// Routes a hit through bounce/slow effects; returns true if the projectile should despawn.
+// when a projectile lands a hit, this handles slow/bounce/pierce
+// returns true if the projectile is fully spent and should be removed
 function consumeProjectileHit(p, target) {
     if (p.appliesSlow) {
         const slowFrames = p.slowFrames ?? VOID_SNAKE_SLOW_FRAMES;
@@ -118,13 +120,12 @@ function consumeProjectileHit(p, target) {
     return true;
 }
 
-// Update Projectiles keeps the game logic moving.
+// moves all the player projectiles, checks for wall + enemy hits, removes dead ones
 function updateProjectiles() {
     updateRailgunBeams();
 
-    // Snapshot the array reference so that if completeVoidEncounterVictory replaces
-    // the global `projectiles` mid-loop (void boss killed by a projectile), the loop
-    // keeps a stable reference and won't read undefined entries from the new array.
+    // grab a stable ref to the array. if the void boss dies mid-loop the global
+    // gets swapped out and we dont want to read garbage from a fresh array
     const arr = projectiles;
     for (let i = arr.length - 1; i >= 0; i--) {
         const p = arr[i];
@@ -135,12 +136,14 @@ function updateProjectiles() {
         p.y += p.velocityY;
         p.framesLeft--;
 
+        // bouncing snakes pass through walls. otherwise wall hit or expired = kill it
         const ignoreWalls = (p.bouncesLeft ?? 0) > 0 || p.visited;
         if ((!ignoreWalls && wallCollision(p.x, p.y, p.size)) || p.framesLeft <= 0) {
             arr.splice(i, 1);
             continue;
         }
 
+        // first try to hit any tumor turret along the path
         let hitThisFrame = false;
         for (const t of tumorTurrets) {
             if (!t.alive) continue;
@@ -160,9 +163,11 @@ function updateProjectiles() {
             }
         }
 
+        // if we already hit something this frame skip the enemy check, also bail if despawned
         if (hitThisFrame || p.lastHitFrame === frameCount) continue;
         if (!arr[i]) continue;
 
+        // then check normal enemies
         for (const e of enemies) {
             if (!e.alive) continue;
             if (p.visited?.has(e)) continue;
@@ -182,7 +187,7 @@ function updateProjectiles() {
     }
 }
 
-// Draw Projectiles keeps the game logic moving.
+// draws all the player projectiles plus the railgun beam streaks
 function drawProjectiles() {
     for (const p of projectiles) {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
@@ -202,6 +207,7 @@ function drawProjectiles() {
         ctx.restore();
     }
 
+    // railgun ult draws a fat pink beam plus a thin white core line on top
     for (const beam of railgunBeams) {
         const s1 = toScreen(beam.x1, beam.y1);
         const s2 = toScreen(beam.x2, beam.y2);
@@ -229,13 +235,14 @@ function drawProjectiles() {
     }
 }
 
-// Update Enemy Projectiles keeps the game logic moving.
+// updates enemy bullets/skulls/orbs/waves, including homing and the wave aoe expanding rings
 function updateEnemyProjectiles() {
     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
         const p = enemyProjectiles[i];
         let oldX = p.x;
         let oldY = p.y;
 
+        // homing types steer toward the player by blending current velocity toward the aim
         if (p.projectileType === 'void_skull' || p.projectileType === 'necro_orb' || p.projectileType === 'water_homing') {
             const aim = Math.atan2(player.y - p.y, player.x - p.x);
             const speed = Math.hypot(p.velocityX, p.velocityY);
@@ -244,6 +251,7 @@ function updateEnemyProjectiles() {
             p.velocityY += (Math.sin(aim) * speed - p.velocityY) * steer;
         }
 
+        // wave aoe doesnt move, it just expands its radius over time and stays on the boss
         if (p.projectileType === 'void_wave_aoe' || p.projectileType === 'water_wave_aoe') {
             const maxRadius = p.waveMaxRadius ?? VOID_WAVE_AOE_MAX_RADIUS;
             const waveFrames = p.projectileType === 'water_wave_aoe' ? 60 : VOID_WAVE_AOE_FRAMES;
@@ -274,6 +282,7 @@ function updateEnemyProjectiles() {
             continue;
         }
 
+        // collide with the player. void burst also locks dash for a bit, mean
         if (segmentCircleHit(oldX, oldY, p.x, p.y, player.x, player.y, player.size + p.size)) {
             if (player.invulnTimer <= 0) {
                 applyPlayerDamage(p.damage ?? TUMOR_PROJECTILE_DAMAGE);
@@ -290,7 +299,7 @@ function updateEnemyProjectiles() {
     }
 }
 
-// Draw Enemy Projectiles keeps the game logic moving.
+// draws every enemy projectile, picking the right sprite for each type. waves use animated frames
 function drawEnemyProjectiles() {
     for (const p of enemyProjectiles) {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;

@@ -1,10 +1,11 @@
-// The main HUD overlays and screens are rendered here.
+// the in-game HUD: fps, dev banners, wave info, vials, xp/ammo bars, minimap, pause, fog
 
 
 
 
-// Draw UI keeps the game logic moving.
+// big top-level HUD draw call. just calls all the smaller HUD drawers in order
 function drawUI() {
+    // FPS counter in the bottom left, only when toggled on
     if (showFpsCounter) {
         ctx.save();
         ctx.textAlign  = 'left';
@@ -16,6 +17,7 @@ function drawUI() {
         ctx.restore();
     }
 
+    // dev test mode banner up top so you remember its on
     if (devTestMode) {
         ctx.save();
         ctx.textAlign = 'center';
@@ -27,6 +29,7 @@ function drawUI() {
         ctx.restore();
     }
 
+    // little box on the left with cheat menu hotkey hints
     if (devCheatMenuEnabled) {
         const boxW = 290;
         const boxH = 44;
@@ -58,6 +61,7 @@ function drawUI() {
     }
 
 
+    // tiny coords readout in the bottom left, helps with debugging
     ctx.save();
     ctx.font      = '10px monospace';
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -65,6 +69,7 @@ function drawUI() {
     ctx.fillText('X: ' + Math.floor(player.x) + '  Y: ' + Math.floor(player.y), 20, canvas.height - 20);
     ctx.restore();
 
+    // top right info block: level/wave, enemies left, time elapsed
     ctx.save();
     ctx.textAlign = 'right';
     ctx.font = 'bold 16px Arial';
@@ -89,6 +94,7 @@ function drawUI() {
     ctx.fillText(`Time: ${minutes}:${seconds}`, canvas.width - 22, 88);
     ctx.restore();
 
+    // when youre dash locked (void burst hit you), show a countdown banner up top
     if ((player.dashLockFrames ?? 0) > 0) {
         const secs = Math.ceil((player.dashLockFrames * FIXED_STEP) / 1000);
         ctx.save();
@@ -117,7 +123,7 @@ function drawUI() {
     drawFinalWaveBanner()
 }
 
-// Draw Final Wave Banner keeps the game logic moving.
+// big "FINAL WAVE" splash that fades out, shown when you reach the last wave of a level
 function drawFinalWaveBanner() {
     if (finalWaveBannerTimer <= 0) return;
     finalWaveBannerTimer--;
@@ -137,7 +143,7 @@ function drawFinalWaveBanner() {
     ctx.restore();
 }
 
-// Draw Minimap keeps the game logic moving.
+// minimap in the bottom right. shows walls, pickups, chests, enemies, totems, and player
 function drawMinimap() {
     const BASE_MM_W = 260, BASE_MM_H = 220;
     const MM_W = Math.max(140, Math.round(BASE_MM_W * mapSize));
@@ -154,6 +160,7 @@ function drawMinimap() {
 
     ctx.save();
 
+    // map shape can be circle/hex/rect, used both for the bg fill and the clip + border
     function traceMinimapShape() {
         if (mapShape === 'circle') {
             ctx.arc(mmCenterX, mmCenterY, mmRadius, 0, Math.PI * 2);
@@ -282,7 +289,7 @@ function drawMinimap() {
     ctx.restore();
 }
 
-// Returns layout rects for the pause menu panel and its elements.
+// computes the rectangles for the pause menu and its sliders/buttons based on screen size
 function getPauseMenuLayout() {
     const panelW = Math.min(420, Math.floor(canvas.width * 0.52));
     const panelH = Math.min(380, Math.floor(canvas.height * 0.62));
@@ -307,7 +314,7 @@ function getPauseMenuLayout() {
     };
 }
 
-// Draw Pause Overlay keeps the game logic moving.
+// draws the pause overlay: dim background, panel, title, volume sliders, resume + menu buttons
 function drawPauseOverlay() {
     const lay = getPauseMenuLayout();
     const p   = lay.panel;
@@ -375,6 +382,7 @@ function drawPauseOverlay() {
     ctx.restore();
 }
 
+// helper: draws one volume slider with a track, fill, and round handle
 function _drawPauseSlider(x, y, w, norm, hr) {
     const hx = x + norm * w;
     // Track background
@@ -393,6 +401,7 @@ function _drawPauseSlider(x, y, w, norm, hr) {
     ctx.stroke();
 }
 
+// helper: draws a pause menu button (Resume = green, Main Menu = red), highlights on hover
 function _drawPauseButton(btn, label, mx, my) {
     const hover = mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
     const bgColor = label === 'Resume'
@@ -413,7 +422,8 @@ function _drawPauseButton(btn, label, mx, my) {
     ctx.fillText(label, btn.x + btn.w / 2, btn.y + btn.h / 2);
 }
 
-// Draw Visibility Mask keeps the game logic moving.
+// fog of war overlay. draws a black layer with a gradient hole around the player
+// then punches extra light around bullets and skull candles
 function drawVisibilityMask() {
     if (fogCanvas.width !== canvas.width || fogCanvas.height !== canvas.height) {
         fogCanvas.width  = canvas.width;
@@ -435,6 +445,7 @@ function drawVisibilityMask() {
     fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
 
+    // destination-out lets us erase parts of the fog so bullets light up dark areas
     fogCtx.globalCompositeOperation = 'destination-out';
     for (const p of projectiles) {
         const prx = (p.prevX ?? p.x) + (p.x - (p.prevX ?? p.x)) * renderAlpha;
@@ -456,6 +467,7 @@ function drawVisibilityMask() {
         fogCtx.fill();
     }
 
+    // skull candles in the world also give off a soft glow that cuts the fog
     for (const deco of levelDecorations) {
         if (deco.type !== 'skullCandle') continue;
 
@@ -488,7 +500,7 @@ function drawVisibilityMask() {
     ctx.drawImage(fogCanvas, 0, 0);
 }
 
-// Draw Low Health Marker keeps the game logic moving.
+// red tint overlay when player is low hp, gets stronger the closer to dead you are
 function drawLowHealthMarker() {
     if (player.hp > 30 || player.hp <= 0) return;
 

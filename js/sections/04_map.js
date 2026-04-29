@@ -1,9 +1,9 @@
-// Map generation pathing and wall collision logic live here.
+// generates the map tiles, walls, decorations, then handles pathfinding and collisions
 
 
 
 
-// Generate Map keeps the game logic moving.
+// builds the whole map for the current level. picks shape, places walls, decorations, etc
 function generateMap() {
     levelDecorations = [];
     mapTiles = [];
@@ -70,7 +70,7 @@ function generateMap() {
     buildNavGrid();
 }
 
-// Generate Void Boss Room keeps the game logic moving.
+// special arena layout used for the void boss fight
 function generateVoidBossRoom() {
     levelDecorations = [];
     mapTiles = [];
@@ -96,7 +96,7 @@ function generateVoidBossRoom() {
     buildNavGrid();
 }
 
-// Generate Necromancer Boss Room keeps the game logic moving.
+// special arena layout for the necromancer boss fight
 function generateNecromancerBossRoom() {
     levelDecorations = [];
     mapTiles = [];
@@ -113,7 +113,7 @@ function generateNecromancerBossRoom() {
     buildNavGrid();
 }
 
-// Is Level4 Decoration Tile Valid keeps the game logic moving.
+// true if this tile is somewhere a level 4 decoration can sit (open floor not near spawn)
 function isLevel4DecorationTileValid(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;
     if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
@@ -133,7 +133,7 @@ function isLevel4DecorationTileValid(tx, ty) {
     return true;
 }
 
-// Is Level1 Pot Tile Valid keeps the game logic moving.
+// true if a pot can be placed at this tile (open floor, not blocking the player path)
 function isLevel1PotTileValid(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;
     if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
@@ -154,7 +154,7 @@ function isLevel1PotTileValid(tx, ty) {
     return true;
 }
 
-// Try Place Level1 Pot keeps the game logic moving.
+// attempts to place a pot here, returns true if it actually got placed
 function tryPlaceLevel1Pot(tx, ty) {
     if (!isLevel1PotTileValid(tx, ty)) return false;
 
@@ -179,7 +179,7 @@ function tryPlaceLevel1Pot(tx, ty) {
     return true;
 }
 
-// Is Level1 Decoration Tile Open keeps the game logic moving.
+// true if this tile is open enough to drop a level 1 decoration on
 function isLevel1DecorationTileOpen(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;
     if (mapTiles[ty]?.[tx] !== TILE_FLOOR) return false;
@@ -197,7 +197,7 @@ function isLevel1DecorationTileOpen(tx, ty) {
     return true;
 }
 
-// Has Nearby Decoration Type keeps the game logic moving.
+// checks if there is already a decoration of this type nearby, used to spread them out
 function hasNearbyDecorationType(tx, ty, type, gapTiles) {
     for (const deco of levelDecorations) {
         if (deco.type !== type) continue;
@@ -208,7 +208,7 @@ function hasNearbyDecorationType(tx, ty, type, gapTiles) {
     return false;
 }
 
-// Try Place Level1 Skull Candle keeps the game logic moving.
+// tries to drop a skull candle here, returns true if successful
 function tryPlaceLevel1SkullCandle(tx, ty, potGap = LEVEL1_SKULL_CANDLE_POT_MIN_GAP_TILES, skullGap = LEVEL1_SKULL_CANDLE_MIN_GAP_TILES) {
     if (!isLevel1DecorationTileOpen(tx, ty)) return false;
     if (!hasSolidOrEdgeWallWithin(tx, ty, 2)) return false;
@@ -236,7 +236,7 @@ function tryPlaceLevel1SkullCandle(tx, ty, potGap = LEVEL1_SKULL_CANDLE_POT_MIN_
     return true;
 }
 
-// Collect Level1 Skull Candle Candidates keeps the game logic moving.
+// finds every tile that would be a valid spot for a skull candle and returns them
 function collectLevel1SkullCandleCandidates(potGap) {
     const candidates = [];
     for (let ty = 2; ty < MAP_H - 2; ty++) {
@@ -258,7 +258,7 @@ function collectLevel1SkullCandleCandidates(potGap) {
     return candidates;
 }
 
-// Place Level1 Skull Candles keeps the game logic moving.
+// scatters a bunch of skull candles around the level 1 map
 function placeLevel1SkullCandles() {
     let placed = 0;
 
@@ -282,7 +282,7 @@ function placeLevel1SkullCandles() {
     }
 }
 
-// Collect Level1 Wall-Adjacent Pot Anchors keeps the game logic moving.
+// gathers tiles right next to walls so pots can lean up against them
 function collectLevel1WallPotAnchors() {
     const anchors = [];
     for (let ty = 4; ty < MAP_H - 4; ty++) {
@@ -294,7 +294,7 @@ function collectLevel1WallPotAnchors() {
     return anchors;
 }
 
-// Collect Level1 Border Pot Anchors keeps the game logic moving.
+// same idea but specifically for tiles along the map border
 function collectLevel1BorderPotAnchors() {
     const anchors = [];
     for (let ty = 2; ty < MAP_H - 2; ty++) {
@@ -308,7 +308,7 @@ function collectLevel1BorderPotAnchors() {
     return anchors;
 }
 
-// Place Level1 Pots keeps the game logic moving.
+// scatters pots around the level 1 map
 function placeLevel1Pots() {
     const anchors = collectLevel1WallPotAnchors();
     const borderAnchors = collectLevel1BorderPotAnchors();
@@ -358,7 +358,7 @@ function placeLevel1Pots() {
     levelDecorations.sort((a, b) => a.y - b.y);
 }
 
-// Is Level3 Puddle Tile Valid keeps the game logic moving.
+// true if this tile can hold a water puddle on level 3
 function isLevel3PuddleTileValid(tx, ty, widthTiles, heightTiles) {
     if (!isInteriorTile(tx, ty)) return false;
 
@@ -388,7 +388,7 @@ function isLevel3PuddleTileValid(tx, ty, widthTiles, heightTiles) {
     return true;
 }
 
-// Try Place Level3 Puddle keeps the game logic moving.
+// tries to drop a puddle here, returns true on success
 function tryPlaceLevel3Puddle(tx, ty, widthTiles, heightTiles) {
     if (!isLevel3PuddleTileValid(tx, ty, widthTiles, heightTiles)) return false;
 
@@ -412,7 +412,7 @@ function tryPlaceLevel3Puddle(tx, ty, widthTiles, heightTiles) {
     return true;
 }
 
-// Place Level3 Puddles keeps the game logic moving.
+// scatters puddles around the level 3 map
 function placeLevel3Puddles() {
     const attempts = LEVEL3_PUDDLE_COUNT * 18;
     let placed = 0;
@@ -428,7 +428,7 @@ function placeLevel3Puddles() {
     levelDecorations.sort((a, b) => a.y - b.y);
 }
 
-// Is Level3 Pot Tile Valid keeps the game logic moving.
+// true if a level 3 pot can fit at this tile
 function isLevel3PotTileValid(tx, ty) {
     if (!isLevel1PotTileValid(tx, ty)) return false;
 
@@ -444,7 +444,7 @@ function isLevel3PotTileValid(tx, ty) {
     return true;
 }
 
-// Try Place Level3 Pot keeps the game logic moving.
+// tries to drop a pot at this tile on level 3
 function tryPlaceLevel3Pot(tx, ty) {
     if (!isLevel3PotTileValid(tx, ty)) return false;
 
@@ -469,7 +469,7 @@ function tryPlaceLevel3Pot(tx, ty) {
     return true;
 }
 
-// Place Level3 Pots keeps the game logic moving.
+// scatters pots around the level 3 map
 function placeLevel3Pots() {
     const anchors = collectLevel1WallPotAnchors();
     const borderAnchors = collectLevel1BorderPotAnchors();
@@ -488,7 +488,7 @@ function placeLevel3Pots() {
     levelDecorations.sort((a, b) => a.y - b.y);
 }
 
-// Try Place Level4 Mushroom Tree keeps the game logic moving.
+// tries to plant a mushroom tree on level 4
 function tryPlaceLevel4MushroomTree(tx, ty) {
     if (!isLevel4DecorationTileValid(tx, ty)) return false;
 
@@ -514,7 +514,7 @@ function tryPlaceLevel4MushroomTree(tx, ty) {
     return true;
 }
 
-// Place Level4 Mushroom Trees keeps the game logic moving.
+// scatters mushroom trees on level 4
 function placeLevel4MushroomTrees() {
     placeMushroomTrees({
         clusterCount: LEVEL4_MUSHROOM_CLUSTER_COUNT,
@@ -522,7 +522,7 @@ function placeLevel4MushroomTrees() {
     });
 }
 
-// Place Mushroom Trees keeps the game logic moving.
+// generic mushroom tree placer used by a couple of levels
 function placeMushroomTrees({ clusterCount, singleCount }) {
     const clusterAttempts = clusterCount * 8;
     let clustersPlaced = 0;
@@ -554,7 +554,7 @@ function placeMushroomTrees({ clusterCount, singleCount }) {
     levelDecorations.sort((a, b) => a.y - b.y);
 }
 
-// Place Level2 Mushroom Trees keeps the game logic moving.
+// places the mushroom trees specifically for level 2
 function placeLevel2MushroomTrees() {
     placeMushroomTrees({
         clusterCount: LEVEL2_MUSHROOM_CLUSTER_COUNT,
@@ -562,7 +562,7 @@ function placeLevel2MushroomTrees() {
     });
 }
 
-// Clear Spawn Area keeps the game logic moving.
+// makes sure there are no walls or decorations right where the player spawns
 function clearSpawnArea(radius = SPAWN_CLEAR_RADIUS) {
     const cx = Math.floor(MAP_W / 2);
     const cy = Math.floor(MAP_H / 2);
@@ -583,22 +583,22 @@ function clearSpawnArea(radius = SPAWN_CLEAR_RADIUS) {
     });
 }
 
-// Reset Tumor Turrets keeps the game logic moving.
+// clears any tumor turrets from the previous map
 function resetTumorTurrets() {
     tumorTurrets = [];
 }
 
-// Is Interior Tile keeps the game logic moving.
+// true if the tile is inside the playable area, not on the border or wall
 function isInteriorTile(tx, ty) {
     return tx >= 2 && tx < MAP_W - 2 && ty >= 2 && ty < MAP_H - 2;
 }
 
-// Chain Cell At keeps the game logic moving.
+// reads the type of sausage chain cell at a tile, used while building wall chains
 function chainCellAt(originX, originY, dx, dy, step) {
     return { x: originX + dx * step, y: originY + dy * step };
 }
 
-// Distance Score To Nearest Solid keeps the game logic moving.
+// score showing how close a tile is to any wall, used to keep walls spaced apart
 function distanceScoreToNearestSolid(tx, ty, maxRadius = 14) {
     if (!isInteriorTile(tx, ty)) return 0;
 
@@ -615,7 +615,7 @@ function distanceScoreToNearestSolid(tx, ty, maxRadius = 14) {
     return maxRadius;
 }
 
-// Can Place Sausage Chain keeps the game logic moving.
+// checks if a sausage wall chain of the given length can fit here
 function canPlaceSausageChain(originX, originY, dx, dy, len, minGap) {
     for (let step = 0; step < len; step++) {
         const cell = chainCellAt(originX, originY, dx, dy, step);
@@ -632,7 +632,7 @@ function canPlaceSausageChain(originX, originY, dx, dy, len, minGap) {
     return true;
 }
 
-// Place Sausage Chain keeps the game logic moving.
+// actually drops a sausage chain into the map after we know it fits
 function placeSausageChain(originX, originY, dx, dy, len) {
     for (let step = 0; step < len; step++) {
         const cell = chainCellAt(originX, originY, dx, dy, step);
@@ -640,7 +640,7 @@ function placeSausageChain(originX, originY, dx, dy, len) {
     }
 }
 
-// Place Level5 Sausage Walls keeps the game logic moving.
+// scatters sausage walls (the wiggly chunky walls) all over level 5
 function placeLevel5SausageWalls() {
     const directions = [
         { dx: 1, dy: 0 },
@@ -687,7 +687,7 @@ function placeLevel5SausageWalls() {
     }
 }
 
-// Has Solid Tile Within keeps the game logic moving.
+// true if there is any solid tile within N tiles of (x, y)
 function hasSolidTileWithin(tx, ty, radius) {
     for (let y = ty - radius; y <= ty + radius; y++) {
         for (let x = tx - radius; x <= tx + radius; x++) {
@@ -698,7 +698,7 @@ function hasSolidTileWithin(tx, ty, radius) {
     return false;
 }
 
-// Has Solid Or Edge Wall Within keeps the game logic moving.
+// same as above but also counts the map edge as a wall
 function hasSolidOrEdgeWallWithin(tx, ty, radius) {
     for (let y = ty - radius; y <= ty + radius; y++) {
         for (let x = tx - radius; x <= tx + radius; x++) {
@@ -709,7 +709,7 @@ function hasSolidOrEdgeWallWithin(tx, ty, radius) {
     return false;
 }
 
-// Can Place Tumor Turret At keeps the game logic moving.
+// checks if a tumor turret can spawn at this tile (open space, not too close to others)
 function canPlaceTumorTurretAt(tx, ty) {
     if (!isInteriorTile(tx, ty)) return false;
     if (mapTiles[ty][tx] !== TILE_FLOOR) return false;
@@ -761,7 +761,7 @@ function placeTumorTurrets({ count, projectileSpeed, projectileSize, spriteSet, 
     }
 }
 
-// Place Level2 Tumor Turrets keeps the game logic moving.
+// scatters tumor turrets in the level 2 map
 function placeLevel2TumorTurrets() {
     placeTumorTurrets({
         count: LEVEL2_TUMOR_TURRETS,
@@ -773,7 +773,7 @@ function placeLevel2TumorTurrets() {
     });
 }
 
-// Place Level5 Tumor Turrets keeps the game logic moving.
+// scatters tumor turrets in the level 5 map
 function placeLevel5TumorTurrets() {
     placeTumorTurrets({
         count: TUMOR_TURRETS_LEVEL5,
@@ -783,24 +783,24 @@ function placeLevel5TumorTurrets() {
     });
 }
 
-// Is Solid Tile Type keeps the game logic moving.
+// true if the given tile id is one of the wall types
 function isSolidTileType(tileType) {
     return tileType !== TILE_FLOOR;
 }
 
-// Is Solid Tile At keeps the game logic moving.
+// true if the tile at (tx, ty) is a wall
 function isSolidTileAt(tx, ty) {
     if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
     return isSolidTileType(mapTiles[ty]?.[tx] ?? TILE_FLOOR);
 }
 
-// Is Sausage Wall Tile At keeps the game logic moving.
+// true if the tile is part of a sausage wall chain
 function isSausageWallTileAt(tx, ty) {
     if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
     return mapTiles[ty]?.[tx] === TILE_SAUSAGE_WALL;
 }
 
-// Is Sausage Wall Vertical At keeps the game logic moving.
+// true if a sausage wall here is laid out vertically (so we know which sprite to use)
 function isSausageWallVerticalAt(tx, ty) {
     const north = isSausageWallTileAt(tx, ty - 1);
     const south = isSausageWallTileAt(tx, ty + 1);
@@ -809,7 +809,7 @@ function isSausageWallVerticalAt(tx, ty) {
     return (north || south) && !(west || east);
 }
 
-// Apply Corner Tiles keeps the game logic moving.
+// figures out which wall tiles are corners and marks them so the right sprite gets drawn
 function applyCornerTiles() {
     const next = mapTiles.map(row => row.slice());
 
@@ -832,7 +832,7 @@ function applyCornerTiles() {
     mapTiles = next;
 }
 
-// Build Nav Grid keeps the game logic moving.
+// builds the navigation grid used for enemy pathfinding (basically marks walkable tiles)
 function buildNavGrid() {
     navGrid = new Uint8Array(MAP_W * MAP_H);
     for (let y = 0; y < MAP_H; y++) {
@@ -850,7 +850,7 @@ function buildNavGrid() {
     }
 }
 
-// Get Nav Waypoint For Tile keeps the game logic moving.
+// returns the nav waypoint at this tile, or null if it isnt walkable
 function getNavWaypointForTile(tx, ty) {
     const tileType = mapTiles[ty]?.[tx] ?? TILE_FLOOR;
     let fx = 0.5, fy = 0.5;
@@ -864,7 +864,7 @@ function getNavWaypointForTile(tx, ty) {
     return { x: tx * TILE + TILE * fx, y: ty * TILE + TILE * fy };
 }
 
-// Find Path keeps the game logic moving.
+// A* pathfinding from one world point to another, used by enemies that need to chase
 function findPath(fromX, fromY, toX, toY) {
     const sx = Math.floor(fromX / TILE), sy = Math.floor(fromY / TILE);
     const gx = Math.floor(toX  / TILE), gy = Math.floor(toY  / TILE);
@@ -910,7 +910,7 @@ function findPath(fromX, fromY, toX, toY) {
     return path;
 }
 
-// Wall Collision keeps the game logic moving.
+// true if a circle of given size at (x, y) is overlapping a wall tile
 function wallCollision(x, y, size) {
     const l = Math.floor((x - size) / TILE), t = Math.floor((y - size) / TILE);
     const r = Math.floor((x + size) / TILE), b = Math.floor((y + size) / TILE);
@@ -942,7 +942,7 @@ function wallCollision(x, y, size) {
     return false;
 }
 
-// Find Nearest Free Position keeps the game logic moving.
+// spirals outward looking for the nearest non-wall tile, used to unstick stuff
 function findNearestFreePosition(x, y, size, maxTileRadius = 24) {
     if (!wallCollision(x, y, size)) return { x, y };
 
@@ -987,7 +987,7 @@ function findNearestFreePosition(x, y, size, maxTileRadius = 24) {
     return null;
 }
 
-// Rescue Player From Wall keeps the game logic moving.
+// teleports the player to a free spot if they ever end up clipped inside a wall
 function rescuePlayerFromWall() {
     const safePos = findNearestFreePosition(player.x, player.y, player.size);
     if (!safePos) return;
@@ -999,7 +999,7 @@ function rescuePlayerFromWall() {
     applyPlayerDamage(DASH_WALL_STUCK_DAMAGE);
 }
 
-// Point Inside Solid Tile keeps the game logic moving.
+// true if a point is sitting inside a wall tile (not just touching it)
 function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
     const lx = px - tileX;
     const ly = py - tileY;
@@ -1024,7 +1024,7 @@ function pointInsideSolidTile(px, py, tileX, tileY, tileType) {
     return false;
 }
 
-// Get Top Polygon keeps the game logic moving.
+// returns the top face polygon for a wall tile, used when drawing the 3d-ish wall faces
 function getTopPolygon(tileType) {
     if (tileType === TILE_CORNER_NW) return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: 0, y: TILE }];
     if (tileType === TILE_CORNER_NE) return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: TILE, y: TILE }];
@@ -1033,7 +1033,7 @@ function getTopPolygon(tileType) {
     return [{ x: 0, y: 0 }, { x: TILE, y: 0 }, { x: TILE, y: TILE }, { x: 0, y: TILE }];
 }
 
-// Draw Wall Face keeps the game logic moving.
+// draws the front face of a wall tile so it has some thickness
 function drawWallFace(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
 
     const x0 = sx + ax, y0 = sy + ay;
@@ -1062,7 +1062,7 @@ function drawWallFace(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
     ctx.restore();
 }
 
-// Draw Wall Face Corner keeps the game logic moving.
+// draws the corner-piece version of the wall face so corners look right
 function drawWallFaceCorner(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
 
     const x0 = sx + ax, y0 = sy + ay;
@@ -1089,7 +1089,7 @@ function drawWallFaceCorner(sx, sy, ax, ay, bx, by, depth, sprite, shade) {
     ctx.restore();
 }
 
-// Draw Wall Face Oriented keeps the game logic moving.
+// draws a wall face flipped/rotated for the right side, just a helper
 function drawWallFaceOriented(sx, sy, ax, ay, bx, by, depth, sprite, shade, rotate90 = false) {
     const x0 = sx + ax, y0 = sy + ay;
     const x1 = sx + bx, y1 = sy + by;
@@ -1122,7 +1122,7 @@ function drawWallFaceOriented(sx, sy, ax, ay, bx, by, depth, sprite, shade, rota
     ctx.restore();
 }
 
-// Draw Wall Tile With Faces keeps the game logic moving.
+// draws a single wall tile including its top + visible side faces, depending on neighbors
 function drawWallTileWithFaces(tileX, tileY, tileType) {
     const s  = toScreen(tileX * TILE, tileY * TILE);
     const FH = WALL_FACE_HEIGHT;
@@ -1253,7 +1253,7 @@ function drawWallTileWithFaces(tileX, tileY, tileType) {
     ctx.restore();
 }
 
-// Draw Map Sprite keeps the game logic moving.
+// helper to draw the floor tile sprite at a given world tile
 function drawMapSprite(sprite, x, y, w, h) {
     ctx.drawImage(sprite, x, y, w, h);
     const tint = MAP_THEME_TINT[currentMapThemeId];
@@ -1262,7 +1262,7 @@ function drawMapSprite(sprite, x, y, w, h) {
     ctx.fillRect(x, y, w, h);
 }
 
-// Draw Level Decorations keeps the game logic moving.
+// draws every prop/decoration the map placed (pots, candles, mushrooms, puddles, etc)
 function drawLevelDecorations() {
     if (!levelDecorations.length) return;
 

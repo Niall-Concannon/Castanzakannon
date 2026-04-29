@@ -1,9 +1,9 @@
-// XP ammo and loot HUD pieces are drawn here.
+// xp bar at the top, ammo bar, powerup banners, off-screen pointer arrows, loot popups
 
 
 
 
-// Draw Xp Bar keeps the game logic moving.
+// xp bar across the top of the screen, with level number and a flash on pickup
 function drawXpBar() {
     if (xpBarFlash > 0) xpBarFlash--;
 
@@ -74,7 +74,7 @@ function drawXpBar() {
     ctx.restore();
 }
 
-// Draw Ammo Bar keeps the game logic moving.
+// ammo bar near the top. pulses red when low, hidden when youre on infinite ammo
 function drawAmmoBar() {
     const DW  = 360;
     const DH  = Math.round(DW * 28 / 620);
@@ -168,7 +168,7 @@ function drawAmmoBar() {
     ctx.restore();
 }
 
-// Draw Ammo Powerup Overlay keeps the game logic moving.
+// banner that shows up while infinite ammo powerup is active, with a countdown
 function drawAmmoPowerupOverlay() {
     if (player.infiniteAmmoTimer <= 0) return;
 
@@ -203,7 +203,7 @@ function drawAmmoPowerupOverlay() {
     ctx.restore();
 }
 
-// Draw Instakill Powerup Overlay keeps the game logic moving.
+// same idea but for the instakill powerup banner
 function drawInstakillPowerupOverlay() {
     if (player.instakillTimer <= 0) return;
 
@@ -238,7 +238,7 @@ function drawInstakillPowerupOverlay() {
     ctx.restore();
 }
 
-// Get Last Alive Enemy keeps the game logic moving.
+// returns the last enemy thats still alive, only used for the arrow that points at it
 function getLastAliveEnemy() {
     for (const e of enemies) {
         if (e.alive) return e;
@@ -246,7 +246,7 @@ function getLastAliveEnemy() {
     return null;
 }
 
-// Draw Last Enemy Arrow keeps the game logic moving.
+// arrow on the edge of the screen pointing to the last hidden enemy so you can find it
 function drawLastEnemyArrow() {
     if (enemiesRemainingInWave !== 1 || enemiesToSpawn > 0) return;
 
@@ -314,7 +314,7 @@ function drawLastEnemyArrow() {
     ctx.restore();
 }
 
-// Get Active Ammo Pickup keeps the game logic moving.
+// returns the first ammo pickup currently on the floor, or null if none
 function getActiveAmmoPickup() {
     for (const p of pickups) {
         if (p.type === 'ammo') return p;
@@ -322,7 +322,7 @@ function getActiveAmmoPickup() {
     return null;
 }
 
-// Draw Ammo Pickup Arrow keeps the game logic moving.
+// off-screen arrow pointing at an ammo pickup so you know where to grab one
 function drawAmmoPickupArrow() {
     const ammoPickup = getActiveAmmoPickup();
     if (!ammoPickup) return;
@@ -387,7 +387,7 @@ function drawAmmoPickupArrow() {
     ctx.restore();
 }
 
-// Draw Void Totem Arrow keeps the game logic moving.
+// arrow that points to the void/necro totem when its active and offscreen
 function drawVoidTotemArrow() {
     const targets = [];
     if (hasActiveVoidTotem()) {
@@ -477,7 +477,7 @@ function drawVoidTotemArrow() {
     }
 }
 
-// Draw Void Totem Prompt keeps the game logic moving.
+// "press E to use" prompt that pops up when you stand on a totem
 function drawVoidTotemPrompt() {
     if (gamePaused) return;
 
@@ -527,7 +527,7 @@ function drawVoidTotemPrompt() {
     ctx.restore();
 }
 
-// Draw Upgrade Hud keeps the game logic moving.
+// the small hud thing showing your stat upgrades you have so far
 function drawUpgradeHud() {
     const panelX = 20;
     const panelY = 252;
@@ -596,7 +596,7 @@ function drawUpgradeHud() {
     ctx.restore();
 }
 
-// Draw Inventory Hud keeps the game logic moving.
+// little inventory display that shows the items youve picked up this run
 function drawInventoryHud() {
     const slotSize = 44;
     const gap = 8;
@@ -669,7 +669,7 @@ function drawInventoryHud() {
     ctx.restore();
 }
 
-// Draw Loot Toast keeps the game logic moving.
+// little popup that says what you just got, slides in from the side and fades out
 function drawLootToast() {
     if (player.lastLootTimer <= 0) return;
     player.lastLootTimer--;

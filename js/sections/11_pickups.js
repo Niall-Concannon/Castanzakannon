@@ -1,11 +1,12 @@
-// Pickup collection chest rewards and damage numbers live here.
+// chests, pickup orbs (xp/ammo/heal/instakill), boss totems, damage numbers
 
+// list of chest opening flair effects (text card + particles)
 let chestPickupEffects = [];
 
 
 
 
-// Update Chests keeps the game logic moving.
+// checks if player is touching a chest, opens it, gives loot and spawns the popup
 function updateChests() {
     for (let i = chests.length - 1; i >= 0; i--) {
         const chest = chests[i];
@@ -43,7 +44,7 @@ function updateChests() {
     }
 }
 
-// Draw Chests keeps the game logic moving.
+// draws each chest with its bobbing motion, glow halo, sparkles, and label
 function drawChests() {
     for (const chest of chests) {
         const crx = (chest.prevX ?? chest.x) + (chest.x - (chest.prevX ?? chest.x)) * renderAlpha;
@@ -100,6 +101,7 @@ function drawChests() {
     }
 }
 
+// ticks down the chest pickup popup effects and moves their particles
 function updateChestPickupEffects() {
     for (let i = chestPickupEffects.length - 1; i >= 0; i--) {
         const effect = chestPickupEffects[i];
@@ -120,6 +122,7 @@ function updateChestPickupEffects() {
     }
 }
 
+// draws the loot popup card after opening a chest, with icon + particles + glow
 function drawChestPickupEffects() {
     const duration = 72;
     for (const effect of chestPickupEffects) {
@@ -199,6 +202,7 @@ function drawChestPickupEffects() {
     }
 }
 
+// shared draw helper for boss summoning/return totems. just adds a glow + sprite + label
 function drawBossTotemObjective(totem, sprite, label, auraColor, glowColor) {
     if (!totem || !totem.active) return;
 
@@ -233,7 +237,7 @@ function drawBossTotemObjective(totem, sprite, label, auraColor, glowColor) {
     ctx.restore();
 }
 
-// Draw Void Totem Objective keeps the game logic moving.
+// purple void totem, label changes to RETURN when youre meant to head back
 function drawVoidTotemObjective() {
     const label = voidTotem?.mode === 'return' ? 'RETURN TOTEM' : 'VOID TOTEM';
     drawBossTotemObjective(
@@ -245,7 +249,7 @@ function drawVoidTotemObjective() {
     );
 }
 
-// Draw Necromancer Totem Objective keeps the game logic moving.
+// green necro totem version of the same thing
 function drawNecromancerTotemObjective() {
     const label = necromancerTotem?.mode === 'return' ? 'RETURN TOTEM' : 'NECRO TOTEM';
     drawBossTotemObjective(
@@ -257,7 +261,8 @@ function drawNecromancerTotemObjective() {
     );
 }
 
-// Update Pickups keeps the game logic moving.
+// updates every floating pickup. xp orbs get sucked toward player, the rest just sit
+// also handles actually picking them up when you walk over them
 function updatePickups() {
     for (let i = pickups.length - 1; i >= 0; i--) {
         const p = pickups[i];
@@ -279,6 +284,7 @@ function updatePickups() {
 
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
 
+        // xp orbs steer toward the player when in range, otherwise they just slow down
         if (p.type === 'xp') {
             const attractRadius = getPlayerXpAttractRadius();
             if (dist < attractRadius && dist > 0) {
@@ -308,6 +314,7 @@ function updatePickups() {
             p.y += p.vy;
         }
 
+        // close enough to player = pick it up. each type does something different
         if (dist < player.size + p.size) {
             if (p.type === 'xp') {
                 playExpOrbPickup();
@@ -338,7 +345,7 @@ function updatePickups() {
     }
 }
 
-// Spawn Damage Number keeps the game logic moving.
+// makes a yellow damage number popup at a given spot
 function spawnDamageNumber(x, y, value) {
     const displayValue = Math.max(1, Math.round(value));
     damageNumbers.push({
@@ -354,7 +361,7 @@ function spawnDamageNumber(x, y, value) {
     });
 }
 
-// Update Damage Numbers keeps the game logic moving.
+// floats the damage numbers up with a little gravity, fades and removes when expired
 function updateDamageNumbers() {
     for (let i = damageNumbers.length - 1; i >= 0; i--) {
         const n = damageNumbers[i];
@@ -370,7 +377,7 @@ function updateDamageNumbers() {
     }
 }
 
-// Draw Damage Numbers keeps the game logic moving.
+// draws all the active damage numbers in yellow with a black shadow
 function drawDamageNumbers() {
     ctx.save();
     ctx.textAlign = 'center';
@@ -386,8 +393,9 @@ function drawDamageNumbers() {
     ctx.restore();
 }
 
-// Draw Pickups keeps the game logic moving.
+// draws all pickup orbs. sorts by type so the rare ones (ammo) draw on top
 function drawPickups() {
+    // build a draw order: xp first, then heal, instakill, ammo on top
     const drawList = [];
 
     for (const p of pickups) {
@@ -420,6 +428,7 @@ function drawPickups() {
             : XP_PICKUP_VARIANTS[p.variant] ?? XP_PICKUP_VARIANTS.green;
 
 
+        // draw the little trail of fading dots behind moving xp orbs
         if (p.type === 'xp' && p.trail?.length) {
             for (const t of p.trail) {
                 const ts   = toScreen(t.x, t.y);

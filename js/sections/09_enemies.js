@@ -1,16 +1,16 @@
-// Enemy spawning movement and drawing logic live here.
+// everything to do with enemies. spawning, movement, AI, bosses, turrets, drawing them
 
 
 
 
-// Spawns one enemy and adds it to the active list.
+// makes one enemy of the given type and drops it into the enemy list
 function spawnEnemy(type) {
     const enemy = { alive: true };
     recycleEnemy(enemy, type);
     enemies.push(enemy);
 }
 
-// Picks a random enemy type for normal waves.
+// rolls a random enemy type for the current wave, weights vary by level
 function pickRandomEnemyType() {
     const level = Math.max(1, Math.min(MAX_ARENA_LEVELS, currentArenaLevel));
     const globalWave = (level - 1) * WAVES_PER_LEVEL + currentWave; // absolute wave count
@@ -45,7 +45,7 @@ function pickRandomEnemyType() {
     return 'basic';
 }
 
-// Finds a safe spawn point away from the player.
+// finds a spot to spawn an enemy thats not too close to the player and not in a wall
 function getEnemySpawnPosition(wallSize) {
 
     const minRadius = Math.min(canvas.width, canvas.height) * 0.5 + SPAWN_RING_INSET;
@@ -70,7 +70,7 @@ function getEnemySpawnPosition(wallSize) {
     return { x: player.x + TILE * 4, y: player.y + TILE * 4 };
 }
 
-// Resets an enemy so it can be reused from the pool.
+// resets an old enemy object back to fresh defaults so we can reuse it instead of GCing
 function recycleEnemy(e, type = pickRandomEnemyType()) {
     const spec = ENEMY_TYPES[type];
     const variant = getEnemyVariantForLevel(currentArenaLevel);
@@ -145,12 +145,12 @@ function recycleEnemy(e, type = pickRandomEnemyType()) {
     }
 }
 
-// Returns the outer recycle distance for offscreen enemies.
+// max distance an enemy can wander before we recycle it back near the player
 function getEnemyRecycleDistance() {
     return Math.hypot(canvas.width, canvas.height) * 1.1;
 }
 
-// Checks whether an enemy has drifted too far away.
+// true if the enemy has wandered way offscreen and should be teleported back
 function isEnemyOffscreenFromPlayer(e) {
     const dx = Math.abs(e.x - player.x);
     const dy = Math.abs(e.y - player.y);
@@ -159,7 +159,7 @@ function isEnemyOffscreenFromPlayer(e) {
     return dx > maxDx || dy > maxDy;
 }
 
-// Tests for a clear line between two points.
+// raycast-ish line of sight check, returns true if no walls block the line
 function hasLineOfSight(x1, y1, x2, y2, size) {
     const dist = Math.hypot(x2 - x1, y2 - y1);
     if (dist === 0) return true;
@@ -171,7 +171,7 @@ function hasLineOfSight(x1, y1, x2, y2, size) {
     return true;
 }
 
-// Steers an enemy toward the target while avoiding walls.
+// moves an enemy toward (tx, ty) by step amount, slides along walls if it cant go straight
 function moveEnemyToward(e, tx, ty, step) {
     const baseAngle = Math.atan2(ty - e.y, tx - e.x);
 
@@ -225,7 +225,7 @@ function moveEnemyToward(e, tx, ty, step) {
     return true;
 }
 
-// Fires one void boss projectile with typed behavior fields.
+// shoots a single projectile from the void boss with the given type/speed/etc
 function fireVoidBossProjectile(enemy, angle, projectileType, speed, size, damage, life, sprite, extra = {}) {
     const sx = enemy.x + Math.cos(angle) * (enemy.size + 14);
     const sy = enemy.y + Math.sin(angle) * (enemy.size + 14);
@@ -245,7 +245,7 @@ function fireVoidBossProjectile(enemy, angle, projectileType, speed, size, damag
     });
 }
 
-// Returns the max number of one necromancer minion type allowed on screen.
+// how many of one minion kind the necromancer is allowed to have alive at once
 function getNecromancerMinionCap(type) {
     const scaledBonus = Math.max(0, currentArenaLevel - 1) * 2;
     if (type !== 'sniper' && type !== 'tank') return 0;
@@ -253,7 +253,7 @@ function getNecromancerMinionCap(type) {
     return 10 + scaledBonus;
 }
 
-// Counts alive necromancer minions for one type.
+// counts how many alive minions of a given type the necromancer has out
 function getAliveNecromancerMinionCount(type) {
     let count = 0;
     for (const e of enemies) {
@@ -264,7 +264,7 @@ function getAliveNecromancerMinionCount(type) {
     return count;
 }
 
-// Counts all alive necromancer minions regardless of type.
+// total count of any minion kind still alive
 function getAliveNecromancerMinionTotal() {
     let count = 0;
     for (const e of enemies) {
@@ -274,7 +274,7 @@ function getAliveNecromancerMinionTotal() {
     return count;
 }
 
-// Chooses a summon type that is still under its on-screen cap.
+// picks which minion kind to summon next, only ones still under their cap
 function pickNecromancerSummonType() {
     const totalCap = 15;
     if (getAliveNecromancerMinionTotal() >= totalCap) return null;
@@ -300,7 +300,7 @@ function pickNecromancerSummonType() {
     return available[available.length - 1] ?? null;
 }
 
-// Returns the active necromancer boss if one is alive.
+// finds the necromancer boss in the enemy list if hes around
 function getActiveNecromancerBoss() {
     for (const e of enemies) {
         if (!e.alive) continue;
@@ -309,7 +309,7 @@ function getActiveNecromancerBoss() {
     return null;
 }
 
-// Builds a spread target around the player so necromancer snipers avoid clustering.
+// gives the necro sniper a slightly offset target so they spread out instead of stacking
 function getNecromancerSniperSpreadTarget(sniper) {
     let repelX = 0;
     let repelY = 0;
