@@ -1361,20 +1361,6 @@ function drawEnemies() {
         const isWaterBoss = e.isBoss && e.isWaterBoss;
         const isFloorBoss = e.isBoss && !e.isVoidBoss && !e.isNecromancerBoss && !e.isWaterBoss;
 
-        // Draw the purple ring for boss types except the fire & water floor bosses
-        if (e.isBoss && !isWaterBoss && !isFloorBoss) {
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.strokeStyle = 'rgba(210,120,255,0.9)';
-            ctx.shadowColor = 'rgba(210,120,255,0.8)';
-            ctx.shadowBlur = 14;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(sc.x, sc.y, e.size + 8, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-        }
-
         if (alpha > 0.15 && e.hpBarTimer > 0) {
             const bw = e.size * 2, bh = 4, hf = e.hp / e.maxHp;
             const bx = sc.x - bw / 2, by = sc.y - e.size - 12;

@@ -543,7 +543,7 @@ const ENEMY_TYPES = {
     tank:  { hp: 8, size: 20, speed: 1.2, color: '#ff0000', animSpeed: 14 },
     sniper:{ hp: 3, size: 18, speed: 1.55, color: '#ff8a2b', animSpeed: 9 },
     void_sniper: { hp: 84, size: 34, speed: 2.25, color: '#8f5dff', animSpeed: 8 },
-    necromancer: { hp: 92, size: 36, speed: 1.95, color: '#4fd39f', animSpeed: 8 },
+    necromancer: { hp: 156, size: 108, speed: 1.95, color: '#4fd39f', animSpeed: 8 },
 };
 
 
