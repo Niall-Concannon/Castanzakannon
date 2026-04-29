@@ -5,10 +5,10 @@
 
 // builds all the button rects for the main menu, sizes scale with canvas so it works on any screen
 function getMainMenuLayout() {
-    const buttonW = Math.min(380, Math.max(280, Math.floor(canvas.width * 0.27)));
+    const buttonW = Math.min(820, Math.max(500, Math.floor(canvas.width * 0.5)));
     const buttonH = Math.min(68, Math.max(52, Math.floor(canvas.height * 0.08)));
     const rowGap = Math.max(10, Math.floor(buttonH * 0.22));
-    const colGap = Math.max(44, Math.floor(buttonW * 0.18));
+    const colGap = Math.max(12, Math.floor(buttonW * 0.04));
     const leftX = Math.floor(canvas.width / 2 - buttonW - colGap / 2);
     const rightX = Math.floor(canvas.width / 2 + colGap / 2);
     const topY = Math.floor(canvas.height / 2 + 12);
@@ -137,13 +137,39 @@ function getEncyclopediaEntriesForTab() {
 }
 
 // figures out how tall the list content is and how much scroll room there is
+function getEncyclopediaEnemyLevelButtons() {
+    const panel = getEncyclopediaPanel();
+    const levels = [1, 2, 3, 4, 5];
+    const btnW = 50;
+    const btnH = 30;
+    const gap = 8;
+    const totalW = levels.length * btnW + (levels.length - 1) * gap;
+    const startX = panel.x + panel.w / 2 - totalW / 2;
+    const y = panel.y + 142;
+    return levels.map((level, i) => ({
+        level,
+        x: startX + i * (btnW + gap),
+        y,
+        w: btnW,
+        h: btnH,
+    }));
+}
+
+function getEncyclopediaEnemyLevelButtonAt(x, y) {
+    if (encyclopediaTab !== 'enemies') return null;
+    for (const btn of getEncyclopediaEnemyLevelButtons()) {
+        if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) return btn;
+    }
+    return null;
+}
+
 function getEncyclopediaScrollMetrics(entries) {
     const panel = getEncyclopediaPanel();
-    const listX = panel.x + 26;
-    const listY = panel.y + 144;
-    const listW = panel.w - 52;
-    const listH = panel.h - 220;
     const isEnemies = encyclopediaTab === 'enemies';
+    const listX = panel.x + 26;
+    const listY = panel.y + (isEnemies ? 184 : 144);
+    const listW = panel.w - 52;
+    const listH = panel.h - (isEnemies ? 260 : 220);
     const isAchievements = encyclopediaTab === 'achievements';
     const cols = isEnemies || isAchievements ? 1 : 2;
     const entryH = isEnemies ? 78 : isAchievements ? 90 : 92;
@@ -166,19 +192,22 @@ function getEncyclopediaEnemyEntries() {
     const entries = [];
     const nameMap = { basic: 'Basic', fast: 'Fast', tank: 'Tank', sniper: 'Sniper' };
 
+    const levelToVariant = { 1: 'base', 2: 'a', 3: 'b', 4: 'c', 5: 'd' };
+    const selectedLevel = encyclopediaEnemyLevel;
+    const variant = levelToVariant[selectedLevel];
+
     for (const [id, base] of Object.entries(ENEMY_TYPES)) {
-        const lvl1 = ENEMY_VARIANT_STATS.base?.[id] ?? { hp: base.hp, speed: base.speed };
-        const lvl5 = ENEMY_VARIANT_STATS.d?.[id] ?? ENEMY_VARIANT_STATS.base?.[id] ?? { hp: base.hp, speed: base.speed };
-        const frames = getEnemySpriteFrames(id);
+        const stats = ENEMY_VARIANT_STATS[variant]?.[id] ?? { hp: base.hp, speed: base.speed };
+        const frames = enemySpriteSets[variant]?.[id] ?? enemySpriteSets.base[id];
         const isSniper = id === 'sniper';
         const rarity = isSniper ? 'uncommon' : 'common';
         const extraText = isSniper
-            ? `Projectile DMG ${lvl1.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE} -> ${lvl5.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE}  Range ${SNIPER_RANGE}`
-            : `Level 5 scaling: HP ${lvl5.hp}  SPD ${lvl5.speed.toFixed(1)}`;
+            ? `Projectile DMG ${stats.projectileDamage ?? SNIPER_PROJECTILE_DAMAGE}  Range ${SNIPER_RANGE}`
+            : `Size ${base.size}`;
         entries.push({
             title: `${nameMap[id] ?? id} Enemy`,
             rarity,
-            detail: `Base HP ${base.hp}  SPD ${base.speed.toFixed(1)}  Size ${base.size}`,
+            detail: `Level ${selectedLevel}: HP ${stats.hp}  SPD ${stats.speed.toFixed(1)}`,
             extra: extraText,
             icon: frames?.[0] ?? null,
             iconFrames: frames,
@@ -322,6 +351,27 @@ function drawEncyclopediaMenu() {
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(button.rarity === 'all' ? 'All' : button.rarity, button.x + button.w / 2, button.y + 19);
+        }
+    }
+
+    if (isEnemies) {
+        const levelButtons = getEncyclopediaEnemyLevelButtons();
+        ctx.fillStyle = 'rgba(210,220,235,0.7)';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText('Level:', levelButtons[0].x - 10, levelButtons[0].y + 20);
+        for (const btn of levelButtons) {
+            const active = encyclopediaEnemyLevel === btn.level;
+            const hover = mouseX >= btn.x && mouseX <= btn.x + btn.w && mouseY >= btn.y && mouseY <= btn.y + btn.h;
+            ctx.fillStyle = active ? 'rgba(255,255,255,0.28)' : hover ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)';
+            ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+            ctx.strokeStyle = active ? '#ffffff' : 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = active ? 2 : 1;
+            ctx.strokeRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
+            ctx.fillStyle = active ? '#ffffff' : 'rgba(220,230,240,0.9)';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(String(btn.level), btn.x + btn.w / 2, btn.y + btn.h / 2 + 5);
         }
     }
 
@@ -760,7 +810,7 @@ function drawPerfGuide() {
     ctx.font       = 'bold 15px Arial';
     ctx.fillStyle  = '#ff0000';
     ctx.shadowBlur = 0;
-    ctx.fillText('GPU Acceleration  â€”  ' + browserNames[browser] + ' detected', canvas.width / 2, by + 30);
+    ctx.fillText('GPU Acceleration - ' + browserNames[browser] + ' detected', canvas.width / 2, by + 30);
     ctx.font      = '13px Arial';
     ctx.fillStyle = '#ff0000';
     ctx.fillText('Follow these steps for a smoother experience:', canvas.width / 2, by + 52);
@@ -1383,8 +1433,8 @@ function drawMenu() {
     if (menuPage === 'main') {
         ctx.font       = `800 64px ${MENU_TITLE_FONT_FAMILY}`;
         ctx.textAlign  = 'center';
-        ctx.fillStyle  = MENU_TEXT_COLORS.title;
-        ctx.shadowColor = MENU_TEXT_COLORS.titleShadow;
+        ctx.fillStyle  = '#39ff66';
+        ctx.shadowColor = 'rgba(57, 255, 102, 0.45)';
         ctx.shadowBlur = 18;
         ctx.fillText('Castanzakannon', canvas.width / 2, canvas.height / 2 - 136);
         ctx.font       = `600 21px ${MENU_UI_FONT_FAMILY}`;

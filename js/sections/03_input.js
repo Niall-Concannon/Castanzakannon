@@ -451,6 +451,14 @@ window.addEventListener('mousedown', e => {
             const back = getEncyclopediaBackButton();
             const tabs = getEncyclopediaTabButtons();
             const filterButton = encyclopediaTab === 'achievements' ? null : getEncyclopediaFilterButtonAt(mouseX, mouseY);
+
+            const levelButton = getEncyclopediaEnemyLevelButtonAt(mouseX, mouseY);
+            if (levelButton) {
+                playUiClick();
+                encyclopediaEnemyLevel = levelButton.level;
+                return;
+            }
+
             if (filterButton) {
                 playUiClick();
                 encyclopediaRarityFilter = filterButton.rarity;
